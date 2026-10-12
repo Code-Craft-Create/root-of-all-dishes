@@ -2394,6 +2394,7 @@
     const prevSpeed = S.speed;
     S.speed = 0;
     SFX.play('legacy');
+    SFX.setMusicScene('finale');
     const guests = Game.restaurants().reduce((n, r) => n + (r.served || 0), 0);
     const days = Game.dayOf(S.legacyWon || S.time) + 1;
     const stat = (icon, val, label, count) => `<div class="fn-stat">${FSI.img(icon)}<b ${count ? `data-count="${Math.floor(val)}"` : ''}>${count ? 0 : val}</b><span>${label}</span></div>`;
@@ -2447,7 +2448,7 @@
       if (p < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
-    const close = () => { el.remove(); S.speed = prevSpeed; };
+    const close = () => { el.remove(); S.speed = prevSpeed; SFX.setMusicScene(ui.townMode ? 'town' : 'farm'); };
     ui.closeFinale = close;
     el.querySelector('[data-fn="close"]').addEventListener('click', close);
   };

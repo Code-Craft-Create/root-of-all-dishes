@@ -90,7 +90,9 @@ are not swapped: use `data-tip` for tooltips, and draw icons in the Town SVG wit
   (assets/music/town-*). Each track plays in full, then a random other one follows. Switching to or from the Town fades one playlist
   out over 5 s while the other fades in, 30 s into a random track. Own Music slider in the ⚙️ menu; mute (🔊 / N) stops it too.
   The music is loaded by relative path, so root-of-all-dishes.html needs the assets/music/ folder next to it (tools/build.js copies it
-  into the download folder; add a .mp3 there, prefixed town- for the Town, and rebuild to include it). In the Town the farm animals, bees and gulls are silent; weather, season sounds and
+  into the download folder; add a .mp3 there, prefixed town- for the Town or finale- for the end screen, and rebuild to include it). The finale has its own track
+  (assets/music/finale-high-score-hoedown.mp3): it fades in from its start when the finale opens and loops; closing the finale fades back
+  to the farm or Town playlist. In the Town the farm animals, bees and gulls are silent; weather, season sounds and
   harbour water stay. 🔊 in the top bar (or N) mutes; the ⚙️ menu has a saved volume slider.
 - The map shows the season (blossom in spring, autumn leaves, snow in winter) and today's weather; working buildings move, smoke
   and have animals wandering about, stopped ones are dimmed. Each new dish gets its own card showing its chain from land to plate,
@@ -184,7 +186,7 @@ restaurants rated 4 stars or better. **The Legacy** (last goal, `Game.legacy`): 
 the Year three years in a row, own all nine restaurants. Winning it opens the finale (`ui.finale` in ui.js "THE FINALE"):
 a full-screen card with every discovered dish swirling in around a five-star restaurant, the money and toque piles and
 the final numbers; the Town Guide can replay it. Cheat console: `guests <n>`, `stock`, `critic <now|plan>`,
-`rival <id> <rating>`, `finale`.
+`rival <id> <rating>`, `finale` (the screen only), `win` (meets all Legacy conditions and wins it for real, `Game.cheatLegacy`).
 
 **📋 Customer orders grow with the stages** (`o.kind` in js/game.js, window in ui.js `modals.orders`). Dishes are only
 ordered from open cuisines; special requests and clues are built around undiscovered dishes of the current stage first.

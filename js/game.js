@@ -2530,10 +2530,31 @@
     if (S.money < cost) return Game.toast(`${Game.CORP.owner} wants 💰${cost.toLocaleString('en-US')}.`, 'bad');
     S.money -= cost; S.stats.spent += cost; dayStats().build += cost;
     for (const rv of Game.RIVALS) { t.rivals[rv.id].sold = true; newRestaurant(rv.lot, rv.name, true); }
-    S.corpBought = S.time;
+    S.corpBought = S.time || 1; // never 0, which reads as not bought
     Game.toast(`🎉 ${Game.CORP.name} is yours: all three of its restaurants now serve food from your farm.`, 'good', 'quiet');
     checkLegacy();
     Game.emit('town');
+  };
+  // Cheat (console `win`): meet all three Legacy conditions (stages up to Grand Cuisine done, gold from every critic
+  // this year, Crestwell bought, paying for it if short) and win it the normal way, finale included.
+  Game.cheatLegacy = function () {
+    const S = Game.S;
+    if (S.legacyWon) return false;
+    Game.cheatStage(FS.STAGES[FS.STAGES.length - 1].id);
+    const t = town();
+    t.open = t.open || {};
+    for (const d of Game.DISTRICTS) t.open[d.id] = true;
+    if (!S.critic || S.critic.v !== 2) planCritic(Math.floor(S.time / YEAR));
+    const c = S.critic;
+    for (const cr of Game.CRITICS) c.gold[cr.district] = c.year;
+    if (c.allGold === undefined) c.allGold = c.year;
+    if (S.corpBought) checkLegacy();
+    else {
+      offered = true; S.corpOffered = S.corpOffered || S.time || 1;
+      if (S.money < Game.CORP.offer) Game.giveMoney(Game.CORP.offer - S.money);
+      Game.acceptOffer();
+    }
+    return !!S.legacyWon;
   };
   let offered = false;
   function checkLegacy() {
@@ -2545,7 +2566,7 @@
       Game.emit('offer');
     }
     if (Game.legacy().every((x) => x.done)) {
-      S.legacyWon = S.time;
+      S.legacyWon = S.time || 1;
       Game.toast('👑 The Legacy is complete: Grand Cuisine mastered, three golds from the critics, and Crestwell bought out. From earth to eat, you did it all!', 'good', 'quiet');
       Game.emit('legacy');
     }
