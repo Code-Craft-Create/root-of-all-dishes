@@ -1595,7 +1595,7 @@
           <div class="row gap"><button data-action="export">Show code for this game</button><button data-action="import">Load code from box</button></div>
         </details>
       </section>
-      <div class="gm-foot"><span class="small muted">The game autosaves to this browser every 30 seconds.</span>
+      <div class="gm-foot"><span class="small muted">The game autosaves to this browser every 30 seconds. Version ${GAME_VERSION}.</span>
         <button class="danger" data-action="newgame">🆕 Start a new game</button></div>
     </div>`,
   });
@@ -1623,7 +1623,7 @@
     return { title: '', cls: 'splash welcome',
       html: `<div class="sp-icon">${FSI.img('ui_logo')}</div>
         <p class="dc-kicker">Welcome to</p><h2 class="sp-title">Root of All Dishes</h2>
-        <p class="wc-sub">The Long Road to a Good Meal</p>
+        <p class="wc-sub">The Long Road to a Good Meal</p><p class="wc-ver">v${GAME_VERSION}</p>
         <div class="wc-chain">${chain}</div>
         <p class="sp-one">Every good meal starts long before the kitchen: in a field, a pasture, an orchard or the sea.</p>
         <p class="sp-one">Grow it, raise it, mill it, cure it, cook it, and find out how many hands and days go into the dishes you love.</p>
@@ -2518,7 +2518,7 @@
   }
 
   ui.init = function () {
-    $('.brand').innerHTML = FSI.img('ui_logo') + '<span>Root of All Dishes</span>';
+    $('.brand').innerHTML = FSI.img('ui_logo') + `<span>Root of All Dishes</span><small class="ver" title="Game version">v${GAME_VERSION}</small>`;
     const fav = document.createElement('link'); fav.rel = 'icon'; fav.type = 'image/svg+xml'; fav.href = FSI.dataURL('ui_logo'); document.head.appendChild(fav);
     watchIcons();
     soundButton();
