@@ -924,6 +924,7 @@ button.ghost { border: none; background: none; padding: 0 4px; }
 .fn-dish .ico { width: 82%; height: 82%; }
 .fn-dish:hover { z-index: 2; scale: 1.6; transition: scale 0.15s; }
 .fn-main { position: relative; z-index: 1; width: min(760px, 100%); padding: 0 16px; text-align: center; color: #fff8ea; pointer-events: none; }
+body:has(#finale) #tip { z-index: 1000; } /* dish names over the finale */
 .fn-main button { pointer-events: auto; }
 .fn-kicker { margin: 0 auto; width: fit-content; display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 800; font-size: 14px; color: #ffe49a; animation: dc-pop 0.6s ease-out 0.2s both; }
 .fn-kicker .ico { width: 30px; height: 30px; animation: egg-bob 2.4s ease-in-out infinite; }
