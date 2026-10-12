@@ -1,0 +1,13 @@
+# Built single-file download (rebuild with: node tools/build.js)
+root-of-all-dishes-download/
+*.zip
+
+# Review screenshots stay in the project files, not the repo
+reviews/**/*.png
+
+# OS / editor clutter
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+node_modules/

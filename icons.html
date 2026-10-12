@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Root of All Dishes Icon Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: sticky filter bar over a dense, sectioned contact sheet; one detail sheet on click. */
+:root {
+  --bg: #f1f3ee; --panel: #ffffff; --fg: #23291f; --muted: #66705f; --line: #d8ddd2;
+  --accent: #3f7a3a; --accent-fg: #ffffff; --flag: #c2621c; --flag-bg: #fbe9da;
+  --tile-paper: #fbfaf6; --tile-dark: #2c3029; --tile-grass: #8fbf63;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1b1f19; --panel: #252a22; --fg: #e6eadf; --muted: #9aa491; --line: #394034;
+  --accent: #8cc56a; --accent-fg: #142010; --flag: #f0a060; --flag-bg: #3d2a1b; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #1b1f19; --panel: #252a22; --fg: #e6eadf; --muted: #9aa491; --line: #394034;
+  --accent: #8cc56a; --accent-fg: #142010; --flag: #f0a060; --flag-bg: #3d2a1b; color-scheme: dark }
+* { box-sizing: border-box }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 var(--body) }
+.wrap { padding-inline: 16px; padding-block: 0 48px; max-width: 1400px; margin: 0 auto }
+header.top { padding-block: 20px 8px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px }
+h1 { font: 800 1.9rem/1.1 var(--display); margin: 0; letter-spacing: -.01em }
+.summary { color: var(--muted); font-variant-numeric: tabular-nums }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line);
+  display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding-block: 10px }
+.bar input[type=search] { flex: 1 1 220px; min-width: 0; font: inherit; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--fg) }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel) }
+.seg button { font: inherit; font-size: 13px; border: 0; background: none; color: var(--fg); padding: 7px 10px; cursor: pointer }
+.seg button[aria-pressed=true] { background: var(--accent); color: var(--accent-fg) }
+.seg button:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+label.chk { display: inline-flex; gap: 6px; align-items: center; font-size: 13px }
+.btn { font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-fg); cursor: pointer }
+.btn.ghost { background: none; color: var(--accent) }
+.legend { color: var(--muted); font-size: 13px; padding-block: 10px 0 }
+section h2 { font: 600 1.2rem/1.2 var(--display); margin: 28px 0 4px; display: flex; gap: 10px; align-items: baseline }
+section h2 small { font: 13px var(--body); color: var(--muted); font-variant-numeric: tabular-nums }
+section h3 { font: 700 12px var(--body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 16px 0 8px }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--cw, 128px), 1fr)); gap: 8px }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; min-width: 0; text-align: left; font: inherit; color: inherit }
+.card.flagged { border-color: var(--flag); box-shadow: inset 0 0 0 1px var(--flag) }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 4px }
+.tile { aspect-ratio: 1; max-width: 100%; border-radius: 6px; display: grid; place-items: center; background: var(--tile) }
+.tile.emoji { font-family: var(--emoji); line-height: 1 }
+.tile svg { display: block }
+.missing { width: 70%; aspect-ratio: 1; border: 2px dashed var(--muted); border-radius: 6px; display: grid; place-items: center; color: var(--muted); font-size: 11px; text-align: center }
+.name { font-size: 13px; line-height: 1.25; overflow-wrap: anywhere }
+.id { font: 11px var(--mono); color: var(--muted); overflow-wrap: anywhere }
+.note { font-size: 12px; color: var(--flag); background: var(--flag-bg); border-radius: 4px; padding: 2px 6px; overflow-wrap: anywhere }
+dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--fg); width: min(720px, calc(100vw - 32px)); padding: 0 }
+dialog::backdrop { background: rgb(0 0 0 / .45) }
+.dlg { padding: 20px; display: grid; gap: 16px }
+.dlg-head { display: flex; justify-content: space-between; gap: 12px; align-items: start }
+.dlg-head h2 { font: 800 1.5rem/1.15 var(--display); margin: 0 }
+.big { display: grid; grid-template-columns: 1fr 1fr; gap: 12px }
+.big .tile { font-size: 120px }
+.sizes { display: flex; flex-wrap: wrap; gap: 14px; align-items: end }
+.sizes div { display: grid; justify-items: center; gap: 4px; font-size: 11px; color: var(--muted) }
+.chain { display: flex; flex-wrap: wrap; gap: 8px }
+.chain button { display: inline-flex; gap: 6px; align-items: center; font: inherit; font-size: 13px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 999px; padding: 3px 10px 3px 4px; cursor: pointer }
+.fact { color: var(--muted); margin: 0; max-width: 65ch }
+textarea { width: 100%; font: inherit; min-height: 64px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg) }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 14px }
+.empty { color: var(--muted); padding-block: 40px; text-align: center }
+@media (max-width: 520px) { h1 { font-size: 1.5rem } .big .tile { font-size: 80px } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Root of All Dishes Icon Review</h1>
+    <span class="summary" id="summary"></span>
+  </header>
+  <div class="bar" role="toolbar" aria-label="Filters">
+    <input type="search" id="q" placeholder="Search names, ids, categories…" aria-label="Search">
+    <div class="seg" id="kind" aria-label="Show">
+      <button data-v="all" aria-pressed="true">All</button><button data-v="b">Buildings</button><button data-v="i">Ingredients</button><button data-v="d">Dishes</button><button data-v="u">Interface</button>
+    </div>
+    <div class="seg" id="size" aria-label="Icon size">
+      <button data-v="24">24 px</button><button data-v="48" aria-pressed="true">48 px</button><button data-v="96">96 px</button>
+    </div>
+    <div class="seg" id="tilebg" aria-label="Background">
+      <button data-v="paper" aria-pressed="true">Paper</button><button data-v="dark">Dark</button><button data-v="grass">Map grass</button>
+    </div>
+    <label class="chk"><input type="checkbox" id="onlyFlag"> Flagged only</label>
+    <label class="chk"><input type="checkbox" id="onlyMissing"> Missing only</label>
+    <button class="btn" id="copy">Copy my notes</button>
+  </div>
+  <p class="legend">Each card shows the current emoji on the left and the new SVG icon on the right. Click a card to see it large, check the ingredients it is made from, and flag it with a note. Copy your notes and paste them into the thread.</p>
+  <main id="out"></main>
+</div>
+<dialog id="dlg" aria-labelledby="dlg-title"><div class="dlg" id="dlg-body"></div></dialog>
+
+<script src="js/data/core.js"></script>
+<script src="js/data/buildings.js"></script>
+<script src="js/data/raw.js"></script>
+<script src="js/data/processing.js"></script>
+<script src="js/data/dishes.js"></script>
+<script src="js/model.js"></script>
+<script src="assets/icons.js"></script>
+<script>
+(function () {
+  FS.finalize();
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+  };
+  let notes = store.get('rootdishes-icon-notes', {});
+  const st = Object.assign({ kind: 'all', size: 48, tilebg: 'paper' }, store.get('rootdishes-icon-view', {}));
+
+  // ---- entries: every thing that needs an icon ----
+  const E = []; // {id, name, emoji, kind, section, sub, fact, inputs}
+  const groups = [...new Set(Object.values(FS.buildings).map((b) => b.group))];
+  for (const g of groups) for (const [id, b] of Object.entries(FS.buildings)) if (b.group === g)
+    E.push({ id: 'b_' + id, name: b.name, emoji: b.icon, kind: 'b', section: 'Buildings', sub: g, fact: b.desc, inputs: [] });
+  const recipeOf = (id) => (FS.items[id].dish ? FS.dishRecipe[id] : (FS.byOutput[id] || [])[0]);
+  for (const cat of Object.keys(FS.catInfo)) for (const it of Object.values(FS.items)) if (!it.dish && it.cat === cat) {
+    const r = recipeOf(it.id);
+    E.push({ id: it.id, name: it.name, emoji: it.emoji, kind: 'i', section: 'Ingredients', sub: FS.catInfo[cat][1], fact: it.fact, inputs: r ? Object.keys(r.inputs) : [],
+      where: r && FS.buildings[r.building] ? FS.buildings[r.building].name : '' });
+  }
+  for (const cu of Object.keys(FS.cuisines)) for (const it of Object.values(FS.items)) if (it.dish && it.cuisine === cu)
+    E.push({ id: it.id, name: it.name, emoji: it.emoji, kind: 'd', section: 'Dishes', sub: cu, fact: it.note, inputs: Object.keys(recipeOf(it.id).inputs) });
+  for (const [id, emoji, label] of FSI.uiList || [])
+    E.push({ id, name: label, emoji, kind: 'u', section: 'Interface', sub: id.startsWith('season') ? 'Seasons' : id.startsWith('weather') ? 'Weather' : 'Controls & status', inputs: [] });
+  const byId = Object.fromEntries(E.map((e) => [e.id, e]));
+  const drawn = E.filter((e) => FSI.has(e.id)).length;
+  $('#summary').textContent = `${drawn} of ${E.length} icons drawn · ${Object.keys(FS.buildings).length} buildings · ${E.filter((e) => e.kind === 'i').length} ingredients · ${E.filter((e) => e.kind === 'd').length} dishes · ${E.filter((e) => e.kind === 'u').length} interface`;
+
+  const tileVar = () => `var(--tile-${st.tilebg})`;
+  function pair(e, size) {
+    const svg = FSI.has(e.id) ? FSI.svg(e.id, size) : `<div class="missing">not drawn yet</div>`;
+    return `<div class="pair"><div class="tile emoji" style="font-size:${Math.round(size * 0.82)}px">${esc(e.emoji)}</div><div class="tile">${svg}</div></div>`;
+  }
+
+  function render() {
+    const q = $('#q').value.trim().toLowerCase();
+    const onlyFlag = $('#onlyFlag').checked, onlyMissing = $('#onlyMissing').checked;
+    const list = E.filter((e) => (st.kind === 'all' || e.kind === st.kind) && (!onlyFlag || notes[e.id] != null) && (!onlyMissing || !FSI.has(e.id)) &&
+      (!q || (e.name + ' ' + e.id + ' ' + e.sub).toLowerCase().includes(q)));
+    document.documentElement.style.setProperty('--cw', Math.max(112, st.size * 2 + 34) + 'px');
+    document.documentElement.style.setProperty('--tile', tileVar());
+    let html = '', sec = '', sub = '';
+    for (const e of list) {
+      if (e.section !== sec) {
+        if (sec) html += '</div></section>';
+        sec = e.section; sub = '';
+        const n = list.filter((x) => x.section === sec).length;
+        html += `<section><h2>${sec} <small>${n}</small></h2>`;
+      }
+      if (e.sub !== sub) { if (sub) html += '</div>'; sub = e.sub; html += `<h3>${esc(sub)}</h3><div class="grid">`; }
+      html += `<button class="card${notes[e.id] != null ? ' flagged' : ''}" data-id="${e.id}">${pair(e, st.size)}<div class="name">${esc(e.name)}</div><div class="id">${e.id}</div>${notes[e.id] ? `<div class="note">${esc(notes[e.id])}</div>` : ''}</button>`;
+    }
+    if (sec) html += '</div></section>';
+    $('#out').innerHTML = html || `<p class="empty">Nothing matches. Clear the search or the filters.</p>`;
+  }
+
+  function open(id) {
+    const e = byId[id]; if (!e) return;
+    const chip = (i) => `<button data-open="${i}">${FSI.has(i) ? FSI.svg(i, 24) : ''}${esc((FS.items[i] || {}).name || i)}</button>`;
+    const uses = e.kind === 'i' ? FS.recipes.filter((r) => r.inputs[id]).map((r) => r.primary).filter((v, i, a) => a.indexOf(v) === i).slice(0, 24) : [];
+    $('#dlg-body').innerHTML = `
+      <div class="dlg-head"><div><h2 id="dlg-title">${esc(e.name)}</h2><div class="id">${e.id} · ${esc(e.sub)}${e.where ? ' · made in ' + esc(e.where) : ''}</div></div>
+        <button class="btn ghost" data-close>Close</button></div>
+      <div class="big" style="--tile:${tileVar()}"><div class="tile emoji">${esc(e.emoji)}</div><div class="tile">${FSI.has(id) ? FSI.svg(id, 192) : '<div class="missing">not drawn yet</div>'}</div></div>
+      ${FSI.has(id) ? `<div class="sizes">${[16, 24, 32, 48, 64].map((s) => `<div><span class="tile" style="padding:6px;--tile:${tileVar()}">${FSI.svg(id, s)}</span>${s} px</div>`).join('')}</div>` : ''}
+      ${e.fact ? `<p class="fact">${esc(e.fact)}</p>` : ''}
+      ${e.inputs.length ? `<div><h3>Made from</h3><div class="chain">${e.inputs.map(chip).join('')}</div></div>` : ''}
+      ${uses.length ? `<div><h3>Used in</h3><div class="chain">${uses.map(chip).join('')}</div></div>` : ''}
+      <div><h3><label for="note">Your note</label></h3><textarea id="note" placeholder="What should change? e.g. make it look more like a cow, the bottle is too dark…">${esc(notes[id] || '')}</textarea>
+      <div class="row" style="margin-top:8px"><button class="btn" data-flag="${id}">${notes[id] != null ? 'Update flag' : 'Flag for rework'}</button>${notes[id] != null ? `<button class="btn ghost" data-unflag="${id}">Remove flag</button>` : ''}</div></div>`;
+    const d = $('#dlg'); if (!d.open) d.showModal();
+  }
+
+  function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.append(t); setTimeout(() => t.remove(), 2200); }
+
+  document.addEventListener('click', (ev) => {
+    const t = ev.target.closest('button'); if (!t) { if (ev.target === $('#dlg')) $('#dlg').close(); return; }
+    if (t.dataset.id) return open(t.dataset.id);
+    if (t.dataset.open) return open(t.dataset.open);
+    if (t.hasAttribute('data-close')) return $('#dlg').close();
+    if (t.dataset.flag) { notes[t.dataset.flag] = $('#note').value.trim(); store.set('rootdishes-icon-notes', notes); $('#dlg').close(); render(); return toast('Flagged'); }
+    if (t.dataset.unflag) { delete notes[t.dataset.unflag]; store.set('rootdishes-icon-notes', notes); $('#dlg').close(); render(); return toast('Flag removed'); }
+    const seg = t.closest('.seg');
+    if (seg) {
+      seg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b === t));
+      st[seg.id] = seg.id === 'size' ? +t.dataset.v : t.dataset.v; store.set('rootdishes-icon-view', st); render();
+    }
+  });
+  $('#copy').addEventListener('click', () => {
+    const ids = Object.keys(notes);
+    if (!ids.length) return toast('No flagged icons yet. Click a card to flag one.');
+    const text = 'Icon feedback:\n' + ids.map((id) => `- ${byId[id] ? byId[id].name : id} (${id}): ${notes[id] || 'needs work'}`).join('\n');
+    const fallback = () => { const a = document.createElement('textarea'); a.value = text; document.body.append(a); a.select(); try { document.execCommand('copy'); } catch (e) {} a.remove(); toast(`Copied ${ids.length} notes`); };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => toast(`Copied ${ids.length} notes`), fallback); else fallback();
+  });
+  let tm; $('#q').addEventListener('input', () => { clearTimeout(tm); tm = setTimeout(render, 120); });
+  $('#onlyFlag').addEventListener('change', render);
+  $('#onlyMissing').addEventListener('change', render);
+  for (const k of ['kind', 'size', 'tilebg']) document.querySelectorAll(`#${k} button`).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v) === String(st[k])));
+  render();
+})();
+</script>
+</body>
+</html>

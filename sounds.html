@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Root of All Dishes sounds</title>
+  <style>
+    body { font: 15px/1.4 system-ui, sans-serif; background: #f6f1e6; color: #2f2a24; margin: 0; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 4px; } h2 { font-size: 15px; margin: 20px 0 8px; }
+    p { margin: 0 0 12px; color: #6b6257; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; }
+    button { font: inherit; padding: 6px 12px; border: 1px solid #cdbfa6; border-radius: 8px; background: #fff; cursor: pointer; }
+    button:hover { background: #fdf6e7; } button.on { background: #e3a92b; border-color: #c88f18; }
+    label { display: inline-flex; gap: 6px; align-items: center; margin-right: 16px; }
+  </style>
+</head>
+<body>
+  <h1>Root of All Dishes sounds</h1>
+  <p>Every sound in the game, synthesized live by js/audio.js. Each press plays a new random variation.</p>
+  <label>Zoom (animals) <input id="near" type="range" min="0" max="100" value="100"></label>
+  <label>Volume <input id="vol" type="range" min="0" max="100"></label>
+  <h2>Farm animals</h2>
+  <div class="row" id="animals"></div>
+  <h2>Places</h2>
+  <div class="row" id="places"></div>
+  <h2>Weather and seasons (loops; press again to stop)</h2>
+  <div class="row" id="amb"></div>
+  <h2>Effects</h2>
+  <div class="row" id="fx"></div>
+  <script>window.ROOTDISHES_NO_MUSIC = true;</script>
+  <script src="js/audio.js"></script>
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const btn = (box, label, fn) => { const b = document.createElement('button'); b.textContent = label; b.onclick = () => fn(b); $(box).appendChild(b); };
+    SFX.setMuted(false);
+    if (!SFX.weather) SFX.setWeatherVolume(0.5);
+    $('#vol').value = Math.round(SFX.volume * 100);
+    $('#vol').oninput = (e) => SFX.setVolume(e.target.value / 100);
+    btn('#animals', 'Cow v2', () => SFX.animal('cattle', $('#near').value / 100, 0, 'mooV2'));
+    btn('#animals', 'Calf v2', () => SFX.animal('calf', $('#near').value / 100, 0, 'mooV2'));
+    btn('#animals', 'Cow v3', () => SFX.animal('cattle', $('#near').value / 100, 0, 'mooV3'));
+    btn('#animals', 'Calf v3', () => SFX.animal('calf', $('#near').value / 100, 0, 'mooV3'));
+    const ANIMALS = [['cattle', 'Cow (v4, in game)'], ['calf', 'Calf (v4, in game)'], ['sheep', 'Sheep'], ['goat', 'Goat'], ['pig', 'Pig'], ['broiler_chicken', 'Hen'], ['duck', 'Duck'], ['turkey', 'Turkey'], ['goose', 'Goose']];
+    for (const [id, name] of [['bees', 'Bees (apiary)'], ['gulls', 'Gulls (shore)'], ['water', 'Lapping water (shore)']]) btn('#places', name, () => SFX.place(id, $('#near').value / 100, 0));
+    for (const [id, name] of ANIMALS) btn('#animals', name, () => SFX.animal(id, $('#near').value / 100, 0));
+    const AMB = [['Rain', 'rain', 'summer'], ['Storm', 'storm', 'summer'], ['Blizzard', 'blizzard', 'winter'], ['Snow', 'snow', 'winter'], ['Frost', 'frost', 'spring'],
+      ['Spring birds', 'sunny', 'spring'], ['Summer crickets', 'sunny', 'summer'], ['Autumn leaves', 'sunny', 'autumn']];
+    for (const [name, kind, season] of AMB) btn('#amb', name, (b) => {
+      const on = !b.classList.contains('on');
+      document.querySelectorAll('#amb button').forEach((x) => x.classList.remove('on'));
+      if (on) { b.classList.add('on'); SFX.setAmbient(kind, season); } else SFX.setAmbient(null, null);
+    });
+    btn('#amb', 'Thunder clap', () => SFX.thunder(true));
+    for (const n of SFX.names) btn('#fx', n, () => SFX.play(n));
+  </script>
+</body>
+</html>

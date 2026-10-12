@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Root of All Dishes: The Long Road to a Good Meal</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="topbar">
+    <div class="brand" title="Root of All Dishes: The Long Road to a Good Meal"><span>Root of All Dishes</span></div>
+    <div id="money" class="pill" data-action="bank">💰 0</div>
+    <div id="toques" class="pill" data-action="modal" data-arg="cuisines" data-tip="Toques, the chef's hat: earned from special-request orders and cuisine targets, spent on 💡 hints for undiscovered dishes">🎩 0</div>
+    <div id="clock" class="pill">Day 1</div>
+    <div id="season" class="pill" title=""></div>
+    <div id="dishcount" class="pill" data-action="modal" data-arg="cookbook" title="Dishes discovered (B)">📖 0</div>
+    <div class="speed" title="Game speed (Space pauses)">
+      <button data-action="speed" data-arg="0" title="Pause">⏸</button>
+      <button data-action="speed" data-arg="1" title="Normal">▶</button>
+      <button data-action="speed" data-arg="3" title="Fast">⏩</button>
+      <button data-action="speed" data-arg="8" title="Very fast">⏭</button>
+    </div>
+    <nav>
+      <button data-action="modal" data-arg="market" title="Inventory (I or M)">🛖 <span>Inventory</span></button>
+      <button data-action="modal" data-arg="testkitchen" title="Test Kitchen (K)">🧪 <span>Test Kitchen</span></button>
+      <button data-action="modal" data-arg="cookbook" title="Cookbook (B)">📖 <span>Cookbook</span></button>
+      <button data-action="modal" data-arg="codex" title="Codex (X)">🔎 <span>Codex</span></button>
+      <button data-action="modal" data-arg="orders" title="Orders (O)">📋 <span>Orders</span><i id="orders-badge" class="badge"></i></button>
+      <button data-action="modal" data-arg="journal" title="Farm journal: daily reports and everything that happened (J)">📰 <span>Journal</span><i id="journal-badge" class="badge"></i></button>
+      <button data-action="modal" data-arg="goals" title="Goals (G)">🎯 <span>Goals</span></button>
+      <button data-action="modal" data-arg="cuisines" title="Cuisines: open new cuisines, stage by stage (P)">🍽️ <span>Cuisines</span><i id="cuisine-badge" class="badge"></i></button>
+      <button id="academy-btn" data-action="modal" data-arg="academy" title="Culinary Academy (U)" hidden>🎓 <span>Academy</span></button>
+      <button id="town-btn" data-action="town" title="Town: your restaurants (T)" hidden>🏙️ <span>Town</span><i id="town-badge" class="badge"></i></button>
+      <button id="sound-btn" data-action="sound" data-tip="Sound on/off (N). Volume is in the ⚙️ menu.">🔊</button>
+      <button data-action="modal" data-arg="menu" title="Save, load, sound, help (Esc closes windows)">⚙️</button>
+    </nav>
+  </header>
+  <div id="goalbar" data-action="modal" data-arg="goals"></div>
+  <main id="main">
+    <aside id="buildbar"></aside>
+    <div id="viewport">
+      <canvas id="map"></canvas>
+      <button id="flows-btn" class="mapbtn" data-action="flows" title="Show how goods flow between your buildings (F)">🔗 Flows</button>
+      <div id="hoverinfo" hidden></div>
+      <div id="bpbar" hidden></div>
+    </div>
+    <aside id="inspector" hidden></aside>
+    <div id="townview" hidden>
+      <div id="town-stage"><div id="town-map"></div><canvas id="town-weather"></canvas><div id="town-night"><div></div></div><div id="town-glow"></div><div id="town-over"></div></div>
+      <aside id="town-panel"></aside>
+    </div>
+  </main>
+  <div id="modal" hidden>
+    <div id="modal-card" class="modal-card">
+      <header><h2 id="modal-title"></h2><button class="x" data-action="close-modal">✕</button></header>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+  <div id="toasts"></div>
+
+  <script src="js/data/core.js"></script>
+  <script src="js/data/buildings.js"></script>
+  <script src="js/data/raw.js"></script>
+  <script src="js/data/processing.js"></script>
+  <script src="js/data/dishes.js"></script>
+  <script src="js/data/unlocks.js"></script>
+  <script src="js/model.js"></script>
+  <script src="assets/icons.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/townmap.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/cheats.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
