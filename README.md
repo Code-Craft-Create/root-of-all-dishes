@@ -13,6 +13,9 @@ No build step and no dependencies. Either:
 - open `index.html` directly in a browser, or
 - serve the folder locally: `python3 -m http.server 8000` and visit http://localhost:8000
 
+The version number (for example `v1.0.0`) is shown next to the logo in the top bar, on the welcome card and at the
+bottom of the ⚙️ Settings window, so you can check at a glance that you have the latest build.
+
 Progress autosaves to the browser's localStorage every 30 seconds (⚙️ menu has save/load, plus *Download save file* / *Load from file* to move a game between browsers as a .json file; old paste codes still load).
 
 ## What's in it
@@ -228,6 +231,7 @@ harvest time; grains, legumes, nuts and processed goods keep their price.
 
 ```
 index.html          page shell
+js/version.js       GAME_VERSION, the version shown in the game (see Versioning)
 css/style.css       all styling
 js/data/core.js     registries + helpers used by data files (FS.source, FS.proc, FS.dishes, …)
 js/data/buildings.js  building types (cost, size, placement rule, upkeep)
@@ -247,6 +251,17 @@ tools/build-icons.js bundles assets/ into assets/icons.js; tools/icon-sheet.js r
 tools/build.js      builds ../root-of-all-dishes-download (single-file HTML + zip)
 tools/playsim.js    headless play-through benchmark (simulated player, results in benchmarks/)
 ```
+
+## Versioning
+
+The game uses semantic versioning, `MAJOR.MINOR.PATCH`, set once in `js/version.js` (`GAME_VERSION`). Every change
+that ships bumps it:
+
+- **MAJOR** when old saves can no longer be loaded (the save format `S.v` in `js/game.js` changes); minor and patch reset to 0.
+- **MINOR** for new features or content, with saves still loading; patch resets to 0.
+- **PATCH** for fixes and small tweaks only.
+
+Saves remember the version that last wrote them (`gameVersion`). Started at v1.0.0.
 
 ## Adding content
 

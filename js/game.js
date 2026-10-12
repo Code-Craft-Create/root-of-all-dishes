@@ -124,12 +124,13 @@
     } catch (e) { console.warn('load failed', e); return false; }
   };
   Game.save = function (quiet) {
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(Game.S)); if (!quiet) Game.toast('Game saved.'); }
+    try { Game.S.gameVersion = GAME_VERSION; localStorage.setItem(SAVE_KEY, JSON.stringify(Game.S)); if (!quiet) Game.toast('Game saved.'); }
     catch (e) { Game.toast('Could not save: ' + e.message); }
   };
   Game.exportSave = () => JSON.stringify(Game.S);
   Game.importSave = function (txt) { const S = JSON.parse(txt); if (!S || typeof S !== 'object' || !migrate(S)) throw new Error('This save is from an older version of the game and can no longer be loaded'); Game.S = S; rebuildOcc(); Game.refreshUnlocks(true); Game.emit('reset'); };
   // Version 4 (cuisine stages and toques) started afresh: older saves had no players to carry over.
+  // Changing the save format so old saves no longer load also means a major bump of GAME_VERSION (js/version.js).
   function migrate(S) { return S.v === 4; }
   // log = true also keeps the message in the farm journal (events worth reading later, not action feedback);
   // log = 'quiet' keeps it without counting on the journal badge (the player just did it, so it isn't news).

@@ -20,7 +20,7 @@ const vm = require('vm');
 const os = require('os');
 
 const ROOT = path.join(__dirname, '..');
-const FILES = ['js/data/core.js', 'js/data/buildings.js', 'js/data/raw.js', 'js/data/processing.js', 'js/data/dishes.js', 'js/data/unlocks.js', 'js/model.js', 'js/game.js'];
+const FILES = ['js/version.js', 'js/data/core.js', 'js/data/buildings.js', 'js/data/raw.js', 'js/data/processing.js', 'js/data/dishes.js', 'js/data/unlocks.js', 'js/model.js', 'js/game.js'];
 
 const HELP = `Root of All Dishes play-through benchmark
 
