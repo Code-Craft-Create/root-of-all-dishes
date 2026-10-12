@@ -20,6 +20,7 @@
     rival: { usage: 'rival <' + Game.RIVALS.map((x) => x.id).join('|') + '> <rating>', about: 'Set a rival\'s rating (saved)', run: rivalCmd },
     stock: { usage: 'stock', about: 'Put 20 freshly cooked plates of every restaurant menu dish in the warehouse (saved)', run: stock },
     finale: { usage: 'finale', about: 'Show the end screen of the Legacy (looks only, nothing is won)', run: () => UI.finale() },
+    win: { usage: 'win', about: 'Win the game: finish every stage, take gold from all three critics, buy out Crestwell; the Legacy completes and the finale plays (saved)', run: win },
     clear: { usage: 'clear', about: 'Remove all overrides and hide the dishes the console revealed', run: clear },
     status: { usage: 'status', about: 'Show the current season, weather and overrides', run: status },
     cls: { usage: 'cls', about: 'Empty this console', run: () => { log.textContent = ''; } },
@@ -100,6 +101,12 @@
     const id = String(arg || '').toUpperCase();
     if (!Game.cheatStage(id)) return print(`Try ${COMMANDS.stage.usage}.`, 'err');
     print(`Stages up to ${id} are done and their cuisines open. Now on ${Game.currentStage().name}.`);
+  }
+  function win() {
+    if (Game.S.legacyWon) return print('The Legacy is already won. Type finale to see the end screen again.', 'err');
+    if (!Game.cheatLegacy()) return print('Could not complete the Legacy.', 'err');
+    print('The Legacy is won.');
+    toggle(false); // out of the way of the finale
   }
   function toques(arg) {
     const n = Math.round(parseFloat(arg));

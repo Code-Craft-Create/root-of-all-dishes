@@ -1,4 +1,4 @@
-# FoodSim UI/UX playtest, 8 Oct 2026 (round 2)
+# Root of All Dishes UI/UX playtest, 8 Oct 2026 (round 2)
 
 Scope: only look, feel and ease of use, plus ideas to make the game more appealing. Mechanics and balance were covered
 in [playtest-2026-10-08.md](playtest-2026-10-08.md) and are not repeated here.

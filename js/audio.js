@@ -30,18 +30,19 @@
     return ctx;
   }
   // ---------- Background music ----------
-  // Original tracks, in two playlists: the farm's and the Town's. Each playlist is shuffled: a track plays to its end,
+  // Original tracks, in two playlists: the farm's and the Town's, plus one track of its own for the finale. Each playlist is shuffled: a track plays to its end,
   // then a random other one follows (never the same one twice in a row). Switching between farm and Town fades the
   // old playlist out first, then fades the other in, dropping in 30 s into a random track. The very first track
   // after loading starts from its beginning. They play through plain <audio> elements (a Web Audio source would
   // come out silent when the game is opened as a local file). Tracks load by relative path from assets/music/; the
-  // single-file download sets window.ROOTDISHES_MUSIC = { farm: [...], town: [...] } to the files tools/build.js found
+  // single-file download sets window.ROOTDISHES_MUSIC = { farm: [...], town: [...], finale: [...] } to the files tools/build.js found
   // there (and copies them next to it). All tracks are 96 kbps and levelled to about -17.5 LUFS. Each ends with its
   // own fade and about 2.5 s of silence, the gap before the next.
   const MUSIC_BASE = 0.35; // the tracks are mastered loud; this keeps them under the game sounds
   const MUSIC_FILES = {
     farm: ['kitchen-pickin', 'kitchen-pickin-2', 'pantry-pickin', 'pantry-pickin-2'],
     town: ['town-downtown-strut', 'town-main-street-groove', 'town-main-street-strut', 'town-sidewalk-shuffle'],
+    finale: ['finale-high-score-hoedown'], // only while the end screen is open; starts from its beginning and loops
   };
   // Farm <-> Town switch: the old playlist fades out over FADE_OUT s; the new one waits IN_DELAY s, then starts DROP_IN s
   // into a random track and fades in over FADE_IN s. Both fades follow a squared curve (the old one drops fast, the new
@@ -81,7 +82,7 @@
         if (!want) { L.pending = false; continue; }
         if ((L.wait -= 0.05) > 0) continue;
         L.pending = false;
-        nextTrack(L, DROP_IN);
+        nextTrack(L, L.name === 'finale' ? 0 : DROP_IN);
         L.fadeIn = 1; // the scene fade is the fade-in
       }
       if (L.mix !== want) {
@@ -100,11 +101,11 @@
   }
   function startMusic() {
     if (lists) return;
-    lists = { farm: playlist('farm'), town: playlist('town') };
+    lists = { farm: playlist('farm'), town: playlist('town'), finale: playlist('finale') };
     musicTimer = setInterval(musicTick, 50);
     nextTrack(lists[scene], 0);
   }
-  // 'farm' or 'town': cross-fade to that playlist.
+  // 'farm', 'town' or 'finale': cross-fade to that playlist.
   function setMusicScene(name) {
     if (!MUSIC_FILES[name] || name === scene) return;
     scene = name;
@@ -784,7 +785,7 @@
     setMuted(m) { pref.muted = !!m; savePref(); if (master) master.gain.value = pref.muted ? 0 : pref.volume; applyAmbient(); applyMusic(); },
     get music() { return pref.music; },
     setMusicVolume(v) { pref.music = Math.max(0, Math.min(1, v)); savePref(); applyMusic(); },
-    // Which playlist plays: 'farm' or 'town'. Cross-fades slowly on a change.
+    // Which playlist plays: 'farm', 'town' or 'finale'. Cross-fades slowly on a change.
     setMusicScene,
     get weather() { return pref.weather; },
     // The current weather kind; call as often as you like, it only acts on changes.

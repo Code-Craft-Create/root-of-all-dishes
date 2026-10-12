@@ -14,14 +14,16 @@ const inline = (page) => {
   return html.replace(/<script src="([^"]+)"><\/script>/g, (_, f) => `<script>\n${fs.readFileSync(path.join(root, f), 'utf8').replace(/<\/script/gi, '<\\/script')}</script>`);
 };
 // The music is not embedded: root-of-all-dishes.html loads it by relative path from assets/music/ next to it, so the tracks are
-// copied there. The list is taken from the folder; files starting with town- are the Town's playlist, the rest the farm's.
+// copied there. The list is taken from the folder; files starting with town- are the Town's playlist,
+// finale- the end screen's track, the rest the farm's.
 const musicDir = path.join(root, 'assets/music');
 const mp3 = fs.readdirSync(musicDir).filter((f) => f.endsWith('.mp3')).sort();
 fs.mkdirSync(path.join(out, 'assets/music'), { recursive: true });
 for (const f of fs.readdirSync(path.join(out, 'assets/music'))) if (!mp3.includes(f)) fs.unlinkSync(path.join(out, 'assets/music', f));
 for (const f of mp3) fs.copyFileSync(path.join(musicDir, f), path.join(out, 'assets/music', f));
 const refs = (list) => JSON.stringify(list.map((f) => `assets/music/${f}`));
-const music = `{ farm: ${refs(mp3.filter((f) => !f.startsWith('town-')))}, town: ${refs(mp3.filter((f) => f.startsWith('town-')))} }`;
+const list = (pre) => refs(mp3.filter((f) => (pre ? f.startsWith(pre) : !/^(town|finale)-/.test(f))));
+const music = `{ farm: ${list('')}, town: ${list('town-')}, finale: ${list('finale-')} }`;
 const html = inline('index.html').replace('<script>', `<script>window.ROOTDISHES_MUSIC = ${music};</script>\n<script>`);
 fs.writeFileSync(path.join(out, 'root-of-all-dishes.html'), html);
 fs.writeFileSync(path.join(out, 'icons.html'), inline('icons.html'));
