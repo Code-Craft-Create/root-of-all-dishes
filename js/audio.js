@@ -9,10 +9,20 @@
 
   function savePref() { try { localStorage.setItem(PREF_KEY, JSON.stringify(pref)); } catch (e) { /* private mode */ } }
   function ensure() {
-    if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return ctx; }
+    // Safari on iPhone also leaves a context 'interrupted' (calls, the music starting, the app going away), and only
+    // a resume() lets it play again.
+    if (ctx) {
+      if (ctx.state !== 'running' && ctx.state !== 'closed') { const r = ctx.resume(); if (r) r.catch(() => {}); }
+      return ctx;
+    }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
+    // iPhone: one 'playback' audio session for effects and music alike. Otherwise the music starting switches the
+    // session and silences the effects (they then also follow the silent switch while the music doesn't).
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older Safari */ }
     ctx = new AC();
+    // Interrupted while the page is on screen (the music just started, a notification): try to carry straight on.
+    ctx.addEventListener('statechange', () => { if (ctx.state === 'interrupted' && !document.hidden) ensure(); });
     master = ctx.createGain();
     master.gain.value = pref.muted ? 0 : pref.volume;
     // A gentle compressor keeps chords and overlapping sounds from clipping.
@@ -121,11 +131,20 @@
     if (name === 'finale') { L.pending = false; L.mix = 1; nextTrack(L, FINALE.at); L.fadeIn = 1; L.a.volume = musicLevel(); return; }
     L.pending = true; L.wait = IN_DELAY; // musicTick starts it once the old playlist has mostly faded
   }
-  const unlock = () => { ensure(); if (window.ROOTDISHES_NO_MUSIC !== true) startMusic(); };
+  // Every tap, click or key press wakes the sound up again if the browser stopped it. Mobile Safari pauses the music
+  // and interrupts the effects when the app goes to the background, and refuses to restart them without a tap; on the
+  // desktop both are already running, so this does nothing there.
+  const unlock = () => {
+    ensure();
+    if (window.ROOTDISHES_NO_MUSIC === true) return;
+    if (!lists) startMusic(); else applyMusic();
+  };
   // No weather or effects while the tab is in the background.
-  document.addEventListener('visibilitychange', () => { if (ctx) document.hidden ? ctx.suspend() : ctx.resume(); applyMusic(); });
-  window.addEventListener('pointerdown', unlock, true);
-  window.addEventListener('keydown', unlock, true);
+  const wake = () => { if (ctx) document.hidden ? ctx.suspend() : ensure(); applyMusic(); };
+  document.addEventListener('visibilitychange', wake);
+  window.addEventListener('pageshow', wake); // Safari restoring the page from its cache
+  // pointerdown alone doesn't count as a tap that may start sound on iPhone; touchend and click do.
+  for (const ev of ['pointerdown', 'touchend', 'click', 'keydown']) window.addEventListener(ev, unlock, true);
 
   // A tone with a quick attack and exponential decay. f may be [from, to] for a pitch slide.
   function tone({ f, type = 'sine', at = 0, dur = 0.15, vol = 0.3, attack = 0.005, dest }) {
