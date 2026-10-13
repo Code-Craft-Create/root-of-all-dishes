@@ -409,6 +409,7 @@
   // ----- Unlock splash: a full card with a fanfare for every new feature, queued behind any open window -----
   ui.splashQ = [];
   const SPLASH = {
+    orders: { icon: '📋', title: 'Customer orders', lines: ['A customer wants what you just started making.', 'Deliver it in 📋 Orders.'] },
     wholesaler: { icon: '🚚', title: 'The Wholesaler', lines: ['Sells your surplus automatically, item by item.', 'Hire him in the 🛖 Inventory.'] },
     academy: { icon: '🎓', title: 'The Culinary Academy', lines: ['Build it (Cooking) and hire chefs with 🎩 toques.', 'Chefs work out undiscovered dishes for you, one ingredient at a time.'] },
     dispatcher: { icon: '📦', title: 'The Dispatcher', lines: ['Delivers orders for you while you build.', 'Hire him in 📋 Orders.'] },
