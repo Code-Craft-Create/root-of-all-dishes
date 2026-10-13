@@ -1859,7 +1859,8 @@
       if (!S.cuisineDone[c.id] && (st.rating ? Game.cuisineRated(c, st.rating) : n) >= st.target) {
         S.cuisineDone[c.id] = true;
         Game.addToques(st.toques);
-        Game.toast(`🍽️ ${c.name}: ${st.target} ${st.rating ? `dishes served at ${'★'.repeat(st.rating)} restaurants` : 'dishes cooked'}, its ${st.name} target is reached! +${st.toques} 🎩 toques`, 'good', 'quiet');
+        // A splash card, ahead of any feature the stage unlocks; the last cuisine of a stage also says the stage is complete.
+        Game.emit('unlock', 'czdone:' + c.id + (Game.stageDone(st.id) ? ':stage' : ''));
         if (Game.stageDone(st.id)) stageFinished(st);
       }
       if (!S.cuisineGold[c.id] && n >= c.dishIds.length) {
