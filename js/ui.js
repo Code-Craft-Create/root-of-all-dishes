@@ -1486,7 +1486,7 @@
     const tb = (id, label) => `<button class="${tab === id ? 'active' : ''}" data-action="otab" data-arg="${id}">${label}</button>`;
     return {
       title: '📋 Customer Orders',
-      html: `<div class="tabs">${tb('orders', `Orders${S.orders.length ? ` (${S.orders.length})` : ''}`)}${tier ? tb('regulars', `❤️ Regulars${regs.length ? ` (${regs.length})` : ''}`) : ''}${Game.featureKnown('dispatcher') ? tb('dispatch', `📦 Dispatcher${Game.dispatcherUnlocked() ? (S.dispatcher && S.dispatcher.on ? ' ✓' : '') : ' 🔒'}`) : ''}${tb('about', 'ℹ️ About orders')}</div>${body}`,
+      html: `<div class="tabs otabs">${tb('orders', `Orders${S.orders.length ? ` (${S.orders.length})` : ''}`)}${tier ? tb('regulars', `❤️ Regulars${regs.length ? ` (${regs.length})` : ''}`) : ''}${Game.featureKnown('dispatcher') ? tb('dispatch', `📦 Dispatcher${Game.dispatcherUnlocked() ? (S.dispatcher && S.dispatcher.on ? ' ✓' : '') : ' 🔒'}`) : ''}${tb('about', 'ℹ️ About orders')}</div>${body}`,
     };
   };
 
