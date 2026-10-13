@@ -612,7 +612,7 @@
           <td class="num">💰${price(Game.sellPrice(id))} ${Game.seasonPrice(id) !== 1 ? `<span class="small ${Game.seasonPrice(id) > 1 ? 'okc' : 'short'}" data-tip="${esc(`${Game.season().name} price: ${Math.round(Game.seasonPrice(id) * 100)}% of normal. Fresh produce is cheap at harvest time and dear in winter.`)}">${Game.season().icon}×${Game.seasonPrice(id)}</span>` : ''} ${d < 0.99 ? `<span class="short small" data-tip="${esc(`You sold a lot recently, so the price is at ${Math.round(d * 100)}% of normal. It recovers over time.`)}">${Math.round(d * 100)}%</span>` : ''}</td>
           <td class="num small">${flow(id)}</td>
           ${ws ? `<td>${autosellCtl(id)}</td>` : ''}
-          <td class="btns">${[[1, '1'], [10, '10'], [999999, 'All']].map(([n, label]) => { const k = Math.min(n, have(id));
+          <td class="btns">${[[10, '10'], [50, '50'], [100, '100'], [999999, 'All']].map(([n, label]) => { const k = Math.min(n, have(id));
             return `<button data-action="sell" data-arg="${id}" data-qty="${n}" ${k > 0 ? `data-tip="Sell ${k} for 💰${coins(k * Game.sellPrice(id))}"` : 'disabled'}>${label}</button>`; }).join('')}</td></tr>`;
       }).join('');
       const sortBtn = (k, label, tip) => `<button class="${by === k ? 'active' : ''}" data-action="mk-sort" data-arg="${k}" title="${tip}">${label}${by === k ? (dir < 0 ? ' ▼' : ' ▲') : ''}</button>`;
