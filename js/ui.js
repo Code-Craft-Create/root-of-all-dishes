@@ -791,8 +791,8 @@
   modals.testkitchen = () => {
     const S = Game.S;
     const q = (ui.search.tk || '').toLowerCase();
-    // After a "Close to…" hint for the target dish, the group filter offers the groups of the ingredients still missing.
-    const miss = ui.tkMiss && ui.tkMiss.dish === ui.tkTarget && !S.discovered[ui.tkTarget] ? ui.tkMiss.cats : null;
+    // After a "Close to…" hint (about the target dish when there is one), the group filter offers the groups of the ingredients still missing.
+    const miss = ui.tkMiss && ui.tkMiss.target === ui.tkTarget && !S.discovered[ui.tkMiss.dish] ? ui.tkMiss.cats : null;
     if (!miss && ui.filter.tkcat === MISS) ui.filter.tkcat = '';
     const cat = ui.filter.tkcat;
     const inCat = (id) => (cat === MISS ? miss.includes(it(id).cat) : !cat || it(id).cat === cat);
@@ -1980,9 +1980,10 @@
         else if (res.kind === 'known') html = `${FSI.img(res.dish)} ${esc(it(res.dish).name)}: already known. ${res.cooked ? 'Cooked one more.' : ''}`;
         else html = `${names} ➜ ${res.kind === 'locked' ? '🔒 ' : ''}${esc(res.msg)}`;
         if (res.target) html += `<div class="tk-t-note">🎯 ${esc(res.target)}</div>`;
-        // The missing groups of the target dish, for the group filter (kept until the next hint about it).
-        const cats = res.dish === ui.tkTarget && res.kind === 'warm' ? res.cats : res.targetCats;
-        if (ui.tkTarget && cats) ui.tkMiss = cats.length ? { dish: ui.tkTarget, cats } : null;
+        // The missing groups named by a "Close to…" hint, for the group filter (kept until the next such hint). With a
+        // target dish only hints about the target count.
+        const cats = res.kind === 'warm' && (!ui.tkTarget || res.dish === ui.tkTarget) ? res.cats : res.targetCats;
+        if (cats) ui.tkMiss = cats.length ? { target: ui.tkTarget, dish: ui.tkTarget || res.dish, cats } : null;
         ui.tkLog.unshift({ kind: res.kind, html, t: Game.S.time });
         ui.tkLog = ui.tkLog.slice(0, 8);
         if ((res.kind === 'new' || res.kind === 'known') && !res.target) ui.tkSlots = [];
