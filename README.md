@@ -44,6 +44,8 @@ are not swapped: use `data-tip` for tooltips, and draw icons in the Town SVG wit
 - **Storage** holds the same amount of every item: 50 at the start, upgraded with 🎩 toques in the Inventory's Stock tab
   to 75 / 100 / 150 / 250 / 375 / 500 (🎩 1 / 2 / 4 / 6 / 10 / 15; `Game.STORAGE`). A building pauses (its map bar turns brown
   and full) once everything it makes is at capacity; a batch that would overflow loses the extra. Imports stop at capacity too.
+- **Sell everything above** (Stock tab): a slider from 0 to your storage capacity (default 25, remembered in the browser)
+  and one button that sells every listed item down to that amount at today's price. A search narrows it to matching items.
 - **Auto-sell** is set per item in the Inventory's Stock tab (after the Wholesaler): Off, Default (keep the Wholesaler's default
   amount, half of storage unless changed in his tab) or Keep a chosen number. An auto-sold item keeps its buildings running.
 - The bar under a building on the map shows how well the farm supplies it: green when total production
