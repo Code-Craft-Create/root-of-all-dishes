@@ -49,6 +49,8 @@ nav button { position: relative; white-space: nowrap; }
 #buildbar { width: 208px; overflow-y: auto; background: var(--panel2); border-right: 1px solid var(--line); padding: 6px; }
 #viewport { flex: 1; position: relative; overflow: hidden; }
 #map { display: block; cursor: grab; touch-action: none; }
+/* iPhones treat two quick taps as a double-tap zoom and drop the second tap: windows and bars don't zoom. */
+#modal, #modal *, #topbar, #topbar *, #buildbar, #buildbar *, #inspector, #inspector * { touch-action: manipulation; }
 body.placing #map { cursor: crosshair; }
 #inspector { width: 330px; overflow-y: auto; background: var(--panel); border-left: 1px solid var(--line); padding: 12px; }
 #hoverinfo { position: absolute; pointer-events: none; background: rgba(20, 25, 22, 0.85); color: #fff; font-size: 12px; padding: 4px 8px; border-radius: 6px; max-width: 320px; white-space: pre-line; }
@@ -490,6 +492,7 @@ body.modal-open #toasts { right: auto; left: 14px; align-items: flex-start; }
 .tk-target .c-emoji { font-size: 30px; }
 .tk-t-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .tk-t-btns { display: flex; flex-direction: column; gap: 4px; }
+.tk-target .io-short { display: none; }
 
 /* Sound toggle and settings */
 #sound-btn.off { opacity: 0.55; }
@@ -1083,6 +1086,16 @@ body.touch-placing #toasts { bottom: 128px; }
   .tk .slot i { top: 0; right: 3px; }
   .tk-target { margin-top: 0; padding: 6px 8px; }
   .tk-target .about, .tk-target .muted.small { display: none; }
+  /* One compact row: silhouette, dish name, "Salt · Butter · 5 × ❓", and the two buttons side by side. */
+  .tk-target { gap: 8px; }
+  .tk-target .c-emoji { font-size: 24px; }
+  .tk-t-main { gap: 2px; }
+  .tk-target .tk-t-lead, .tk-target .io-full { display: none; }
+  .tk-target .io-short { display: block; }
+  .tk-target .io-short .chip { font-size: 11px; padding: 0 6px; }
+  .tk-t-btns { flex-direction: row; }
+  .tk-t-btns button { padding: 3px 7px; }
+  .tk-target .tk-bl { display: none; }
   .tk .tiles { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
 }
 @media (hover: none) and (pointer: coarse) and (max-width: 760px) { .tk .slot i .ico { width: 11px; height: 11px; } }

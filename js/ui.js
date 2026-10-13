@@ -830,10 +830,13 @@
     const S = Game.S, id = ui.tkTarget;
     if (!id || S.discovered[id] || !FS.dishRecipe[id]) { ui.tkTarget = null; return ''; }
     const d = it(id), rev = S.revealed[id] || [];
-    const slots = Object.keys(FS.dishRecipe[id].inputs).map((i) => (rev.includes(i) ? chip(i) : '<span class="chip unknown">❓</span>')).join(' ');
-    return `<div class="tk-target"><span class="c-emoji sil">${FSI.img(id)}</span><div class="tk-t-main"><div>🎯 Looking for <b>${esc(d.name)}</b> <span class="muted small">${esc(d.cuisine)}</span></div>
-      ${d.about ? `<div class="small about">${esc(d.about)}</div>` : ''}<div class="io">${slots}</div><div class="muted small">Hints only talk about this dish.</div></div>
-      <div class="tk-t-btns"><button class="small" data-action="reveal" data-arg="${id}" title="${revealTip()}">💡 Reveal (🎩${Game.revealCost(id)})</button><button class="small" data-action="tk-untarget" title="Stop aiming for this dish">✕ Clear target</button></div></div>`;
+    const ins = Object.keys(FS.dishRecipe[id].inputs), hidden = ins.filter((i) => !rev.includes(i)).length;
+    const slots = ins.map((i) => (rev.includes(i) ? chip(i) : '<span class="chip unknown">❓</span>')).join(' ');
+    // Phones get a short form: the revealed ingredients, then one "5 × ❓" chip for the rest.
+    const short = ins.filter((i) => rev.includes(i)).map((i) => chip(i)).join(' ') + (hidden ? ` <span class="chip unknown">${hidden} × ❓</span>` : '');
+    return `<div class="tk-target"><span class="c-emoji sil">${FSI.img(id)}</span><div class="tk-t-main"><div><span class="tk-t-lead">🎯 Looking for </span><b>${esc(d.name)}</b> <span class="muted small">${esc(d.cuisine)}</span></div>
+      ${d.about ? `<div class="small about">${esc(d.about)}</div>` : ''}<div class="io io-full">${slots}</div><div class="io io-short">${short}</div><div class="muted small">Hints only talk about this dish.</div></div>
+      <div class="tk-t-btns"><button class="small" data-action="reveal" data-arg="${id}" title="${revealTip()}">💡 <span class="tk-bl">Reveal </span>(🎩${Game.revealCost(id)})</button><button class="small" data-action="tk-untarget" title="Stop aiming for this dish">✕<span class="tk-bl"> Clear target</span></button></div></div>`;
   }
 
   // ----- Codex -----
