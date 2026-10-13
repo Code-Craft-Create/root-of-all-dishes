@@ -1088,3 +1088,28 @@ body.touch-placing #toasts { bottom: 128px; }
   .tk .tiles { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
 }
 @media (hover: none) and (pointer: coarse) and (max-width: 760px) { .tk .slot i .ico { width: 11px; height: 11px; } }
+/* Phones held upright: order cards stack. The customer line and each good get the full width (names no longer cut to
+   "Harbour …" or hidden), quantity sits inside its tile, and reward + Deliver share a row under the goods. */
+@media (hover: none) and (pointer: coarse) and (max-width: 600px) {
+  #modal-body:has(.otabs) { padding: 10px; }
+  .otabs { flex-wrap: wrap; gap: 4px; }
+  .otabs button { flex: 1 1 auto; white-space: nowrap; padding: 5px 9px; font-size: 14px; }
+  .order { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "main main" "pay act"; gap: 8px 10px; padding: 8px; }
+  .order .o-main { grid-area: main; min-width: 0; }
+  .order .o-pay { grid-area: pay; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; justify-self: start; }
+  .order .o-act { grid-area: act; }
+  .order .o-act button { width: auto; min-width: 110px; padding: 7px 14px; }
+  .order .o-act:empty { display: none; }
+  .o-head { flex-wrap: wrap; row-gap: 3px; }
+  .o-head > b { flex: 1 1 9em; min-width: 0; }
+  .otag { margin-right: 0; }
+  .otile { grid-template-columns: 34px minmax(0, 1fr) auto; grid-template-areas: "ico name qty" "ico have qty"; gap: 0 10px; padding: 3px 10px 3px 4px; }
+  .otile .ot-ico { grid-area: ico; }
+  .otile .ot-name { grid-area: name; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.2; }
+  .otile .ot-have { grid-area: have; font-size: 11px; }
+  .otile .ot-qty { grid-area: qty; }
+  .o-want > button { align-self: stretch; }
+  .clue-text { line-height: 1.3; }
+  .regulars { grid-template-columns: minmax(0, 1fr); }
+  #modal-body:has(.otabs) .stats { grid-template-columns: repeat(2, 1fr); }
+}
