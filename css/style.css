@@ -129,6 +129,7 @@ span.short { color: var(--bad); }
 .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .sellabove { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
 .sellabove input.slider { flex: 1 1 160px; max-width: 260px; }
+.tbl button.sa-row { min-width: 9em; font-variant-numeric: tabular-nums; }
 .sellabove #sa-val { min-width: 2.5em; text-align: right; font-variant-numeric: tabular-nums; }
 .sortbar { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
 .sortbar .seg { display: flex; }

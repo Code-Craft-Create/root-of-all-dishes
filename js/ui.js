@@ -19,7 +19,7 @@
   window.UI = ui;
   // Inventory stock-list sort, remembered between sessions: by group/value/stock/price/name, dir -1 = high to low (or Z–A).
   ui.mkSort = { by: 'group', dir: 1 };
-  // "Sell everything above": how many of each item to keep, remembered in this browser (not in the save).
+  // "Sell above": how many of each item to keep, remembered in this browser (not in the save).
   ui.sellAbove = 25;
   try { const v = +localStorage.getItem('rootdishes-sell-above'); if (localStorage.getItem('rootdishes-sell-above') != null && v >= 0) ui.sellAbove = Math.round(v); } catch (e) { /* keep default */ }
   try { const m = JSON.parse(localStorage.getItem('rootdishes-market-sort')); if (m && ['group', 'value', 'stock', 'price', 'name'].includes(m.by) && (m.dir === 1 || m.dir === -1)) ui.mkSort = m; } catch (e) { /* keep default */ }
@@ -590,7 +590,7 @@
     const opt = (k, label) => `<option value="${k}" ${mode === k ? 'selected' : ''}>${label}</option>`;
     return `<span class="asell m-${mode}"><select data-autosell="${id}" title="Off: you sell by hand. Default: keep the Wholesaler's default amount. Keep: pick your own number.">${opt('off', 'Off')}${opt('d', (() => { const r = mode === 'd' && Game.keepRule(id); return r ? `Default · ${r.keep >= Game.capacity() ? 'keep all' : `keep ${r.keep}`} (${{ menu: 'menu', feed: 'feed', winter: 'winter' }[r.rule.id]})` : `Default · keep ${Game.wholesaleKeep()}`; })())}${opt('n', 'Keep…')}</select>${mode === 'n' ? `<input type="number" min="0" max="${Game.capacity()}" step="5" value="${Game.sellKeep(id)}" data-askeep="${id}" title="Keep this many; the Wholesaler buys the rest">` : ''}</span>`;
   }
-  // What "Sell everything above n" would sell among the listed items: [[id, qty]...] and the coins it brings.
+  // What "Sell from everything" above n would sell among the listed items: [[id, qty]...] and the coins it brings.
   function sellAbovePlan(ids, n) {
     const list = ids.map((id) => [id, have(id) - n]).filter(([, k]) => k > 0);
     return { list, qty: list.reduce((t, [, k]) => t + k, 0), coins: list.reduce((t, [id, k]) => t + k * Game.sellPrice(id), 0) };
@@ -598,11 +598,16 @@
   const sellAboveVal = () => Math.min(ui.sellAbove, Game.capacity());
   function sellAboveLabel(ids) {
     const n = sellAboveVal(), p = sellAbovePlan(ids, n);
-    return { n, p, text: p.qty ? `Sell ${p.qty} for 💰${coins(p.coins)}` : 'Nothing above it' };
+    return { n, p, text: p.qty ? `Sell from everything, ${p.qty} for 💰${coins(p.coins)}` : 'Nothing above it' };
+  }
+  // One row's "Sell xx for yy" button: sells that item down to the "Sell above" amount.
+  function sellAboveRow(id) {
+    const k = Math.max(0, have(id) - sellAboveVal());
+    return { k, text: k ? `Sell ${k} for 💰${coins(k * Game.sellPrice(id))}` : `Sell 0`, tip: `Sell down to ${sellAboveVal()}, the "Sell above" amount` };
   }
   function sellAboveBar(ids, q) {
     const cap = Game.capacity(), { n, p, text } = sellAboveLabel(ids), pc = cap ? Math.round(n / cap * 100) : 0;
-    return `<div class="sellabove small"><span>Sell everything above</span>
+    return `<div class="sellabove small"><span>Sell above</span>
       <input type="range" class="slider" min="0" max="${cap}" step="1" value="${n}" style="--p:${pc}%" data-sellabove="1" aria-label="Keep this many of each item">
       <b id="sa-val">${n}</b>
       <button class="primary small" id="sa-btn" data-action="sell-above" ${p.qty ? '' : 'disabled'} data-tip="${esc(`Keeps ${n} of each ${q ? 'matching ' : ''}item and sells the rest at today's price.`)}">${text}</button></div>`;
@@ -643,7 +648,7 @@
           <td class="num">💰${price(Game.sellPrice(id))} ${Game.seasonPrice(id) !== 1 ? `<span class="small ${Game.seasonPrice(id) > 1 ? 'okc' : 'short'}" data-tip="${esc(`${Game.season().name} price: ${Math.round(Game.seasonPrice(id) * 100)}% of normal. Fresh produce is cheap at harvest time and dear in winter.`)}">${Game.season().icon}×${Game.seasonPrice(id)}</span>` : ''} ${d < 0.99 ? `<span class="short small" data-tip="${esc(`You sold a lot recently, so the price is at ${Math.round(d * 100)}% of normal. It recovers over time.`)}">${Math.round(d * 100)}%</span>` : ''}</td>
           <td class="num small">${flow(id)}</td>
           ${ws ? `<td>${autosellCtl(id)}</td>` : ''}
-          <td class="btns">${[[10, '10'], [50, '50'], [100, '100'], [999999, 'All']].map(([n, label]) => { const k = Math.min(n, have(id));
+          <td class="btns">${(() => { const r = sellAboveRow(id); return `<button class="sa-row" data-action="sell" data-arg="${id}" data-qty="${r.k}" data-sarow="${id}" data-tip="${esc(r.tip)}" ${r.k ? '' : 'disabled'}>${r.text}</button>`; })()}${[[10, '10'], [50, '50'], [100, '100'], [999999, 'All']].map(([n, label]) => { const k = Math.min(n, have(id));
             return `<button data-action="sell" data-arg="${id}" data-qty="${n}" ${k > 0 ? `data-tip="Sell ${k} for 💰${coins(k * Game.sellPrice(id))}"` : 'disabled'}>${label}</button>`; }).join('')}</td></tr>`;
       }).join('');
       const sortBtn = (k, label, tip) => `<button class="${by === k ? 'active' : ''}" data-action="mk-sort" data-arg="${k}" title="${tip}">${label}${by === k ? (dir < 0 ? ' ▼' : ' ▲') : ''}</button>`;
@@ -2211,7 +2216,7 @@
       else if (d.wskeep) { Game.setWholesaleKeep(e.target.value === '' ? null : Math.min(Game.capacity(), Math.max(0, +e.target.value || 0))); ui.refresh(); }
       else if (d.askeep) { Game.setAutosell(d.askeep, Math.min(Game.capacity(), Math.max(0, +e.target.value || 0))); ui.refresh(); }
     });
-    // The "Sell everything above" slider updates its number and button while dragging; the window only redraws on release.
+    // The "Sell above" slider updates its number and button while dragging; the window only redraws on release.
     document.addEventListener('input', (e) => {
       if (!e.target.dataset.sellabove) return;
       ui.sellAbove = +e.target.value;
@@ -2220,6 +2225,7 @@
       e.target.style.setProperty('--p', (cap ? Math.round(ui.sellAbove / cap * 100) : 0) + '%');
       const { n, p, text } = sellAboveLabel((ui.mkOrder && ui.mkOrder.ids) || []), v = $('#sa-val'), b = $('#sa-btn');
       if (v) v.textContent = n;
+      document.querySelectorAll('[data-sarow]').forEach((el) => { const r = sellAboveRow(el.dataset.sarow); el.textContent = r.text; el.dataset.qty = r.k; el.dataset.tip = r.tip; el.disabled = !r.k; });
       if (b) { b.textContent = text; b.disabled = !p.qty; b.dataset.tip = `Keeps ${n} of each ${ui.search.mk ? 'matching ' : ''}item and sells the rest at today's price.`; }
     });
     document.addEventListener('input', (e) => {
