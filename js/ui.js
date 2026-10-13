@@ -1674,9 +1674,36 @@
     const cv = $('#map'), [w, h] = FS.buildings[Render.ghost].size;
     const mb = ui.moving && Game.S.buildings.find((x) => x.id === ui.moving);
     const c = Render.screenToTile(cv.clientWidth / 2, cv.clientHeight / 2);
-    Render.hover = mb ? { x: mb.x, y: mb.y } : { x: c.x - Math.floor((w - 1) / 2), y: c.y - Math.floor((h - 1) / 2) };
+    const at = ui.buildAt || c;
+    Render.hover = mb ? { x: mb.x, y: mb.y } : { x: at.x - Math.floor((w - 1) / 2), y: at.y - Math.floor((h - 1) / 2) };
+    closeBuildPop();
     touchBar();
   }
+  // Touch screens keep the build menu hidden (CSS, same media query): a tap on empty ground of your own land pops it up,
+  // on the half of the screen away from that spot, and the building picked from it starts there. Any other tap closes it.
+  const touchMenu = () => matchMedia('(hover: none) and (pointer: coarse)').matches;
+  function openBuildPop(t, clientY) {
+    const bar = $('#buildbar'), top = $('#main').getBoundingClientRect().top;
+    ui.buildAt = t; Render.hover = t;
+    const low = clientY > (top + innerHeight) / 2; // tapped in the lower half: the menu goes up top
+    bar.style.top = low ? top + 8 + 'px' : ''; bar.style.bottom = low ? 'auto' : '';
+    bar.scrollTop = 0;
+    document.body.classList.add('bb-open');
+    ui.popAt = performance.now();
+  }
+  // The click that follows the opening tap may land on the menu that just opened under the finger: swallow it.
+  document.addEventListener('click', (e) => {
+    if (performance.now() - (ui.popAt || 0) < 500 && e.target.closest && e.target.closest('#buildbar')) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
+  function closeBuildPop() {
+    if (!document.body.classList.contains('bb-open')) return;
+    document.body.classList.remove('bb-open');
+    const bar = $('#buildbar');
+    bar.style.top = ''; bar.style.bottom = '';
+    ui.buildAt = null;
+    if (!ui.placing && !ui.moving) Render.hover = null;
+  }
+  ui.closeBuildPop = closeBuildPop;
   function touchBar() {
     const bar = $('#touchbar'), on = ui.touch && (ui.placing || ui.moving) && Render.ghost && Render.hover;
     document.body.classList.toggle('touch-placing', !!on);
@@ -1769,11 +1796,12 @@
 
   function act(action, arg, el) {
     const S = Game.S;
+    if (action !== 'bgroup' && action !== 'build') closeBuildPop(); // folding a group keeps the pop-up build menu open
     switch (action) {
       case 'bgroup': toggleBuildGroup(arg); break;
       case 'touch-build': if (Render.hover && (ui.placing || ui.moving)) ui.commitAt(Render.hover); break;
       case 'touch-cancel': cancelPlacing(); break;
-      case 'build': if (ui.bp) cancelPlacing(); ui.placingRecipe = null; ui.moving = null; Render.ghostMove = null; ui.placing = arg; Render.ghost = arg; selectBuilding(null); document.body.classList.add('placing'); placeHint(`Placing ${FS.buildings[arg].name}: click on the map. Right-click to cancel.`); break;
+      case 'build': if (ui.bp) cancelPlacing(); ui.placingRecipe = null; ui.moving = null; Render.ghostMove = null; ui.placing = arg; Render.ghost = arg; selectBuilding(null); document.body.classList.add('placing'); placeHint(`Placing ${FS.buildings[arg].name}: click on the map. Right-click to cancel.`); closeBuildPop(); break;
       case 'speed': S.speed = +arg; break;
       case 'modal': openModal(arg); break;
       case 'bank': ui.marketTab = 'bank'; openModal('market'); break;
@@ -2195,7 +2223,7 @@
       updateHoverInfo(e.clientX - rect.left, e.clientY - rect.top);
     });
     cv.addEventListener('pointerleave', (e) => {
-      if (e.pointerType === 'touch' && placingNow()) return; // the lifted finger leaves; the ghost stays where it was put
+      if (e.pointerType === 'touch' && (placingNow() || document.body.classList.contains('bb-open'))) return; // the lifted finger leaves; the ghost (or the spot the build menu is for) stays marked
       Render.hover = null; Render.mouse = null; $('#hoverinfo').hidden = true;
     });
     cv.addEventListener('pointercancel', (e) => { if (e.pointerType === 'touch') { pts.delete(e.pointerId); pinch = null; down = null; } });
@@ -2225,6 +2253,13 @@
         return;
       }
       if (placingNow()) { commitAt(t, e.shiftKey, e.clientX - rect.left, e.clientY - rect.top); return; }
+      // Touch, with the build menu open: a tap on the map only closes it (or picks the building tapped).
+      if (e.pointerType === 'touch' && document.body.classList.contains('bb-open')) {
+        closeBuildPop();
+        const ob = Game.buildingAt(t.x, t.y);
+        if (ob) selectBuilding(ob.id);
+        return;
+      }
       // Land the farm doesn't own: its sign, or anywhere on it, offers to buy it.
       const sign = Render.signAt(e.clientX - rect.left, e.clientY - rect.top);
       if (sign || (Game.plotAt(t.x, t.y) >= 0 && !Game.owns(t.x, t.y))) {
@@ -2233,6 +2268,8 @@
         return;
       }
       const b = Game.buildingAt(t.x, t.y);
+      // Touch: a tap on empty ground of your own land opens the build menu for that spot.
+      if (e.pointerType === 'touch' && touchMenu() && !b) { selectBuilding(null); openBuildPop(t, e.clientY); return; }
       ui.search.recipe = '';
       selectBuilding(b ? b.id : null);
     });

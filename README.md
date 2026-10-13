@@ -79,7 +79,8 @@ are not swapped: use `data-tip` for tooltips, and draw icons in the Town SVG wit
 - Each new day's report (what the farm made and sold, and how much of the sale price was the raw ingredients' share) goes to the
   **📰 Farm journal** (`J`), as a little newspaper. The journal keeps every event: new dishes, unlocks, weather, orders, goals.
   A day before winter you get a warning with how long your animals' feed will last.
-- **Phones and tablets** (touch screens only; mouse play is unchanged): pinch to zoom the map. Placing or moving a building
+- **Phones and tablets** (touch screens only; mouse play is unchanged): pinch to zoom the map. The build menu is hidden;
+  tap empty ground of your own land and it pops up, and the building you pick starts on that spot. Placing or moving a building
   shows it where it would go first: tap elsewhere or drag it to adjust, then tap it again or press Build in the bar at the
   bottom (Cancel stops). Holding a finger on anything with a hover tip shows the tip. Windows taller than a sideways phone scroll.
 - Keyboard: I or M inventory, K test kitchen, B cookbook, X codex, O orders, J journal, G goals, P cuisines, F flows, N sound on/off, Space pause.

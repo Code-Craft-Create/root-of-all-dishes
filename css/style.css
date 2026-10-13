@@ -1043,3 +1043,19 @@ body.touch-placing #toasts { bottom: 128px; }
   .modal-card { max-height: 94vh; }
   .modal-card.wide { height: 94vh; }
 }
+@keyframes bb-pop { from { opacity: 0; transform: translateY(10px); } }
+/* Touch screens: the build menu is a pop-up, opened by tapping empty ground (ui.js openBuildPop), not a side panel. */
+@media (hover: none) and (pointer: coarse) {
+  #buildbar { display: none; }
+  body.bb-open:not(.town-mode) #buildbar { display: block; position: fixed; left: 8px; right: 8px; bottom: 8px; width: auto; max-width: 520px; max-height: 48vh; margin: 0 auto; z-index: 15;
+    padding: 8px 10px; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); animation: bb-pop 0.18s ease-out; }
+  /* Groups sit side by side and wrap, so a group of one or two buildings doesn't take a whole row. */
+  body.bb-open:not(.town-mode) #buildbar { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 2px 12px; overflow-y: auto; }
+  body.bb-open #buildbar .bgroup { flex: 0 1 auto; min-width: 0; margin-bottom: 4px; }
+  body.bb-open #buildbar .bgroup-title { font-size: 11px; }
+  body.bb-open #buildbar .bgrid { display: flex; flex-wrap: wrap; gap: 4px; }
+  body.bb-open #buildbar .bbtn { width: 74px; }
+  body.bb-open #buildbar .lockedb { flex-basis: 100%; }
+  body.bb-open #buildbar .bname, body.bb-open #buildbar .bcost { display: block; }
+  body.bb-open #buildbar .bbtn { padding: 5px 2px 4px; }
+}
