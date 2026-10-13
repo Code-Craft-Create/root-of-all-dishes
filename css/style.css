@@ -611,6 +611,7 @@ details.settings .ratectl, details.settings .stockctl { background: none; paddin
 .io-line.s-bad { background: #fbe3df; border-color: #eab5ad; }
 .tag.stock { background: #fff; color: #9a2a1c; border: 1px solid #eab5ad; }
 .tk-t-note { margin-top: 4px; padding-top: 4px; border-top: 1px dashed #efd28f; }
+.log .tk-aim { display: block; margin-top: 5px; }
 
 /* Ingredient-group dropdown (Codex, Test Kitchen): icon button with an alphabetical two-column list. */
 .dd { position: relative; flex: none; }

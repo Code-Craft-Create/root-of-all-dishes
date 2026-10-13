@@ -1460,16 +1460,17 @@
       if (!best || score > best.score) best = { d, overlap, extra, missing, score };
     }
     if (!best || best.overlap < 2 && ids.length > 1) return { kind: 'fail', msg: 'Nothing comes of this combination.' };
-    return { kind: 'warm', dish: best.d.id, msg: warmMsg(best.d, Object.keys(FS.dishRecipe[best.d.id].inputs), ids, sel, best.missing) };
+    const ins = Object.keys(FS.dishRecipe[best.d.id].inputs);
+    return { kind: 'warm', dish: best.d.id, cats: missingCats(ins, sel), msg: warmMsg(best.d, ins, ids, sel, best.missing) };
   };
   function targetHint(target, ids, sel) {
     const t = FS.items[target], ins = Object.keys(FS.dishRecipe[target].inputs);
     const overlap = ins.filter((i) => sel.has(i)).length;
     if (!overlap) return { kind: 'fail', dish: target, msg: `None of these go into ${t.name}.` };
-    // cats: the groups of the ingredients still missing (the hint names them), for the Test Kitchen's group filter.
-    const cats = [...new Set(ins.filter((i) => !sel.has(i)).map((i) => FS.items[i].cat))];
-    return { kind: 'warm', dish: target, cats, msg: warmMsg(t, ins, ids, sel, ins.length - overlap) };
+    return { kind: 'warm', dish: target, cats: missingCats(ins, sel), msg: warmMsg(t, ins, ids, sel, ins.length - overlap) };
   }
+  // The groups of the ingredients still missing (the hint names them), for the Test Kitchen's group filter.
+  const missingCats = (ins, sel) => [...new Set(ins.filter((i) => !sel.has(i)).map((i) => FS.items[i].cat))];
   function warmMsg(d, ins, ids, sel, missing) {
     const missingCats = [...new Set(ins.filter((i) => !sel.has(i)).map((i) => (FS.catInfo[FS.items[i].cat] || ['', FS.items[i].cat])[1]))];
     const extras = ids.filter((i) => !ins.includes(i)).map((i) => FS.items[i].name);

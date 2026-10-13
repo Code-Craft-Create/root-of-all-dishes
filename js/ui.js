@@ -791,8 +791,8 @@
   modals.testkitchen = () => {
     const S = Game.S;
     const q = (ui.search.tk || '').toLowerCase();
-    // After a "Close to…" hint for the target dish, the group filter offers the groups of the ingredients still missing.
-    const miss = ui.tkMiss && ui.tkMiss.dish === ui.tkTarget && !S.discovered[ui.tkTarget] ? ui.tkMiss.cats : null;
+    // After a "Close to…" hint about the target dish, the group filter offers the groups of the ingredients still missing.
+    const miss = ui.tkTarget && ui.tkMiss && ui.tkMiss.target === ui.tkTarget && !S.discovered[ui.tkTarget] ? ui.tkMiss.cats : null;
     if (!miss && ui.filter.tkcat === MISS) ui.filter.tkcat = '';
     const cat = ui.filter.tkcat;
     const inCat = (id) => (cat === MISS ? miss.includes(it(id).cat) : !cat || it(id).cat === cat);
@@ -808,7 +808,7 @@
           <div class="slots">${tkSlotsHtml()}</div>
           <div class="row gap"><button class="primary" data-action="tk-cook" ${hasKitchen ? '' : 'disabled'}>🧪 Try this combination</button><button data-action="tk-clear">Clear</button></div>
           ${(ui.tkLog = ui.tkLog.filter((l) => !(Game.S.time - (l.t || 0) > 3 * Game.DAY))).length > 1 ? `<button class="small tk-hist" data-action="tk-hist">${ui.tkHist ? '▴ Hide' : '▾ Show'} earlier tries (${ui.tkLog.length - 1})</button>` : ''}
-          <div class="tk-log${ui.tkHist ? ' open' : ''}">${ui.tkLog.map((l) => `<div class="log ${l.kind}">${l.html}</div>`).join('')}</div>`;
+          <div class="tk-log${ui.tkHist ? ' open' : ''}">${ui.tkLog.map((l, n) => `<div class="log ${l.kind}">${l.html}${l.aim && l.aim.dish !== ui.tkTarget && !S.discovered[l.aim.dish] ? ` <button class="small tk-aim" data-action="tk-aim" data-arg="${n}" title="Aim for this dish: hints then only talk about it">🎯 Make it the target</button>` : ''}</div>`).join('')}</div>`;
     // The ingredient grid can hold hundreds of tiles, and drawing them all again took seconds on a big farm, so a pick or a
     // stock change only redraws the left side and updates the tiles in place. The grid is drawn again only when the list
     // of tiles itself changes (a new ingredient, a search, a group filter, the group menu opening).
@@ -1972,6 +1972,7 @@
       case 'cz': ui.filter.cuisine = ui.filter.cuisine === arg ? '' : arg; ui.refresh(); break;
       case 'tk-try': ui.tkSlots = (S.revealed[arg] || []).slice(); ui.tkTarget = S.discovered[arg] ? null : arg; openModal('testkitchen'); break;
       case 'tk-untarget': ui.tkTarget = null; ui.refresh(); break;
+      case 'tk-aim': { const l = ui.tkLog[+arg]; if (l && l.aim) { ui.tkTarget = l.aim.dish; ui.tkMiss = { target: l.aim.dish, cats: l.aim.cats }; } ui.refresh(); break; }
       case 'tk-cook': {
         const res = Game.experiment(ui.tkSlots, ui.tkTarget);
         const names = ui.tkSlots.map((i) => FSI.img(i)).join(' ');
@@ -1980,10 +1981,14 @@
         else if (res.kind === 'known') html = `${FSI.img(res.dish)} ${esc(it(res.dish).name)}: already known. ${res.cooked ? 'Cooked one more.' : ''}`;
         else html = `${names} ➜ ${res.kind === 'locked' ? '🔒 ' : ''}${esc(res.msg)}`;
         if (res.target) html += `<div class="tk-t-note">🎯 ${esc(res.target)}</div>`;
-        // The missing groups of the target dish, for the group filter (kept until the next hint about it).
-        const cats = res.dish === ui.tkTarget && res.kind === 'warm' ? res.cats : res.targetCats;
-        if (ui.tkTarget && cats) ui.tkMiss = cats.length ? { dish: ui.tkTarget, cats } : null;
-        ui.tkLog.unshift({ kind: res.kind, html, t: Game.S.time });
+        // With a target dish, the missing groups named by a hint about it feed the group filter (until the next such hint).
+        // Without one, a "Close to…" hint offers to make that dish the target.
+        let aim = null;
+        if (ui.tkTarget) {
+          const cats = res.kind === 'warm' && res.dish === ui.tkTarget ? res.cats : res.targetCats;
+          if (cats) ui.tkMiss = cats.length ? { target: ui.tkTarget, cats } : null;
+        } else if (res.kind === 'warm' && res.cats) aim = { dish: res.dish, cats: res.cats };
+        ui.tkLog.unshift({ kind: res.kind, html, aim, t: Game.S.time });
         ui.tkLog = ui.tkLog.slice(0, 8);
         if ((res.kind === 'new' || res.kind === 'known') && !res.target) ui.tkSlots = [];
         SFX.play({ known: 'pop', warm: 'warm', fail: 'flop', locked: 'warm' }[res.kind] || (res.kind === 'none' ? 'error' : ''));
