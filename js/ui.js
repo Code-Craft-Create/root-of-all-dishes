@@ -784,7 +784,8 @@
           ${targetBox()}
           <div class="slots">${slots.join('')}</div>
           <div class="row gap"><button class="primary" data-action="tk-cook" ${hasKitchen ? '' : 'disabled'}>🧪 Try this combination</button><button data-action="tk-clear">Clear</button></div>
-          <div class="tk-log">${(ui.tkLog = ui.tkLog.filter((l) => !(Game.S.time - (l.t || 0) > 3 * Game.DAY))).map((l) => `<div class="log ${l.kind}">${l.html}</div>`).join('')}</div>
+          ${(ui.tkLog = ui.tkLog.filter((l) => !(Game.S.time - (l.t || 0) > 3 * Game.DAY))).length > 1 ? `<button class="small tk-hist" data-action="tk-hist">${ui.tkHist ? '▴ Hide' : '▾ Show'} earlier tries (${ui.tkLog.length - 1})</button>` : ''}
+          <div class="tk-log${ui.tkHist ? ' open' : ''}">${ui.tkLog.map((l) => `<div class="log ${l.kind}">${l.html}</div>`).join('')}</div>
         </div>
         <div class="tk-right">
           <div class="row gap"><input type="search" class="search" data-search="tk" placeholder="Search ingredients…" value="${esc(ui.search.tk || '')}">
@@ -1919,6 +1920,7 @@
       case 'tk-remove': ui.tkSlots = ui.tkSlots.filter((x) => x !== arg); ui.refresh(); break;
       case 'tk-clear': ui.tkSlots = []; ui.refresh(); break;
       case 'tk-all': ui.filter.tkall = !ui.filter.tkall; ui.refresh(); break;
+      case 'tk-hist': ui.tkHist = !ui.tkHist; ui.refresh(); break; // touch screens show only the latest try unless asked
       case 'dd': ui.dd = ui.dd === arg ? null : arg; ui.refresh(); { const m = document.querySelector('.dd.open .dd-menu'); if (m) m.scrollIntoView({ block: 'nearest' }); } break;
       case 'cz-scroll': { const st = document.querySelector('.cz-strip'); if (st) st.scrollBy({ left: +arg * st.clientWidth * 0.8, behavior: 'smooth' }); break; }
       case 'dd-set': { const k = arg.slice(0, arg.indexOf('|')); SETTERS[k](arg.slice(arg.indexOf('|') + 1)); ui.dd = null; ui.refresh(); break; }
