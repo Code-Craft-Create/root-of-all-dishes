@@ -20,6 +20,7 @@
     critic: { usage: 'critic <now|plan>', about: 'Bring all three food critics now (now), or announce a new year\'s visits (plan)', run: criticCmd },
     rival: { usage: 'rival <' + Game.RIVALS.map((x) => x.id).join('|') + '> <rating>', about: 'Set a rival\'s rating (saved)', run: rivalCmd },
     stock: { usage: 'stock', about: 'Put 20 freshly cooked plates of every restaurant menu dish in the warehouse (saved)', run: stock },
+    target: { usage: 'target [cuisine]', about: 'Show the splash for a cuisine reaching its target (looks only; default: the newest open cuisine)', run: target },
     finale: { usage: 'finale', about: 'Show the end screen of the Legacy (looks only, nothing is won)', run: () => UI.finale() },
     win: { usage: 'win', about: 'Win the game: finish every stage, take gold from all three critics, buy out Crestwell; the Legacy completes and the finale plays (saved)', run: win },
     clear: { usage: 'clear', about: 'Remove all overrides and hide the dishes the console revealed', run: clear },
@@ -102,6 +103,13 @@
     const id = String(arg || '').toUpperCase();
     if (!Game.cheatStage(id)) return print(`Try ${COMMANDS.stage.usage}.`, 'err');
     print(`Stages up to ${id} are done and their cuisines open. Now on ${Game.currentStage().name}.`);
+  }
+  function target(arg) {
+    const q = FS.slug(String(arg || '')), open = FS.CUISINES.filter((c) => Game.S.cuisines[c.id]);
+    const c = q ? FS.CUISINES.find((x) => x.id === q) || FS.CUISINES.find((x) => x.id.includes(q)) : open[open.length - 1];
+    if (!c) return print(`No such cuisine. Try one of: ${FS.CUISINES.map((x) => x.id).join(', ')}.`, 'err');
+    toggle(false);
+    UI.splash('czdone:' + c.id);
   }
   function win() {
     if (Game.S.legacyWon) return print('The Legacy is already won. Type finale to see the end screen again.', 'err');

@@ -87,7 +87,7 @@ are not swapped: use `data-tip` for tooltips, and draw icons in the Town SVG wit
 - Keyboard: I or M inventory, K test kitchen, B cookbook, X codex, O orders, J journal, G goals, P cuisines, F flows, N sound on/off, Space pause.
 - **Debug cheat console:** press the key left of 1 (`` ` `` or §), or on a phone or tablet hold a finger on the logo and version at the top left, and type `help` (on touch screens, tapping a command in the list writes it into the line). `season winter` / `weather storm` force the
   season or weather (`off` or `clear` goes back to normal); visuals, sounds and growth follow. Overrides are not saved.
-  `money 10000` adds money. `recipes all` reveals every dish (no rewards); `recipes hide` or `clear` hides only the dishes
+  `money 10000` adds money. `target [cuisine]` shows the splash a cuisine gets when it reaches its stage's target (looks only). `recipes all` reveals every dish (no rewards); `recipes hide` or `clear` hides only the dishes
   the console revealed (tracked in the save as `S.cheatRevealed`), so real discoveries stay.
 - Sound effects are synthesized in the browser (js/audio.js, no audio files): clicks, building plonks, sales, order cash register,
   discovery fanfare, goal chimes, unlock sparkles and more. Rain, storms (with distant thunder) and snow (wind) play quiet

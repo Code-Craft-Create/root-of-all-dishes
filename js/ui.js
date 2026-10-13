@@ -431,6 +431,13 @@
       if (c) return { icon: FSI.img('cz_' + c.id), kicker: 'New cuisine', title: c.name,
         lines: [c.desc, `Its buildings and recipes are unlocked, and its ${c.dishIds.length} dishes are waiting in your 📖 Cookbook.`].filter(Boolean) };
     }
+    // A cuisine reached its stage's target ('czdone:<id>', plus ':stage' when that completed the stage).
+    if (key && key.startsWith('czdone:')) {
+      const [, cid, last] = key.split(':'), c = FS.cuisineById[cid], st = c && Game.stageById(c.stage);
+      if (c) return { icon: FSI.img('cz_' + c.id), kicker: 'Target reached', title: c.name,
+        lines: [st.rating ? `${st.target} of its dishes are served at ${'★'.repeat(st.rating)} restaurants.` : `${st.target} of its dishes cooked.`,
+          `+${st.toques} 🎩 toques`, last ? `That completes ${st.name}!` : ''].filter(Boolean) };
+    }
     return SPLASH[key] || { icon: '✨', title: 'Something new', lines: [] };
   }
   modals.splash = () => {
