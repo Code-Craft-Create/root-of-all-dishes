@@ -832,6 +832,7 @@
         ? 'You are in debt: you can’t build, import or open cuisines, and fields can’t buy seed. Sell surplus, or take a loan in the 🛖 Inventory’s Bank tab.'
         : `Money is running low. Sell surplus in the 🛖 Inventory${Game.wholesalerLevel() ? ', or turn on 🚚 auto-sell for items in the Inventory' : ', or deliver 📋 orders'}.`, 'bad', true);
     }
+    if (!S.stats.orderCounter) firstOrder();
     S.orderTimer -= dt;
     if (S.orderTimer <= 0) { S.orderTimer = Game.orderGap(); newOrder(); }
     tickOrders();
@@ -1226,6 +1227,20 @@
     return o;
   }
   Game.newOrder = newOrder;
+  // The very first customer turns up as soon as one of your buildings is set to make an ingredient (not a raw crop),
+  // and wants that ingredient: a few more than you have, so you deliver something you made yourself.
+  function firstOrder() {
+    const S = Game.S;
+    const b = S.buildings.find((x) => { const r = x.recipe && FS.recipeById[x.recipe]; return r && !r.dish && !FS.items[r.primary].raw; });
+    if (!b) return;
+    const id = FS.recipeById[b.recipe].primary, it = FS.items[id];
+    const qty = Math.min(25, Math.floor(S.inv[id] || 0) + 5);
+    S.stats.orderCounter = 1;
+    S.orders.push({ kind: 'plain', item: id, qty, who: pickOne(VILLAGE), reward: Math.round(it.value * qty * 1.9 + 40), id: 1, since: S.time, expires: S.time + 1800 });
+    S.orderTimer = Game.orderGap();
+    Game.emit('orders');
+    Game.emit('unlock', 'orders');
+  }
 
   // ----- Delivering -----
   // keep: stock held back while the Dispatcher delivers (0 when you deliver by hand).
@@ -1729,17 +1744,18 @@
     { id: 'well', text: 'Click your Well to see what it makes', reward: 50, check: () => !!(Game.S.tut && Game.S.tut.well) },
     { id: 'harvest', text: 'Harvest your first wheat', reward: 50, check: () => made('wheat') },
     { id: 'mill', text: 'Build a Mill and grind Wheat Flour', reward: 150, check: () => made('wheat_flour') },
+    { id: 'order', text: 'Deliver a customer order (📋 Orders)', reward: 250, check: () => Game.S.stats.ordersDone > 0 },
     { id: 'kitchen', text: 'Build a Kitchen', reward: 150, check: () => count('kitchen') > 0 },
     { id: 'dish1', text: 'Cook your first dish: try bread + butter in the 🧪 Test Kitchen', reward: 200, check: () => disc() >= 1 },
     { id: 'plan', text: 'Open 🗺️ Plan production for a dish (in the Cookbook or Codex) to see every building it needs', reward: 100, check: () => (Game.S.stats.plans || 0) > 0 },
     { id: 'sell', text: 'Sell something in the 🛖 Inventory', reward: 50, check: () => Game.S.stats.sold > 0 },
-    { id: 'bread', text: 'Bake a Bread Loaf (needs flour, water, yeast, salt)', reward: 200, open: () => canMake('bread_loaf'), check: () => made('bread_loaf') },
+    // Bottom-up: bread's own ingredients come first (salt, then yeast), then the bread itself.
+    { id: 'salt', text: 'Almost every recipe needs salt: build Salt Pans next to water', reward: 300, open: () => canMake('salt'), check: () => made('salt') },
+    { id: 'yeast', text: 'Yeast grows on molasses: Sugar Beet ➜ Sugar Refinery ➜ Fermentation Cellar', reward: 400, open: () => canMake('yeast'), check: () => made('yeast') },
+    { id: 'bread', text: 'Bake a Bread Loaf from your own flour, water, yeast and salt', reward: 300, open: () => canMake('bread_loaf'), check: () => made('bread_loaf') },
     { id: 'animals', text: 'Raise animals: build a Poultry House with Laying Hens', reward: 200, open: () => canMake('chicken_egg'), check: () => made('chicken_egg') },
     { id: 'feed', text: 'Hens eat feed: grow Barley and mix it with the Wheat Bran left over from milling at a Feed Mill', reward: 300, open: () => canMake('animal_feed'), check: () => made('animal_feed') },
-    { id: 'order', text: 'Deliver a customer order (📋 Orders)', reward: 250, check: () => Game.S.stats.ordersDone > 0 },
     { id: 'butter', text: 'Butter starts with grass: grow Hay, keep Dairy Cows on a Pasture, then churn Butter at a Creamery', reward: 400, open: () => canMake('butter'), check: () => made('butter') },
-    { id: 'yeast', text: 'Bread needs yeast, grown on molasses: Sugar Beet ➜ Sugar Refinery ➜ Fermentation Cellar', reward: 400, open: () => canMake('yeast'), check: () => made('yeast') },
-    { id: 'salt', text: 'Almost every recipe needs salt: build Salt Pans next to water', reward: 300, open: () => canMake('salt'), check: () => made('salt') },
     { id: 'dish10', text: 'Cook 10 different dishes', reward: 500, check: () => disc() >= 10, progress: () => [disc(), 10] },
     { id: 'cuisine', text: 'Open a new cuisine in 🍽️ Cuisines: Swiss Alpine or Nordic & Dutch', reward: 750, open: () => !!Game.S.goalsDone.dish1, check: () => Object.keys(Game.S.cuisines).length > 1 },
     { id: 'cheese', text: 'Make a cheese at the Creamery', reward: 400, open: () => Object.keys(FS.items).some((i) => FS.items[i].cat === 'cheese' && canMake(i)), check: () => Object.keys(Game.S.stats.produced).some((i) => FS.items[i].cat === 'cheese') },
@@ -1769,9 +1785,8 @@
   // Shown in the goal bar and Goals window: done goals, and open ones the player can work on now.
   Game.goalVisible = (g) => !!Game.S.goalsDone[g.id] || !g.open || g.open();
   Game.nextGoal = () => Game.goals.find((g) => !Game.S.goalsDone[g.id] && Game.goalVisible(g));
-  // Customers only start ordering once the guided "deliver an order" goal is the one to do (2026-10-12), so the
-  // first order doesn't unlock the Kitchen garden ahead of the guided steps.
-  Game.ordersOpen = () => !!Game.S.goalsDone.order || (Game.nextGoal() || {}).id === 'order';
+  // Customers start ordering with the first order, which comes as soon as you make something of your own (2026-10-13).
+  Game.ordersOpen = () => !!Game.S.goalsDone.order || !!Game.S.stats.orderCounter;
   // Count goals report [current, target]; null for yes/no goals.
   Game.goalProgress = (g) => (g.progress && !Game.S.goalsDone[g.id] ? g.progress() : null);
   function checkGoals() {

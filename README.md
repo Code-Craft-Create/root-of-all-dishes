@@ -109,8 +109,10 @@ are not swapped: use `data-tip` for tooltips, and draw icons in the Town SVG wit
 ## Unlocking
 
 You start with four buildings (Field, Well, Mill, Kitchen) and a handful of crops. Guided first steps unlock more as
-you complete goals: cooking your first dish opens the Farmyard (bakery, hens, feed mill, orchard), then come Dairy &
-pantry, Kitchen garden, and Butcher & cheesemaker. The 🎯 Goals list shows which goal unlocks what.
+you complete goals, from the bottom of the supply chain up: cooking your first dish opens Salt & fields (salt pans,
+orchard, more crops), making salt opens Sugar & yeast, making yeast opens the Bakery, baking bread opens the Farmyard
+(hens, feed mill), then come Dairy & bees, Kitchen garden, and Butcher & cheesemaker. The 🎯 Goals list shows which
+goal unlocks what.
 
 Every dish belongs to one of 15 cuisines in five stages (**🍽️ Cuisines**, key P):
 
@@ -196,6 +198,8 @@ the final numbers; the Town Guide can replay it. Cheat console: `guests <n>`, `s
 
 **📋 Customer orders grow with the stages** (`o.kind` in js/game.js, window in ui.js `modals.orders`). Dishes are only
 ordered from open cuisines; special requests and clues are built around undiscovered dishes of the current stage first.
+- The first customer turns up as soon as one of your buildings is set to make an ingredient (usually Wheat Flour at
+  the Mill) and asks for that ingredient (`firstOrder` in js/game.js); orders keep coming from then on.
 - Stage A: plain orders, 📦 bulk orders, ⭐ special requests.
 - Stage B on: ❤️ **regulars**, one per cuisine of stages B to D (The Red Lion, Le Petit Bistro, Bierhalle Edelweiss,
   Trattoria da Nonna, The Meze House, World Food Market, Golden Dragon, Spice Route, Route 66 Diner). They order their
