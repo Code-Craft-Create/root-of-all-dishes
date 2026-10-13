@@ -82,7 +82,8 @@ are not swapped: use `data-tip` for tooltips, and draw icons in the Town SVG wit
 - **Phones and tablets** (touch screens only; mouse play is unchanged): pinch to zoom the map. The build menu is hidden;
   tap empty ground of your own land and it pops up, and the building you pick starts on that spot. Placing or moving a building
   shows it where it would go first: tap elsewhere or drag it to adjust, then tap it again or press Build in the bar at the
-  bottom (Cancel stops). Holding a finger on anything with a hover tip shows the tip. Windows taller than a sideways phone scroll.
+  bottom (Cancel stops). Holding a finger on anything with a hover tip shows the tip. On a phone the Test Kitchen
+  fills the screen: only the latest try shows ("Show earlier tries" opens the rest) and the ingredient list keeps the space below. Windows taller than a sideways phone scroll.
 - Keyboard: I or M inventory, K test kitchen, B cookbook, X codex, O orders, J journal, G goals, P cuisines, F flows, N sound on/off, Space pause.
 - **Debug cheat console:** press the key left of 1 (`` ` `` or §), or on a phone or tablet hold a finger on the logo and version at the top left, and type `help` (on touch screens, tapping a command in the list writes it into the line). `season winter` / `weather storm` force the
   season or weather (`off` or `clear` goes back to normal); visuals, sounds and growth follow. Overrides are not saved.
