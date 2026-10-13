@@ -42,12 +42,15 @@
   const MUSIC_FILES = {
     farm: ['kitchen-pickin', 'kitchen-pickin-2', 'pantry-pickin', 'pantry-pickin-2'],
     town: ['town-downtown-strut', 'town-main-street-groove', 'town-main-street-strut', 'town-sidewalk-shuffle'],
-    finale: ['finale-high-score-hoedown'], // only while the end screen is open; starts from its beginning and loops
+    finale: ['finale-high-score-hoedown'], // only while the end screen is open; loops
   };
   // Farm <-> Town switch: the old playlist fades out over FADE_OUT s; the new one waits IN_DELAY s, then starts DROP_IN s
   // into a random track and fades in over FADE_IN s. Both fades follow a squared curve (the old one drops fast, the new
   // one rises slowly), so the two are hardly ever loud together (hearing both at once was disturbing).
   const FADE_OUT = 4, IN_DELAY = 2.5, FADE_IN = 5, DROP_IN = 30;
+  // The finale cuts in at once instead: its track starts right away, past its 2.7 s of opening silence (its own intro
+  // swells up), while the old playlist drops over 1.5 s, so the music lands with the title.
+  const FINALE = { out: 1.5, at: 2.5 };
   let scene = 'farm', lists = null, musicTimer = 0;
   function musicLevel() { return pref.muted ? 0 : MUSIC_BASE * pref.music * pref.volume; }
   function musicOn() { return musicLevel() > 0 && !document.hidden; }
@@ -61,9 +64,10 @@
     let i = Math.floor(Math.random() * srcs.length);
     if (srcs.length > 1 && i === L.track) i = (i + 1 + Math.floor(Math.random() * (srcs.length - 1))) % srcs.length;
     L.track = i;
-    L.a.src = srcs[i];
+    if (L.a.getAttribute('src') !== srcs[i]) L.a.src = srcs[i]; // the same track again (or preloaded): no reload
     L.fadeIn = 0; L.a.volume = 0;
-    if (at) L.a.addEventListener('loadedmetadata', () => { L.a.currentTime = Math.min(at, L.a.duration / 2); }, { once: true });
+    const seek = () => { L.a.currentTime = Math.min(at, L.a.duration / 2); };
+    if (at) L.a.readyState >= 1 ? seek() : L.a.addEventListener('loadedmetadata', seek, { once: true });
     if (musicOn()) L.a.play().catch(() => {});
   }
   function applyMusic() {
@@ -82,11 +86,12 @@
         if (!want) { L.pending = false; continue; }
         if ((L.wait -= 0.05) > 0) continue;
         L.pending = false;
-        nextTrack(L, L.name === 'finale' ? 0 : DROP_IN);
+        nextTrack(L, DROP_IN);
         L.fadeIn = 1; // the scene fade is the fade-in
       }
       if (L.mix !== want) {
-        L.mix = want ? Math.min(1, L.mix + 0.05 / FADE_IN) : Math.max(0, L.mix - 0.05 / FADE_OUT);
+        const fin = scene === 'finale';
+        L.mix = want ? Math.min(1, L.mix + 0.05 / FADE_IN) : Math.max(0, L.mix - 0.05 / (fin ? FINALE.out : FADE_OUT));
         if (!L.mix) L.a.pause(); // faded out: stop; switching back later starts a fresh track
       }
       L.fadeIn = Math.min(1, L.fadeIn + 0.05 / 3); // 3 s fade-in after starting, unmuting or a new track
@@ -102,6 +107,7 @@
   function startMusic() {
     if (lists) return;
     lists = { farm: playlist('farm'), town: playlist('town'), finale: playlist('finale') };
+    lists.finale.a.src = musicSrcs('finale')[0]; // preloaded, so it starts the moment the finale opens
     musicTimer = setInterval(musicTick, 50);
     nextTrack(lists[scene], 0);
   }
@@ -112,6 +118,7 @@
     if (!lists) return;
     const L = lists[name];
     if (L.mix > 0 && !L.a.paused) return; // still fading out from a moment ago: just fade it back up
+    if (name === 'finale') { L.pending = false; L.mix = 1; nextTrack(L, FINALE.at); L.fadeIn = 1; L.a.volume = musicLevel(); return; }
     L.pending = true; L.wait = IN_DELAY; // musicTick starts it once the old playlist has mostly faded
   }
   const unlock = () => { ensure(); if (window.ROOTDISHES_NO_MUSIC !== true) startMusic(); };

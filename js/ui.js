@@ -2328,7 +2328,7 @@
     // Five stars in an arch over the roof, popping in one after another.
     const stars = [0, 1, 2, 3, 4].map((k) => {
       const a = Math.PI * (0.78 - k * 0.14), x = 360 + 150 * Math.cos(a), y = 118 - 70 * Math.sin(a);
-      return `<g class="fn-star" style="animation-delay:${1.2 + k * 0.28}s">${star(x, y, k === 2 ? 22 : 18)}</g>`;
+      return `<g class="fn-star" style="animation-delay:${2.8 + k * 0.3}s">${star(x, y, k === 2 ? 22 : 18)}</g>`;
     }).join('');
     // The restaurant: a cream facade, a red roof, a striped awning and three glowing windows.
     const awning = Array.from({ length: 12 }, (_, k) => `<path d="M${240 + k * 20} 168 h20 v18 a10 8 0 0 1 -20 0 z" fill="${k % 2 ? C.creamL : C.red}" ${INK}/>`).join('');
@@ -2377,7 +2377,7 @@
       for (let k = 0; k < n; k++) coins += coin(x, base - k * 6);
     });
     const heap = `<path d="M8 292 Q70 236 136 292 z" fill="${C.yellowD}" ${INK}/>${coins}${img('ui_money', 52, 192, 40, 'fn-bag')}
-      ${[30, 66, 98, 118].map((x, k) => `<g class="fn-drop" style="animation-delay:${0.4 + k * 0.55}s">${coin(x, 200)}</g>`).join('')}`;
+      ${[30, 66, 98, 118].map((x, k) => `<g class="fn-drop" style="animation-delay:${3.6 + k * 0.55}s">${coin(x, 200)}</g>`).join('')}`;
     // The toque pile: a pyramid of chef's hats.
     let toques = '';
     [[4, 0], [3, 1], [2, 2], [1, 3]].forEach(([n, row]) => {
@@ -2386,6 +2386,20 @@
     return `<svg class="fn-scene" viewBox="0 0 720 300" aria-hidden="true">
       <ellipse cx="360" cy="290" rx="356" ry="16" fill="rgba(0,0,0,0.25)"/>
       ${lights}${building}${stars}${tables}${heap}${toques}</svg>`;
+  }
+  // The finale plays out in steps, timed to its music: kicker and title (0.3-1.8 s, first confetti shower), the
+  // restaurant (2.1 s), its stars one by one (2.8-4 s, confetti cannons from both bottom corners as the last one
+  // lands), the dishes flying in (from 3.4 s), coins and toques (4.2 s), the numbers counting up (5 s), the button
+  // (7 s), and a gentle confetti rain from then on.
+  function finaleConfetti() {
+    const piece = (cls, k, style) => `<i class="${cls}" style="--r:${(k * 47) % 360}deg;${style}"></i>`;
+    const shower = Array.from({ length: 90 }, (_, k) => piece('fc-fall', k, `left:${(k * 37) % 100}%;--d:${(0.8 + (k % 11) * 0.09).toFixed(2)}s;--t:${(2.6 + (k % 7) * 0.35).toFixed(2)}s;--n:1`));
+    const cannon = (side) => Array.from({ length: 55 }, (_, k) => {
+      const a = (20 + (k * 29) % 50) * Math.PI / 180, v = 45 + (k * 17) % 45; // launch angle from the floor and power (vh)
+      return piece('fc-shot', k, `${side}:0;--x:${(side === 'left' ? 1 : -1) * Math.cos(a) * v}vh;--y:${-Math.sin(a) * v}vh;--d:${(4 + (k % 9) * 0.03).toFixed(2)}s;--t:${(2.4 + (k % 5) * 0.3).toFixed(2)}s`);
+    });
+    const rain = Array.from({ length: 50 }, (_, k) => piece('fc-fall', k, `left:${(k * 53 + 11) % 100}%;--d:${(7 + (k * 0.17) % 5).toFixed(2)}s;--t:${(4.5 + (k % 7) * 0.6).toFixed(1)}s;--n:infinite`));
+    return [...shower, ...cannon('left'), ...cannon('right'), ...rain].join('');
   }
   ui.finale = function () {
     if (document.getElementById('finale')) return;
@@ -2401,7 +2415,7 @@
     const el = document.createElement('div');
     el.id = 'finale';
     el.innerHTML = `<div class="fn-rays"></div><div class="fn-cloud"></div>
-      <div class="fn-confetti">${Array.from({ length: 60 }, (_, k) => `<i style="left:${(k * 37) % 100}%;--d:${((k * 0.13) % 3).toFixed(2)}s;--t:${(3.5 + (k % 7) * 0.5).toFixed(1)}s;--r:${(k * 47) % 360}deg"></i>`).join('')}</div>
+      <div class="fn-confetti">${finaleConfetti()}</div>
       <div class="fn-main" role="dialog" aria-labelledby="fn-title">
         <p class="fn-kicker fn-keep">${FSI.img('ui_crown')} The Legacy is yours</p>
         <h1 id="fn-title" class="fn-keep">Root of All Dishes</h1>
@@ -2436,14 +2450,14 @@
     const size = Math.max(20, Math.min(48, gap * 0.8));
     el.style.setProperty('--sz', size.toFixed(0) + 'px');
     el.querySelector('.fn-cloud').innerHTML = pts.map(([x, y], k) => {
-      const id = dishes[k], dx = W / 2 - x, dy = H / 2 - y, d = Math.min(3, 0.35 + k * 0.006);
+      const id = dishes[k], dx = W / 2 - x, dy = H / 2 - y, d = 3.4 + Math.min(3, k * 0.007);
       return `<span class="fn-dish" data-tip="${esc(it(id).name)}" style="left:${(x - size / 2).toFixed(0)}px;top:${(y - size / 2).toFixed(0)}px;--dx:${dx.toFixed(0)}px;--dy:${dy.toFixed(0)}px;--d:${d.toFixed(2)}s;--f:${(3 + (k % 5) * 0.4).toFixed(1)}s">${FSI.img(id)}</span>`;
     }).join('');
     // Count the numbers up while the dishes fly in.
     const t0 = performance.now(), nums = [...el.querySelectorAll('[data-count]')];
     const step = (now) => {
       if (!el.isConnected) return;
-      const p = Math.min(1, (now - t0 - 900) / 2200), e = p <= 0 ? 0 : 1 - (1 - p) ** 3;
+      const p = Math.min(1, (now - t0 - 5000) / 2200), e = p <= 0 ? 0 : 1 - (1 - p) ** 3;
       for (const n of nums) n.textContent = money(+n.dataset.count * e);
       if (p < 1) requestAnimationFrame(step);
     };
