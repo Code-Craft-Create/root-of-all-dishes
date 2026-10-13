@@ -1,4 +1,5 @@
-// Debug cheat console. Open and close it with the key left of 1 (` on US keyboards, § on Swiss/German ones).
+// Debug cheat console. Open and close it with the key left of 1 (` on US keyboards, § on Swiss/German ones), or on a
+// touch screen by holding a finger on the logo and version at the top left.
 // Type "help" for the commands. Overrides live in Game.cheat and are not saved.
 (function () {
   'use strict';
@@ -29,7 +30,7 @@
   const box = document.createElement('div');
   box.id = 'cheat-console';
   box.hidden = true;
-  box.innerHTML = '<div class="cc-log"></div><div class="cc-row"><span>&gt;</span><input type="text" spellcheck="false" autocomplete="off" aria-label="Cheat command"></div>';
+  box.innerHTML = '<div class="cc-log"></div><div class="cc-row"><span>&gt;</span><input type="text" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" enterkeyhint="go" aria-label="Cheat command"><button class="cc-close" type="button" aria-label="Close">✕</button></div>';
   document.body.appendChild(box);
   const log = box.querySelector('.cc-log'), input = box.querySelector('input');
   const history = [];
@@ -212,5 +213,40 @@
     }
   });
   input.addEventListener('keyup', (e) => e.stopPropagation());
+
+  // Touch screens have no key left of 1: hold a finger on the logo and version for a moment instead. The console opens
+  // when the finger lifts, so the phone's keyboard may come up with it. ✕ closes it (shown on touch screens only), and
+  // tapping a command in the help list writes it into the line.
+  const touchUI = () => matchMedia('(hover: none) and (pointer: coarse)').matches;
+  let hold = null;
+  document.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'touch' || !e.target.closest || !e.target.closest('#topbar .brand')) return;
+    const h = hold = { x: e.clientX, y: e.clientY };
+    h.timer = setTimeout(() => { h.ready = true; e.target.closest('.brand').classList.add('cc-armed'); if (navigator.vibrate) navigator.vibrate(15); }, 600);
+  }, true);
+  const endHold = (open) => {
+    if (!hold) return;
+    clearTimeout(hold.timer);
+    const ready = hold.ready;
+    hold = null;
+    const brand = document.querySelector('#topbar .brand');
+    if (brand) brand.classList.remove('cc-armed');
+    if (open && ready) { toggle(); opened = performance.now(); }
+  };
+  // The phone sends a mouse press after the finger lifts (now on the console, which opens over the logo); it must not
+  // take the focus from the command line.
+  let opened = 0;
+  document.addEventListener('mousedown', (e) => { if (performance.now() - opened < 800 && e.target !== input) e.preventDefault(); }, true);
+  document.addEventListener('pointermove', (e) => { if (hold && Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > 12) endHold(false); }, true);
+  document.addEventListener('pointerup', () => endHold(true), true);
+  document.addEventListener('pointercancel', () => endHold(true), true); // some browsers cancel a long hold; it still counts
+  document.addEventListener('contextmenu', (e) => { if (e.target.closest && e.target.closest('#topbar .brand') && touchUI()) e.preventDefault(); }, true);
+  box.querySelector('.cc-close').addEventListener('click', () => toggle(false));
+  log.addEventListener('click', (e) => {
+    const u = touchUI() && e.target.closest('.cc-help .use');
+    if (!u) return;
+    input.value = u.textContent.split(' ')[0] + ' ';
+    input.focus();
+  });
   window.Cheats = { run, toggle };
 })();

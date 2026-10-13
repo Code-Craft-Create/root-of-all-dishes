@@ -1659,11 +1659,39 @@
   // The placing hint is one toast that lasts while you place, and goes as soon as you place or cancel.
   function placeHint(msg) {
     dropHint();
+    if (ui.touch) return touchGhost(); // a touch screen gets the Build bar instead of the mouse hint
     const el = toast(msg, 'hint');
     el.classList.add('sticky');
     ui.hintEl = el;
   }
   function dropHint() { if (ui.hintEl) { ui.hintEl.remove(); ui.hintEl = null; } }
+
+  // ----- Touch placing (phones, tablets): the ghost starts in the middle of the view (or on the building being moved)
+  // and only moves when tapped elsewhere or dragged; the bar at the bottom builds it or cancels. Mouse play never sees it.
+  ui.touch = matchMedia('(hover: none) and (pointer: coarse)').matches;
+  function touchGhost() {
+    const cv = $('#map'), [w, h] = FS.buildings[Render.ghost].size;
+    const mb = ui.moving && Game.S.buildings.find((x) => x.id === ui.moving);
+    const c = Render.screenToTile(cv.clientWidth / 2, cv.clientHeight / 2);
+    Render.hover = mb ? { x: mb.x, y: mb.y } : { x: c.x - Math.floor((w - 1) / 2), y: c.y - Math.floor((h - 1) / 2) };
+    touchBar();
+  }
+  function touchBar() {
+    const bar = $('#touchbar'), on = ui.touch && (ui.placing || ui.moving) && Render.ghost && Render.hover;
+    document.body.classList.toggle('touch-placing', !!on);
+    bar.hidden = !on;
+    if (!on) { bar.innerHTML = ''; bar.dataset.sig = ''; return; }
+    const type = Render.ghost, bt = FS.buildings[type], t = Render.hover;
+    const mb = ui.moving && Game.S.buildings.find((x) => x.id === ui.moving), same = mb && mb.x === t.x && mb.y === t.y;
+    const err = !same && Game.canPlace(type, t.x, t.y, Render.ghostMove);
+    const note = same ? 'Tap a new spot, or drag the building there.'
+      : err ? `<span class="short">${esc(err)}</span>` : `Tap the building again or ${mb ? 'Move here' : 'Build'} to confirm. Drag it to adjust.`;
+    const html = `<div class="tb-head">${FSI.img('b_' + type)} <b>${mb ? 'Moving' : 'Placing'} ${esc(bt.name)}</b> <span class="muted">💰${money(mb ? Game.moveCost(type) : bt.cost)}</span></div>
+      <div class="small tb-note">${note}</div>
+      <div class="tb-btns"><button data-action="touch-cancel">✕ Cancel</button><button class="primary" data-action="touch-build"${err || same ? ' disabled' : ''}>✓ ${mb ? 'Move here' : 'Build'}</button></div>`;
+    if (bar.dataset.sig !== html) { bar.innerHTML = html; bar.dataset.sig = html; }
+  }
+  ui.touchBar = touchBar;
 
   function bindGameEvents() {
     Game.on('toast', (m, k, ev) => toast(esc(m), k, ev));
@@ -1742,6 +1770,8 @@
     const S = Game.S;
     switch (action) {
       case 'bgroup': toggleBuildGroup(arg); break;
+      case 'touch-build': if (Render.hover && (ui.placing || ui.moving)) ui.commitAt(Render.hover); break;
+      case 'touch-cancel': cancelPlacing(); break;
       case 'build': if (ui.bp) cancelPlacing(); ui.placingRecipe = null; ui.moving = null; Render.ghostMove = null; ui.placing = arg; Render.ghost = arg; selectBuilding(null); document.body.classList.add('placing'); placeHint(`Placing ${FS.buildings[arg].name}: click on the map. Right-click to cancel.`); break;
       case 'speed': S.speed = +arg; break;
       case 'modal': openModal(arg); break;
@@ -1926,7 +1956,7 @@
   }
   ui.soundButton = soundButton;
 
-  function cancelPlacing() { dropHint(); ui.placing = null; ui.placingRecipe = null; ui.moving = null; ui.bp = null; Render.ghost = null; Render.ghostMove = null; Render.blueprint = null; bpBar(); document.body.classList.remove('placing'); $('#hoverinfo').hidden = true; }
+  function cancelPlacing() { dropHint(); ui.placing = null; ui.placingRecipe = null; ui.moving = null; ui.bp = null; Render.ghost = null; Render.ghostMove = null; Render.blueprint = null; bpBar(); document.body.classList.remove('placing'); $('#hoverinfo').hidden = true; if (ui.touch) Render.hover = null; touchBar(); }
   // ----- Blueprint placing: the layout follows the mouse until a click sets it down; then single buildings can be
   // dragged, a click on open ground moves the whole layout there, Rotate (R) turns it, Build (Enter) pays once.
   function bpFit(x, y) {
@@ -1971,11 +2001,11 @@
     if (!box || box.hidden || tipS.x < 0) return;
     showTip(true);
   }
-  function showTip(now) {
+  function showTip(now, force) {
     const box = $('#tip');
     const at = document.elementFromPoint(tipS.x, tipS.y);
     const host = at && at.closest('[data-tip]');
-    if (!host || ui.mouseDown) { box.hidden = true; return; }
+    if (!host || (ui.mouseDown && !force)) { box.hidden = true; return; }
     if (box.hidden && !now) { clearTimeout(tipS.timer); tipS.timer = setTimeout(() => showTip(true), 280); return; }
     const txt = host.dataset.tip;
     if (box.dataset.txt !== txt) { box.textContent = txt; box.dataset.txt = txt; }
@@ -2004,7 +2034,27 @@
     document.addEventListener('pointerdown', hide, true);
     document.addEventListener('keydown', hide, true); // a key can open or close a window under a still pointer
     document.addEventListener('wheel', hide, { capture: true, passive: true });
-    document.addEventListener('pointerleave', hide);
+    document.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch') hide(); }); // a lifted finger "leaves" too: a held tip stays
+    // Touch screens have no hover: holding a finger on something with a tip shows it until the next touch, and the
+    // tap that ends the hold does nothing else.
+    let hold = null;
+    const dropHold = () => { if (hold) clearTimeout(hold.timer); hold = null; };
+    document.addEventListener('pointerdown', (e) => {
+      dropHold();
+      const host = e.pointerType === 'touch' && e.target.closest && e.target.closest('[data-tip]');
+      if (!host) return;
+      const h = hold = { x: e.clientX, y: e.clientY };
+      h.timer = setTimeout(() => { h.shown = true; tipS.x = h.x; tipS.y = h.y; showTip(true, true); }, 450);
+    }, true);
+    document.addEventListener('pointermove', (e) => { if (hold && !hold.shown && e.pointerType === 'touch' && Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > 10) dropHold(); }, true);
+    document.addEventListener('pointercancel', () => { if (hold && !hold.shown) dropHold(); }, true);
+    document.addEventListener('pointerup', () => {
+      if (!hold) return;
+      if (!hold.shown) return dropHold();
+      clearTimeout(hold.timer); hold.timer = setTimeout(dropHold, 500); // swallow only the click this hold ends with
+    }, true);
+    document.addEventListener('click', (e) => { if (hold && hold.shown) { e.preventDefault(); e.stopPropagation(); dropHold(); } }, true);
+    document.addEventListener('contextmenu', (e) => { if (hold) e.preventDefault(); }, true);
   }
 
   const OWN_SOUND = new Set(['sell', 'buy', 'buy-short', 'borrow', 'fulfil', 'open-cuisine', 'hire-wholesaler', 'hire-dispatcher', 'tk-cook', 'modal', 'close-modal', 'sound', 'sound-test', 'bank', 'demolish']);
@@ -2017,7 +2067,7 @@
       const item = e.target.closest('[data-item]');
       if (item) { ui.codexItem = item.dataset.item; if (ui.modal !== 'codex') openModal('codex'); else ui.refresh(); const d = document.querySelector('[data-scroll="cxdetail"]'); if (d) d.scrollTop = 0; }
     });
-    document.addEventListener('pointerdown', () => (ui.mouseDown = true), true);
+    document.addEventListener('pointerdown', (e) => { ui.mouseDown = true; ui.touch = e.pointerType === 'touch'; }, true);
     document.addEventListener('pointerup', () => (ui.mouseDown = false), true);
     $('#modal').addEventListener('mousedown', (e) => { if (e.target.id === 'modal') closeModal(); });
     let searchTimer;
@@ -2081,35 +2131,80 @@
 
     const cv = $('#map');
     let down = null;
+    // Touch only: two fingers pinch to zoom and pan with their midpoint; while placing, the ghost stays put until a tap
+    // moves it or a finger drags it (see touchGhost). Mouse input never takes these paths.
+    const pts = new Map();
+    let pinch = null;
+    const pinchState = () => { const [a, b] = [...pts.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
+    const placingNow = () => ui.placing || ui.moving;
+    const onGhost = (t) => { const h = Render.hover, [w, hh] = FS.buildings[Render.ghost].size; return h && t.x >= h.x && t.x < h.x + w && t.y >= h.y && t.y < h.y + hh; };
     cv.addEventListener('pointerdown', (e) => {
+      const touch = e.pointerType === 'touch';
+      if (touch) {
+        pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pts.size >= 2) { cv.setPointerCapture(e.pointerId); pinch = pinchState(); down = null; return; }
+      }
       down = { x: e.clientX, y: e.clientY, cx: Render.cam.x, cy: Render.cam.y, drag: false, btn: e.button };
       // On a set-down blueprint, pressing on one of its buildings picks that building up instead of panning.
       if (ui.bp && ui.bp.pinned && e.button === 0) {
         const rect = cv.getBoundingClientRect(), t = Render.screenToTile(e.clientX - rect.left, e.clientY - rect.top), k = bpItemAt(t);
         if (k >= 0) { const bi = ui.bp.items[k]; down.bp = { k, ox: t.x - bi.x, oy: t.y - bi.y }; }
       }
+      // A finger set down on the ghost drags the ghost instead of panning the map.
+      if (touch && placingNow()) {
+        const rect = cv.getBoundingClientRect(), t = Render.screenToTile(e.clientX - rect.left, e.clientY - rect.top);
+        if (onGhost(t)) down.ghost = { ox: t.x - Render.hover.x, oy: t.y - Render.hover.y };
+      }
       cv.setPointerCapture(e.pointerId);
     });
     cv.addEventListener('pointermove', (e) => {
-      const rect = cv.getBoundingClientRect();
+      const touch = e.pointerType === 'touch', rect = cv.getBoundingClientRect();
+      if (touch && pts.has(e.pointerId)) {
+        pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pinch) {
+          if (pts.size < 2) return;
+          const p = pinchState();
+          Render.cam.x -= (p.x - pinch.x) / Render.cam.z; Render.cam.y -= (p.y - pinch.y) / Render.cam.z;
+          Render.zoomAt(p.x - rect.left, p.y - rect.top, p.d / pinch.d);
+          pinch = p;
+          return;
+        }
+      }
       Render.mouse = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-      Render.hover = Render.screenToTile(e.clientX - rect.left, e.clientY - rect.top);
+      const t = Render.screenToTile(e.clientX - rect.left, e.clientY - rect.top);
+      if (touch && placingNow()) {
+        if (down && down.ghost) {
+          if (!down.drag && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) down.drag = true;
+          const h = Render.hover, nx = t.x - down.ghost.ox, ny = t.y - down.ghost.oy;
+          if (down.drag && (h.x !== nx || h.y !== ny)) { Render.hover = { x: nx, y: ny }; touchBar(); }
+          return;
+        }
+      } else Render.hover = t;
       if (down && down.btn === 0) {
         const dx = e.clientX - down.x, dy = e.clientY - down.y;
         if (!down.drag && Math.hypot(dx, dy) > 5) down.drag = true;
         if (down.drag && down.bp && ui.bp) {
-          const bi = ui.bp.items[down.bp.k], t = Render.hover, nx = t.x - down.bp.ox, ny = t.y - down.bp.oy;
+          const bi = ui.bp.items[down.bp.k], nx = t.x - down.bp.ox, ny = t.y - down.bp.oy;
           ui.bp.drag = down.bp.k;
           if (bi.x !== nx || bi.y !== ny) { bi.x = nx; bi.y = ny; bi.fixed = true; Game.blueprintCheck(ui.bp.items); bpBar(); }
         } else if (down.drag) { Render.cam.x = down.cx - dx / Render.cam.z; Render.cam.y = down.cy - dy / Render.cam.z; Render.clampCam(); }
       }
+      if (touch) { $('#hoverinfo').hidden = true; return; } // no hover on a touch screen: a tap sets the blueprint down
       if (ui.bp && !ui.bp.pinned && Render.hover && (Render.hover.x !== ui.bp.ax || Render.hover.y !== ui.bp.ay)) bpFit(Render.hover.x, Render.hover.y);
       updateHoverInfo(e.clientX - rect.left, e.clientY - rect.top);
     });
-    cv.addEventListener('pointerleave', () => { Render.hover = null; Render.mouse = null; $('#hoverinfo').hidden = true; });
+    cv.addEventListener('pointerleave', (e) => {
+      if (e.pointerType === 'touch' && placingNow()) return; // the lifted finger leaves; the ghost stays where it was put
+      Render.hover = null; Render.mouse = null; $('#hoverinfo').hidden = true;
+    });
+    cv.addEventListener('pointercancel', (e) => { if (e.pointerType === 'touch') { pts.delete(e.pointerId); pinch = null; down = null; } });
     cv.addEventListener('pointerup', (e) => {
+      if (e.pointerType === 'touch') {
+        pts.delete(e.pointerId);
+        if (pinch) { if (pts.size < 2) pinch = null; down = null; return; }
+      }
       if (!down) return;
-      const wasDrag = down.drag, btn = down.btn, held = down.bp;
+      const wasDrag = down.drag, btn = down.btn, held = down.bp, grabbed = down.ghost;
       down = null;
       if (ui.bp) ui.bp.drag = null;
       if (wasDrag || btn !== 0) return;
@@ -2120,22 +2215,15 @@
         else if (!held) bpFit(t.x, t.y);
         return;
       }
-      if (ui.moving) {
-        const id = ui.moving;
-        const mb = Game.S.buildings.find((x) => x.id === id);
-        if (!mb || (mb.x === t.x && mb.y === t.y)) { cancelPlacing(); selectBuilding(id); return; }
-        if (Game.move(id, t.x, t.y)) { SFX.play('move'); cancelPlacing(); selectBuilding(id); updateHoverInfo(e.clientX - rect.left, e.clientY - rect.top); }
+      // Touch: a tap on the ghost builds (or moves) it there if it fits; a tap anywhere else puts the ghost there.
+      if (e.pointerType === 'touch' && placingNow()) {
+        if (grabbed && !Game.canPlace(Render.ghost, Render.hover.x, Render.hover.y, Render.ghostMove)) { commitAt(Render.hover); return; }
+        const [w, h] = FS.buildings[Render.ghost].size;
+        Render.hover = { x: t.x - Math.floor((w - 1) / 2), y: t.y - Math.floor((h - 1) / 2) };
+        touchBar();
         return;
       }
-      if (ui.placing) {
-        const b = Game.place(ui.placing, t.x, t.y);
-        if (b) {
-          SFX.play('plonk');
-          if (ui.placingRecipe) Game.setRecipe(b.id, ui.placingRecipe);
-          if (!e.shiftKey) { cancelPlacing(); selectBuilding(b.id); updateHoverInfo(e.clientX - rect.left, e.clientY - rect.top); }
-        }
-        return;
-      }
+      if (placingNow()) { commitAt(t, e.shiftKey, e.clientX - rect.left, e.clientY - rect.top); return; }
       // Land the farm doesn't own: its sign, or anywhere on it, offers to buy it.
       const sign = Render.signAt(e.clientX - rect.left, e.clientY - rect.top);
       if (sign || (Game.plotAt(t.x, t.y) >= 0 && !Game.owns(t.x, t.y))) {
@@ -2147,6 +2235,24 @@
       ui.search.recipe = '';
       selectBuilding(b ? b.id : null);
     });
+    // Build or move what is being placed at tile t. Shift (mouse) keeps placing more of the same; px, py place the hover box.
+    function commitAt(t, keep, px, py) {
+      const info = () => { if (px != null) updateHoverInfo(px, py); };
+      if (ui.moving) {
+        const id = ui.moving;
+        const mb = Game.S.buildings.find((x) => x.id === id);
+        if (!mb || (mb.x === t.x && mb.y === t.y)) { cancelPlacing(); selectBuilding(id); return; }
+        if (Game.move(id, t.x, t.y)) { SFX.play('move'); cancelPlacing(); selectBuilding(id); info(); }
+        return;
+      }
+      const b = Game.place(ui.placing, t.x, t.y);
+      if (b) {
+        SFX.play('plonk');
+        if (ui.placingRecipe) Game.setRecipe(b.id, ui.placingRecipe);
+        if (!keep) { cancelPlacing(); selectBuilding(b.id); info(); }
+      }
+    }
+    ui.commitAt = commitAt;
     function buyLand(k) {
       if (!Game.plotBuyable(k)) { SFX.play('error'); toast('That land is too far away: buy the land next to your farm first.', 'bad'); return; }
       const cost = Game.landCost();
@@ -2598,6 +2704,7 @@
     if (now - ui.lastLive > 250) {
       ui.lastLive = now;
       updateInspectorLive();
+      if (document.body.classList.contains('touch-placing')) touchBar(); // money may have come in (or gone out)
       // The Academy panel has no live block: redraw it when a chef's progress moves on.
       const sb = Render.selected && Game.S.buildings.find((x) => x.id === Render.selected);
       if (sb && sb.type === 'academy' && !ui.mouseDown) {

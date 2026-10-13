@@ -79,8 +79,11 @@ are not swapped: use `data-tip` for tooltips, and draw icons in the Town SVG wit
 - Each new day's report (what the farm made and sold, and how much of the sale price was the raw ingredients' share) goes to the
   **📰 Farm journal** (`J`), as a little newspaper. The journal keeps every event: new dishes, unlocks, weather, orders, goals.
   A day before winter you get a warning with how long your animals' feed will last.
+- **Phones and tablets** (touch screens only; mouse play is unchanged): pinch to zoom the map. Placing or moving a building
+  shows it where it would go first: tap elsewhere or drag it to adjust, then tap it again or press Build in the bar at the
+  bottom (Cancel stops). Holding a finger on anything with a hover tip shows the tip. Windows taller than a sideways phone scroll.
 - Keyboard: I or M inventory, K test kitchen, B cookbook, X codex, O orders, J journal, G goals, P cuisines, F flows, N sound on/off, Space pause.
-- **Debug cheat console:** press the key left of 1 (`` ` `` or §) and type `help`. `season winter` / `weather storm` force the
+- **Debug cheat console:** press the key left of 1 (`` ` `` or §), or on a phone or tablet hold a finger on the logo and version at the top left, and type `help` (on touch screens, tapping a command in the list writes it into the line). `season winter` / `weather storm` force the
   season or weather (`off` or `clear` goes back to normal); visuals, sounds and growth follow. Overrides are not saved.
   `money 10000` adds money. `recipes all` reveals every dish (no rewards); `recipes hide` or `clear` hides only the dishes
   the console revealed (tracked in the save as `S.cheatRevealed`), so real discoveries stay.
