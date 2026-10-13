@@ -1444,7 +1444,7 @@
       Game.emit('inv');
       const res = { kind: isNew ? 'new' : 'known', dish: dish.id, cooked };
       // The combo was another dish: still say how it stands against the target.
-      if (target && target !== dish.id && !S.discovered[target]) res.target = targetHint(target, ids, new Set(ids)).msg;
+      if (target && target !== dish.id && !S.discovered[target]) { const h = targetHint(target, ids, new Set(ids)); res.target = h.msg; res.targetCats = h.cats; }
       return res;
     }
     const sel = new Set(ids);
@@ -1466,7 +1466,9 @@
     const t = FS.items[target], ins = Object.keys(FS.dishRecipe[target].inputs);
     const overlap = ins.filter((i) => sel.has(i)).length;
     if (!overlap) return { kind: 'fail', dish: target, msg: `None of these go into ${t.name}.` };
-    return { kind: 'warm', dish: target, msg: warmMsg(t, ins, ids, sel, ins.length - overlap) };
+    // cats: the groups of the ingredients still missing (the hint names them), for the Test Kitchen's group filter.
+    const cats = [...new Set(ins.filter((i) => !sel.has(i)).map((i) => FS.items[i].cat))];
+    return { kind: 'warm', dish: target, cats, msg: warmMsg(t, ins, ids, sel, ins.length - overlap) };
   }
   function warmMsg(d, ins, ids, sel, missing) {
     const missingCats = [...new Set(ins.filter((i) => !sel.has(i)).map((i) => (FS.catInfo[FS.items[i].cat] || ['', FS.items[i].cat])[1]))];

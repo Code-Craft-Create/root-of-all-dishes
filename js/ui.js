@@ -495,14 +495,16 @@
 
   // Ingredient-group dropdown: a button with the group's icon that opens an alphabetical list of groups.
   // key = the ui.filter key it sets, counts = {cat: number of items} (only those groups are listed).
-  function catPicker(key, counts, allLabel) {
+  // extra: an optional full-width choice under the first one, { v, icon, label, n } (the Test Kitchen's missing groups).
+  function catPicker(key, counts, allLabel, extra) {
     const cur = ui.filter[key], open = ui.dd === key;
     const cats = Object.keys(counts).sort((a, b) => catName(a).localeCompare(catName(b)));
     const total = cats.reduce((n, c) => n + counts[c], 0);
-    const opt = (c, label, n) => `<button class="dd-opt ${cur === c ? 'on' : ''}" data-action="dd-pick" data-arg="${key}:${c}">${c ? catIcon(c) : '<span class="dd-all">✱</span>'}<span>${esc(label)}</span><small>${n}</small></button>`;
+    const ico = (c) => (extra && c === extra.v ? FSI.img(extra.icon) : c ? catIcon(c) : '<span class="dd-all">✱</span>');
+    const opt = (c, label, n) => `<button class="dd-opt ${cur === c ? 'on' : ''}" data-action="dd-pick" data-arg="${key}:${c}">${ico(c)}<span>${esc(label)}</span><small>${n}</small></button>`;
     return `<div class="dd ${open ? 'open' : ''}"><button class="dd-btn" data-action="dd" data-arg="${key}" title="Filter by ingredient group">
-      ${cur ? catIcon(cur) : '<span class="dd-all">✱</span>'}<span>${esc(cur ? catName(cur) : allLabel)}</span><i>▾</i></button>
-      ${open ? `<div class="dd-menu" data-scroll="dd-${key}">${opt('', allLabel, total)}<div class="dd-grid" style="grid-template-rows: repeat(${Math.ceil(cats.length / 2)}, auto)">${cats.map((c) => opt(c, catName(c), counts[c])).join('')}</div></div>` : ''}</div>`;
+      ${ico(cur)}<span>${esc(extra && cur === extra.v ? extra.label : cur ? catName(cur) : allLabel)}</span><i>▾</i></button>
+      ${open ? `<div class="dd-menu" data-scroll="dd-${key}">${opt('', allLabel, total)}${extra ? opt(extra.v, extra.label, extra.n) : ''}<div class="dd-grid" style="grid-template-rows: repeat(${Math.ceil(cats.length / 2)}, auto)">${cats.map((c) => opt(c, catName(c), counts[c])).join('')}</div></div>` : ''}</div>`;
   }
   // A drop-down in the same style for any list: opts = [{ v, label, icon? }]. Picking one runs SETTERS[key](v).
   const SETTERS = {
@@ -774,6 +776,7 @@
   const groupRank = (id) => { const k = GROUP_ORDER.indexOf(it(id).cat); return k < 0 ? GROUP_ORDER.indexOf('feed') - 0.5 : k; };
   // Everything you have in stock or have ever had: experiments are free, so you can discover a dish without stocking
   // everything at once. Cooking it still needs the real ingredients.
+  const MISS = '@miss';
   const tkPool = () => FS.ingredientList.map((i) => i.id).filter((id) => have(id) > 0 || Game.S.seen[id]);
   const tkTile = (id) => `<div class="tile ${ui.tkSlots.includes(id) ? 'picked' : ''} ${have(id) > 0 ? '' : 'empty'}" data-action="tk-add" data-arg="${id}" ${have(id) > 0 ? '' : 'title="None left: you can still experiment with it"'}>
             <span class="t-emoji">${FSI.img(id)}</span><span class="t-name">${esc(it(id).name)}</span><span class="t-qty">${have(id)}</span></div>`;
@@ -788,12 +791,17 @@
   modals.testkitchen = () => {
     const S = Game.S;
     const q = (ui.search.tk || '').toLowerCase();
+    // After a "Close to…" hint for the target dish, the group filter offers the groups of the ingredients still missing.
+    const miss = ui.tkMiss && ui.tkMiss.dish === ui.tkTarget && !S.discovered[ui.tkTarget] ? ui.tkMiss.cats : null;
+    if (!miss && ui.filter.tkcat === MISS) ui.filter.tkcat = '';
     const cat = ui.filter.tkcat;
+    const inCat = (id) => (cat === MISS ? miss.includes(it(id).cat) : !cat || it(id).cat === cat);
     const pool = tkPool();
-    const ids = pool.filter((id) => (!q || it(id).name.toLowerCase().includes(q)) && (!cat || it(id).cat === cat))
+    const ids = pool.filter((id) => (!q || it(id).name.toLowerCase().includes(q)) && inCat(id))
       .sort((a, b) => groupRank(a) - groupRank(b) || it(a).name.localeCompare(it(b).name));
     const counts = countBy(pool.filter((id) => !q || it(id).name.toLowerCase().includes(q)));
-    if (cat && !counts[cat]) counts[cat] = 0;
+    if (cat && cat !== MISS && !counts[cat]) counts[cat] = 0;
+    const extra = miss && { v: MISS, icon: 'ui_goals', label: 'Groups of missing ingredients', n: miss.reduce((n, c) => n + (counts[c] || 0), 0) };
     const hasKitchen = S.buildings.some((b) => b.type === 'kitchen');
     const left = `${hasKitchen ? '' : '<p class="warn">You need to build a 👩‍🍳 Kitchen before you can experiment.</p>'}
           ${targetBox()}
@@ -804,14 +812,14 @@
     // The ingredient grid can hold hundreds of tiles, and drawing them all again took seconds on a big farm, so a pick or a
     // stock change only redraws the left side and updates the tiles in place. The grid is drawn again only when the list
     // of tiles itself changes (a new ingredient, a search, a group filter, the group menu opening).
-    const key = [q, cat, ui.dd === 'tkcat', ids.join()].join('|');
+    const key = [q, cat, ui.dd === 'tkcat', miss, ids.join()].join('|');
     return {
       title: `🧪 Test Kitchen ${qm('Combine 2–8 different ingredients. The exact set makes a dish: you discover it, and if you have enough of each it is cooked straight away. Experiments are free, and you can use anything you have ever had.')}`, cls: 'wide',
       html: `<div class="tk" data-key="${esc(key)}">
         <div class="tk-left">${left}</div>
         <div class="tk-right">
           <div class="row gap"><input type="search" class="search" data-search="tk" placeholder="Search ingredients…" value="${esc(ui.search.tk || '')}">
-          ${catPicker('tkcat', counts, 'All groups')}</div>
+          ${catPicker('tkcat', counts, 'All groups', extra)}</div>
           <div class="tiles small" data-scroll="tkpick">${ids.map((id, n) => `${n && it(ids[n - 1]).cat === it(id).cat ? '' : `<div class="tile-group">${catIcon(it(id).cat)} ${esc(catName(it(id).cat))}</div>`}${tkTile(id)}`).join('') || '<p class="hint">No ingredients in stock.</p>'}</div>
         </div></div>`,
       patch: (body) => {
@@ -1795,7 +1803,7 @@
     Game.on('wholesaler-hired', () => openModal('wsOn'));
     Game.on('reset', () => {
       Render.buildTerrain(); Render.cam.z = 1.4; Render.centerOn(Game.OX + 26, Game.OY + 18); Render.selected = null; renderInspector(); buildTopbar();
-      ui.tkSlots = []; ui.tkLog = []; ui.tkTarget = null; lastTop = ''; orderN = null;
+      ui.tkSlots = []; ui.tkLog = []; ui.tkTarget = null; ui.tkMiss = null; lastTop = ''; orderN = null;
     });
     // A ding when a new order comes in (the order counter only grows for new ones).
     let orderN = null;
@@ -1972,6 +1980,9 @@
         else if (res.kind === 'known') html = `${FSI.img(res.dish)} ${esc(it(res.dish).name)}: already known. ${res.cooked ? 'Cooked one more.' : ''}`;
         else html = `${names} ➜ ${res.kind === 'locked' ? '🔒 ' : ''}${esc(res.msg)}`;
         if (res.target) html += `<div class="tk-t-note">🎯 ${esc(res.target)}</div>`;
+        // The missing groups of the target dish, for the group filter (kept until the next hint about it).
+        const cats = res.dish === ui.tkTarget && res.kind === 'warm' ? res.cats : res.targetCats;
+        if (ui.tkTarget && cats) ui.tkMiss = cats.length ? { dish: ui.tkTarget, cats } : null;
         ui.tkLog.unshift({ kind: res.kind, html, t: Game.S.time });
         ui.tkLog = ui.tkLog.slice(0, 8);
         if ((res.kind === 'new' || res.kind === 'known') && !res.target) ui.tkSlots = [];
