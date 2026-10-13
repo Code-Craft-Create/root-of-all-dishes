@@ -14,7 +14,7 @@
   const have = (id) => Math.floor(Game.S.inv[id] || 0);
   const rate = (q) => (q < 10 ? (Math.round(q * 10) / 10).toString() : String(Math.round(q)));
 
-  const ui = { modal: null, search: {}, filter: { cuisine: '', show: 'all', sort: 'cuisine', cat: '', tkcat: '', tkall: true }, codexItem: 'bread_loaf',
+  const ui = { modal: null, search: {}, filter: { cuisine: '', show: 'all', sort: 'cuisine', cat: '', tkcat: '' }, codexItem: 'bread_loaf',
     tkSlots: [], townStock: true, tkLog: [], tkTarget: null, placing: null, marketTab: 'sell', lastLive: 0, lastModal: 0 };
   window.UI = ui;
   // Inventory stock-list sort, remembered between sessions: by group/value/stock/price/name, dir -1 = high to low (or Z–A).
@@ -465,6 +465,8 @@
     const top = fresh ? 0 : body.scrollTop;
     $('#modal-title').innerHTML = m.title;
     $('#modal-card').className = 'modal-card ' + (m.cls || '');
+    // A window can update itself in place when its layout hasn't changed (see the Test Kitchen).
+    if (!fresh && m.patch && m.patch(body)) return;
     body.innerHTML = m.html;
     body.scrollTop = top;
     body.querySelectorAll('[data-scroll]').forEach((s) => { if (scrolls[s.dataset.scroll]) s.scrollTop = scrolls[s.dataset.scroll]; if (scrolls[s.dataset.scroll + ':x']) s.scrollLeft = scrolls[s.dataset.scroll + ':x']; });
@@ -582,8 +584,8 @@
     let rows;
     if (tab === 'sell') {
       const { by, dir } = ui.mkSort, sig = q + '|' + by + dir;
-      const catOrder = Object.keys(FS.catInfo), grouped = by === 'group';
-      const key = { group: (id) => catOrder.indexOf(it(id).cat), value: (id) => have(id) * Game.sellPrice(id), stock: have, price: (id) => Game.sellPrice(id) }[by];
+      const grouped = by === 'group';
+      const key = { group: groupRank, value: (id) => have(id) * Game.sellPrice(id), stock: have, price: (id) => Game.sellPrice(id) }[by];
       // Once an item has been in stock it keeps its row, also at 0 (its made / used per minute still matter).
       let ids = [...new Set([...Object.keys(Game.S.inv), ...Object.keys(Game.S.seen)])].filter((id) => it(id) && (have(id) > 0 || Game.S.seen[id] || (Game.S.autosell || {})[id] != null) && (!q || it(id).name.toLowerCase().includes(q)))
         .sort((a, b) => dir * (key ? key(a) - key(b) : 0) || (grouped ? 1 : dir) * it(a).name.localeCompare(it(b).name));
@@ -756,44 +758,69 @@
   }
 
   // ----- Test Kitchen -----
-  // Ingredients are grouped in the fixed category order of FS.catInfo, then by name, so tiles never move when stock changes.
-  const CAT_ORDER = Object.keys(FS.catInfo);
-  const catOrder = (id) => CAT_ORDER.indexOf(it(id).cat);
-  modals.testkitchen = () => {
-    const S = Game.S;
-    const q = (ui.search.tk || '').toLowerCase();
-    const cat = ui.filter.tkcat;
-    // Ingredients in stock, plus (optionally) ones you have had before but used up: experiments are free, so you can
-    // discover a dish without stocking everything at once. Cooking it still needs the real ingredients.
-    const pool = ui.filter.tkall ? FS.ingredientList.map((i) => i.id).filter((id) => have(id) > 0 || S.seen[id]) : Object.keys(S.inv).filter((id) => have(id) > 0 && !it(id).dish);
-    const ids = pool.filter((id) => (!q || it(id).name.toLowerCase().includes(q)) && (!cat || it(id).cat === cat))
-      .sort((a, b) => catOrder(a) - catOrder(b) || it(a).name.localeCompare(it(b).name));
-    const counts = countBy(pool.filter((id) => !q || it(id).name.toLowerCase().includes(q)));
-    if (cat && !counts[cat]) counts[cat] = 0;
+  // Ingredients are grouped in a fixed kitchen order, then by name, so tiles never move when stock changes: fresh produce
+  // first, then meat, fish, eggs and dairy, then staples and the pantry, and the farm's own goods (feed, livestock) last.
+  // The Inventory's grouped view uses the same order. Groups missing here (a new category) go just before feed.
+  const GROUP_ORDER = ['vegetable', 'root', 'mushroom', 'herb', 'fruit', 'berry', 'citrus', 'tropical', 'meat', 'charcuterie', 'seafood', 'egg',
+    'dairy', 'cheese', 'flour', 'bread', 'pasta', 'grain', 'legume', 'nut', 'oilseed', 'oil', 'sugar', 'mineral', 'spice', 'spiceblend', 'sauce',
+    'ferment', 'preserve', 'cocoa', 'drink', 'pastry', 'dish', 'feed', 'livestock'];
+  const groupRank = (id) => { const k = GROUP_ORDER.indexOf(it(id).cat); return k < 0 ? GROUP_ORDER.indexOf('feed') - 0.5 : k; };
+  // Everything you have in stock or have ever had: experiments are free, so you can discover a dish without stocking
+  // everything at once. Cooking it still needs the real ingredients.
+  const tkPool = () => FS.ingredientList.map((i) => i.id).filter((id) => have(id) > 0 || Game.S.seen[id]);
+  const tkTile = (id) => `<div class="tile ${ui.tkSlots.includes(id) ? 'picked' : ''} ${have(id) > 0 ? '' : 'empty'}" data-action="tk-add" data-arg="${id}" ${have(id) > 0 ? '' : 'title="None left: you can still experiment with it"'}>
+            <span class="t-emoji">${FSI.img(id)}</span><span class="t-name">${esc(it(id).name)}</span><span class="t-qty">${have(id)}</span></div>`;
+  const tkSlotsHtml = () => {
     const slots = [];
     for (let k = 0; k < Game.MAX_SLOTS; k++) {
       const id = ui.tkSlots[k];
       slots.push(id ? `<div class="slot full" data-action="tk-remove" data-arg="${id}" title="Remove"><span>${FSI.img(id)}</span><small>${esc(it(id).name)}</small><i>✕</i></div>` : '<div class="slot"></div>');
     }
+    return slots.join('');
+  };
+  modals.testkitchen = () => {
+    const S = Game.S;
+    const q = (ui.search.tk || '').toLowerCase();
+    const cat = ui.filter.tkcat;
+    const pool = tkPool();
+    const ids = pool.filter((id) => (!q || it(id).name.toLowerCase().includes(q)) && (!cat || it(id).cat === cat))
+      .sort((a, b) => groupRank(a) - groupRank(b) || it(a).name.localeCompare(it(b).name));
+    const counts = countBy(pool.filter((id) => !q || it(id).name.toLowerCase().includes(q)));
+    if (cat && !counts[cat]) counts[cat] = 0;
     const hasKitchen = S.buildings.some((b) => b.type === 'kitchen');
-    return {
-      title: `🧪 Test Kitchen ${qm('Combine 2–8 different ingredients. The exact set makes a dish: you discover it, and if you have enough of each it is cooked straight away. Experiments are free, and you can use anything you have ever had.')}`, cls: 'wide',
-      html: `<div class="tk">
-        <div class="tk-left">
-          ${hasKitchen ? '' : '<p class="warn">You need to build a 👩‍🍳 Kitchen before you can experiment.</p>'}
+    const left = `${hasKitchen ? '' : '<p class="warn">You need to build a 👩‍🍳 Kitchen before you can experiment.</p>'}
           ${targetBox()}
-          <div class="slots">${slots.join('')}</div>
+          <div class="slots">${tkSlotsHtml()}</div>
           <div class="row gap"><button class="primary" data-action="tk-cook" ${hasKitchen ? '' : 'disabled'}>🧪 Try this combination</button><button data-action="tk-clear">Clear</button></div>
           ${(ui.tkLog = ui.tkLog.filter((l) => !(Game.S.time - (l.t || 0) > 3 * Game.DAY))).length > 1 ? `<button class="small tk-hist" data-action="tk-hist">${ui.tkHist ? '▴ Hide' : '▾ Show'} earlier tries (${ui.tkLog.length - 1})</button>` : ''}
-          <div class="tk-log${ui.tkHist ? ' open' : ''}">${ui.tkLog.map((l) => `<div class="log ${l.kind}">${l.html}</div>`).join('')}</div>
-        </div>
+          <div class="tk-log${ui.tkHist ? ' open' : ''}">${ui.tkLog.map((l) => `<div class="log ${l.kind}">${l.html}</div>`).join('')}</div>`;
+    // The ingredient grid can hold hundreds of tiles, and drawing them all again took seconds on a big farm, so a pick or a
+    // stock change only redraws the left side and updates the tiles in place. The grid is drawn again only when the list
+    // of tiles itself changes (a new ingredient, a search, a group filter, the group menu opening).
+    const key = [q, cat, ui.dd === 'tkcat', ids.join()].join('|');
+    return {
+      title: `🧪 Test Kitchen ${qm('Combine 2–8 different ingredients. The exact set makes a dish: you discover it, and if you have enough of each it is cooked straight away. Experiments are free, and you can use anything you have ever had.')}`, cls: 'wide',
+      html: `<div class="tk" data-key="${esc(key)}">
+        <div class="tk-left">${left}</div>
         <div class="tk-right">
           <div class="row gap"><input type="search" class="search" data-search="tk" placeholder="Search ingredients…" value="${esc(ui.search.tk || '')}">
           ${catPicker('tkcat', counts, 'All groups')}</div>
-          <label class="small tk-all"><input type="checkbox" data-action="tk-all" ${ui.filter.tkall ? 'checked' : ''}> Include ingredients you've had before but used up</label>
-          <div class="tiles small" data-scroll="tkpick">${ids.map((id, n) => `${n && it(ids[n - 1]).cat === it(id).cat ? '' : `<div class="tile-group">${catIcon(it(id).cat)} ${esc(catName(it(id).cat))}</div>`}<div class="tile ${ui.tkSlots.includes(id) ? 'picked' : ''} ${have(id) > 0 ? '' : 'empty'}" data-action="tk-add" data-arg="${id}" ${have(id) > 0 ? '' : 'title="None left: you can still experiment with it"'}>
-            <span class="t-emoji">${FSI.img(id)}</span><span class="t-name">${esc(it(id).name)}</span><span class="t-qty">${have(id)}</span></div>`).join('') || '<p class="hint">No ingredients in stock.</p>'}</div>
+          <div class="tiles small" data-scroll="tkpick">${ids.map((id, n) => `${n && it(ids[n - 1]).cat === it(id).cat ? '' : `<div class="tile-group">${catIcon(it(id).cat)} ${esc(catName(it(id).cat))}</div>`}${tkTile(id)}`).join('') || '<p class="hint">No ingredients in stock.</p>'}</div>
         </div></div>`,
+      patch: (body) => {
+        const tk = body.querySelector('.tk');
+        if (!tk || tk.dataset.key !== key) return false;
+        tk.querySelector('.tk-left').innerHTML = left;
+        tk.querySelectorAll('.tile[data-arg]').forEach((el) => {
+          const id = el.dataset.arg, n = have(id);
+          el.classList.toggle('picked', ui.tkSlots.includes(id));
+          el.classList.toggle('empty', n <= 0);
+          if (n > 0) el.removeAttribute('title'); else el.title = 'None left: you can still experiment with it';
+          const qty = el.querySelector('.t-qty');
+          if (qty.textContent !== String(n)) qty.textContent = n;
+        });
+        return true;
+      },
     };
   };
 
@@ -803,10 +830,13 @@
     const S = Game.S, id = ui.tkTarget;
     if (!id || S.discovered[id] || !FS.dishRecipe[id]) { ui.tkTarget = null; return ''; }
     const d = it(id), rev = S.revealed[id] || [];
-    const slots = Object.keys(FS.dishRecipe[id].inputs).map((i) => (rev.includes(i) ? chip(i) : '<span class="chip unknown">❓</span>')).join(' ');
-    return `<div class="tk-target"><span class="c-emoji sil">${FSI.img(id)}</span><div class="tk-t-main"><div>🎯 Looking for <b>${esc(d.name)}</b> <span class="muted small">${esc(d.cuisine)}</span></div>
-      ${d.about ? `<div class="small about">${esc(d.about)}</div>` : ''}<div class="io">${slots}</div><div class="muted small">Hints only talk about this dish.</div></div>
-      <div class="tk-t-btns"><button class="small" data-action="reveal" data-arg="${id}" title="${revealTip()}">💡 Reveal (🎩${Game.revealCost(id)})</button><button class="small" data-action="tk-untarget" title="Stop aiming for this dish">✕ Clear target</button></div></div>`;
+    const ins = Object.keys(FS.dishRecipe[id].inputs), hidden = ins.filter((i) => !rev.includes(i)).length;
+    const slots = ins.map((i) => (rev.includes(i) ? chip(i) : '<span class="chip unknown">❓</span>')).join(' ');
+    // Phones get a short form: the revealed ingredients, then one "5 × ❓" chip for the rest.
+    const short = ins.filter((i) => rev.includes(i)).map((i) => chip(i)).join(' ') + (hidden ? ` <span class="chip unknown">${hidden} × ❓</span>` : '');
+    return `<div class="tk-target"><span class="c-emoji sil">${FSI.img(id)}</span><div class="tk-t-main"><div><span class="tk-t-lead">🎯 Looking for </span><b>${esc(d.name)}</b> <span class="muted small">${esc(d.cuisine)}</span></div>
+      ${d.about ? `<div class="small about">${esc(d.about)}</div>` : ''}<div class="io io-full">${slots}</div><div class="io io-short">${short}</div><div class="muted small">Hints only talk about this dish.</div></div>
+      <div class="tk-t-btns"><button class="small" data-action="reveal" data-arg="${id}" title="${revealTip()}">💡 <span class="tk-bl">Reveal </span>(🎩${Game.revealCost(id)})</button><button class="small" data-action="tk-untarget" title="Stop aiming for this dish">✕<span class="tk-bl"> Clear target</span></button></div></div>`;
   }
 
   // ----- Codex -----
@@ -1919,7 +1949,6 @@
       case 'tk-add': if (!ui.tkSlots.includes(arg) && ui.tkSlots.length < Game.MAX_SLOTS) ui.tkSlots.push(arg); else ui.tkSlots = ui.tkSlots.filter((x) => x !== arg); ui.refresh(); break;
       case 'tk-remove': ui.tkSlots = ui.tkSlots.filter((x) => x !== arg); ui.refresh(); break;
       case 'tk-clear': ui.tkSlots = []; ui.refresh(); break;
-      case 'tk-all': ui.filter.tkall = !ui.filter.tkall; ui.refresh(); break;
       case 'tk-hist': ui.tkHist = !ui.tkHist; ui.refresh(); break; // touch screens show only the latest try unless asked
       case 'dd': ui.dd = ui.dd === arg ? null : arg; ui.refresh(); { const m = document.querySelector('.dd.open .dd-menu'); if (m) m.scrollIntoView({ block: 'nearest' }); } break;
       case 'cz-scroll': { const st = document.querySelector('.cz-strip'); if (st) st.scrollBy({ left: +arg * st.clientWidth * 0.8, behavior: 'smooth' }); break; }
