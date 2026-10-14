@@ -742,7 +742,7 @@
     if (f.sort === 'complexity') list.sort((a, b) => cx(b) - cx(a));
     else if (f.sort === 'name') list.sort((a, b) => a.name.localeCompare(b.name));
     const disc = Object.keys(S.discovered).length;
-    // Newest opened cuisine first (leftmost in the strip, top of the dropdown), as David asked.
+    // Newest opened cuisine first (leftmost in the strip, top of the dropdown).
     const cuisines = Game.cuisinesNewestFirst().map((z) => z.name).filter((c) => menu.some((d) => d.cuisine === c));
     const hidden = FS.dishList.length - menu.length;
     return {

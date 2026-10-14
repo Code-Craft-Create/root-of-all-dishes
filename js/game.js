@@ -1280,7 +1280,12 @@
     }
     earn(coins, item, qty, 'orders');
     if (toques) Game.addToques(toques);
-    if (msg) Game.toast(`${dispatching ? '📦' : '📋'} ${msg}: +${Math.round(coins)} coins${toques ? ` and +${toques} 🎩` : ''}`, 'good', 'quiet');
+    // Only the Dispatcher's deliveries get a toast; one you make yourself is just kept in the journal (you saw it happen).
+    if (msg) {
+      const text = `${dispatching ? '📦' : '📋'} ${msg}: +${Math.round(coins)} coins${toques ? ` and +${toques} 🎩` : ''}`;
+      if (dispatching) Game.toast(text, 'good', 'quiet');
+      else Game.journal({ type: 'msg', kind: 'good', text, quiet: true });
+    }
   }
   // A delivery to a regular: friendship, a level up now and then, and tips from level 3.
   function befriend(regId) {
@@ -1329,7 +1334,7 @@
         o.paidDay = true; o.met++;
         S.stats.ordersDone++;
         paid(o, o.dayPay, befriend(o.reg), o.lines[0].item, o.lines[0].qty, `${o.who}: day ${o.day + 1} of ${o.days} supplied`);
-      } else if (!dispatching) Game.toast(`📦 Delivered ${n} goods to ${o.who}; the rest of today's quota is still open.`, '', 'quiet');
+      } else if (!dispatching) Game.journal({ type: 'msg', kind: '', text: `📦 Delivered ${n} goods to ${o.who}; the rest of today's quota is still open.`, quiet: true });
     } else {
       if (!can(o.item, o.qty)) return Game.toast(`You need ${o.qty}× ${name(o.item)}.`, 'bad');
       take(o.item, o.qty); closeOrder(o);
