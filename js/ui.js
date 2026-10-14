@@ -221,6 +221,10 @@
     if (!searchable) ui.search.recipe = '';
     const recipes = allRecipes.filter((r) => !q || Object.keys(r.outputs).concat(Object.keys(r.inputs)).some((i) => it(i).name.toLowerCase().includes(q)) || (r.label || '').toLowerCase().includes(q));
     const isKitchen = b.type === 'kitchen';
+    // Farm crops are listed by ingredient group (the kitchen order), then by name, under group headings.
+    const grouped = bt.group === 'Farming' && new Set(allRecipes.map((r) => it(r.primary).cat)).size > 1;
+    if (grouped) recipes.sort((x, y) => groupRank(x.primary) - groupRank(y.primary) || (x.label || it(x.primary).name).localeCompare(y.label || it(y.primary).name));
+    const groupHead = (r, n) => (!grouped || (n && it(recipes[n - 1].primary).cat === it(r.primary).cat) ? '' : `<div class="tile-group">${catIcon(it(r.primary).cat)} ${esc(catName(it(r.primary).cat))}</div>`);
     el.innerHTML = `
       <div class="insp-head"><span class="big">${FSI.img('b_' + bt.id)}</span><div data-tip="${esc(bt.desc)}"><h3>${esc(bt.name)}</h3><small>${bt.group} · upkeep <span id="insp-upkeep">${upkeepText(b)}</span>/min</small></div><button class="x" data-action="deselect">✕</button></div>
       <div id="insp-live"><div class="live-io"></div><div class="live-prog"></div></div>
@@ -234,7 +238,7 @@
       ${searchable ? `<input type="search" class="search" data-search="recipe" placeholder="Search…" value="${esc(ui.search.recipe || '')}">` : ''}
       <div class="recipe-list" data-scroll="recipes">
         ${isKitchen && !Game.recipesFor('kitchen').length ? `<p class="hint">No dishes discovered yet. Open the <a data-action="modal" data-arg="testkitchen">🧪 Test Kitchen</a> and combine ingredients to discover dishes.</p>` : ''}
-        ${recipes.map((r) => recipeRow(r, b)).join('')}
+        ${recipes.map((r, n) => groupHead(r, n) + recipeRow(r, b)).join('')}
         ${lockedCount(b.type) ? `<p class="hint locked-more">🔒 ${lockedCount(b.type)} more production choice${lockedCount(b.type) > 1 ? 's' : ''} unlock with goals and new <a data-action="modal" data-arg="cuisines">🍽️ cuisines</a>.</p>` : ''}
       </div>`;
     updateInspectorLive();
