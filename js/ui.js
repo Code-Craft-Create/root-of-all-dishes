@@ -812,14 +812,15 @@
     const slots = [];
     for (let k = 0; k < Game.MAX_SLOTS; k++) {
       const id = ui.tkSlots[k];
-      slots.push(id ? `<div class="slot full" data-action="tk-remove" data-arg="${id}" title="Remove"><span>${FSI.img(id)}</span><small>${esc(it(id).name)}</small><i>✕</i></div>` : '<div class="slot"></div>');
+      const ok = id && ui.tkTarget && ui.tkFit && ui.tkFit.target === ui.tkTarget ? ui.tkFit.ok[id] : undefined;
+      slots.push(id ? `<div class="slot full${ok === true ? ' fit-good' : ok === false ? ' fit-bad' : ''}" data-action="tk-remove" data-arg="${id}" title="Remove"><span>${FSI.img(id)}</span><small>${esc(it(id).name)}</small><i>✕</i></div>` : '<div class="slot"></div>');
     }
     return slots.join('');
   };
   modals.testkitchen = () => {
     const S = Game.S;
     const q = (ui.search.tk || '').toLowerCase();
-    // After a "Close to…" hint about the target dish, the group filter offers the groups of the ingredients still missing.
+    // After a hint about the target dish, the group filter offers the groups of the ingredients still missing.
     const miss = ui.tkTarget && ui.tkMiss && ui.tkMiss.target === ui.tkTarget && !S.discovered[ui.tkTarget] ? ui.tkMiss.cats : null;
     if (!miss && ui.filter.tkcat === MISS) ui.filter.tkcat = '';
     const cat = ui.filter.tkcat;
@@ -1831,7 +1832,7 @@
     Game.on('wholesaler-hired', () => openModal('wsOn'));
     Game.on('reset', () => {
       Render.buildTerrain(); Render.cam.z = 1.4; Render.centerOn(Game.OX + 26, Game.OY + 18); Render.selected = null; renderInspector(); buildTopbar();
-      ui.tkSlots = []; ui.tkLog = []; ui.tkTarget = null; ui.tkMiss = null; lastTop = ''; orderN = null;
+      ui.tkSlots = []; ui.tkLog = []; ui.tkTarget = null; ui.tkMiss = null; ui.tkFit = null; lastTop = ''; orderN = null;
     });
     // A ding when a new order comes in (the order counter only grows for new ones).
     let orderN = null;
@@ -2010,7 +2011,15 @@
       case 'tk-aim': { const l = ui.tkLog[+arg]; if (l && l.aim) { ui.tkTarget = l.aim.dish; ui.tkMiss = { target: l.aim.dish, cats: l.aim.cats }; } ui.refresh(); break; }
       case 'tk-cook': {
         const res = Game.experiment(ui.tkSlots, ui.tkTarget);
-        const names = ui.tkSlots.map((i) => FSI.img(i)).join(' ');
+        // What a hint told about the target dish: each tried ingredient fits it or not. Kept for the target and shown as
+        // green / red on the slots and on this try's icons.
+        const fit = ui.tkTarget && (res.dish === ui.tkTarget && res.fit || res.targetFit);
+        if (fit) {
+          if (!ui.tkFit || ui.tkFit.target !== ui.tkTarget) ui.tkFit = { target: ui.tkTarget, ok: {} };
+          fit.good.forEach((i) => (ui.tkFit.ok[i] = true));
+          fit.bad.forEach((i) => (ui.tkFit.ok[i] = false));
+        }
+        const names = ui.tkSlots.map((i) => `<span class="${fit ? (fit.good.includes(i) ? 'fit-good' : 'fit-bad') : ''}">${FSI.img(i)}</span>`).join(' ');
         let html;
         if (res.kind === 'new') html = `🎉 <b>Discovered ${FSI.img(res.dish)} ${esc(it(res.dish).name)}!</b> ${res.cooked ? 'You cooked one.' : 'Not enough of each ingredient to cook one yet.'} It can now be cooked in a Kitchen.`;
         else if (res.kind === 'known') html = `${FSI.img(res.dish)} ${esc(it(res.dish).name)}: already known. ${res.cooked ? 'Cooked one more.' : ''}`;

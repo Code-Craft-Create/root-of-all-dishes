@@ -181,6 +181,12 @@ span.short { color: var(--bad); }
 .slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 10px 0; }
 .slot { height: 74px; border: 2px dashed var(--line); border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
 .slot.full { border-style: solid; border-color: var(--accent2); background: #fff; cursor: pointer; }
+/* With a target dish, tried ingredients show whether they go into it. */
+.slot.full.fit-good { border-color: #6aa84f; background: #eef7e8; }
+.slot.full.fit-bad { border-color: #d9826f; background: #fbebe7; }
+.log .fit-good, .log .fit-bad { display: inline-block; border-radius: 6px; padding: 1px 2px; }
+.log .fit-good { background: #dcefd2; box-shadow: inset 0 -2px 0 #6aa84f; }
+.log .fit-bad { background: #f6d9d2; box-shadow: inset 0 -2px 0 #d9826f; }
 .slot span { font-size: 26px; }
 .slot small { font-size: 11px; text-align: center; padding: 0 3px; }
 .slot i { position: absolute; top: 2px; right: 6px; font-style: normal; color: var(--muted); font-size: 11px; }
