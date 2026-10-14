@@ -2779,6 +2779,9 @@
   ui.init = function () {
     $('.brand').innerHTML = FSI.img('ui_logo') + `<span>Root of All Dishes</span><small class="ver" title="Game version">v${GAME_VERSION}</small>`;
     const fav = document.createElement('link'); fav.rel = 'icon'; fav.type = 'image/svg+xml'; fav.href = FSI.dataURL('ui_logo'); document.head.appendChild(fav);
+    // A narrow screen wraps the top bar onto several rows: the map area starts below however tall it really is.
+    const tb = $('#topbar');
+    if (window.ResizeObserver) new ResizeObserver(() => document.documentElement.style.setProperty('--tb-h', Math.ceil(tb.getBoundingClientRect().height) + 'px')).observe(tb);
     watchIcons();
     soundButton();
     bindGameEvents();
