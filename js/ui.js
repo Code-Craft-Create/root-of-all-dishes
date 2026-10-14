@@ -729,14 +729,14 @@
     if (f.sort === 'complexity') list.sort((a, b) => cx(b) - cx(a));
     else if (f.sort === 'name') list.sort((a, b) => a.name.localeCompare(b.name));
     const disc = Object.keys(S.discovered).length;
-    const cuisines = Object.keys(FS.cuisines).filter((c) => menu.some((d) => d.cuisine === c));
-    const cuisinesAZ = cuisines.slice().sort((a, b) => a.localeCompare(b));
+    // Newest opened cuisine first (leftmost in the strip, top of the dropdown), as David asked.
+    const cuisines = Game.cuisinesNewestFirst().map((z) => z.name).filter((c) => menu.some((d) => d.cuisine === c));
     const hidden = FS.dishList.length - menu.length;
     return {
       title: `📖 Cookbook <span class="muted">${disc} / ${FS.dishList.length} discovered</span>`, cls: 'wide',
       html: `<div class="row gap wrap">
         <input type="search" class="search" data-search="cb" placeholder="Search dishes…" value="${esc(ui.search.cb || '')}">
-        ${ddPicker('cb-cuisine', [{ v: '', label: 'All cuisines' }, ...cuisinesAZ.map((c) => ({ v: c, label: c, icon: 'cz_' + FS.slug(c), n: menu.filter((d) => d.cuisine === c).length }))], f.cuisine || '', 'Filter by cuisine', 'dd-wide')}
+        ${ddPicker('cb-cuisine', [{ v: '', label: 'All cuisines' }, ...cuisines.map((c) => ({ v: c, label: c, icon: 'cz_' + FS.slug(c), n: menu.filter((d) => d.cuisine === c).length }))], f.cuisine || '', 'Filter by cuisine', 'dd-wide')}
         ${ddPicker('cb-show', [{ v: 'all', label: 'All dishes' }, { v: 'known', label: 'Discovered' }, { v: 'unknown', label: 'Undiscovered' }], f.show || 'all', 'Which dishes to show')}
         ${ddPicker('cb-sort', [{ v: 'cuisine', label: 'Sort: cuisine' }, { v: 'complexity', label: 'Sort: supply-chain size' }, { v: 'name', label: 'Sort: name' }], f.sort || 'cuisine', 'Sort order')}
         </div>

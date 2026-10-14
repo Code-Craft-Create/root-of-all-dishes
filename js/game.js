@@ -1849,7 +1849,8 @@
     const cost = Game.cuisineCost(c);
     if (S.money < cost) return Game.toast('Not enough money to open this cuisine.', 'bad');
     S.money -= cost; S.stats.spent += cost; dayStats().shop += cost;
-    S.cuisines[cid] = true;
+    // The number records the opening order (newest = highest), for lists that show the latest cuisine first.
+    S.cuisines[cid] = Math.max(1, ...Object.values(S.cuisines).map(Number)) + 1;
     Game.journal({ type: 'msg', kind: 'good', text: `🍽️ ${c.name} is open! Its buildings and recipes are unlocked and its ${c.dishIds.length} dishes are in your 📖 Cookbook.`, quiet: true });
     Game.refreshUnlocks();
     Game.emit('unlock', 'cz:' + cid);
@@ -2601,6 +2602,12 @@
   let U = null;
   Game.stepsDone = () => FS.STEPS.filter((st) => !st.goal || Game.S.goalsDone[st.goal]).map((st) => st.id);
   Game.cuisinesOpen = () => FS.CUISINES.filter((c) => Game.S.cuisines[c.id]).map((c) => c.id);
+  // Open cuisines, most recently opened first. Cuisines opened before the order was recorded (value true) count as
+  // opened in stage order, before any numbered one.
+  Game.cuisinesNewestFirst = function () {
+    const S = Game.S, rank = (c, k) => (typeof S.cuisines[c.id] === 'number' ? 1e4 + S.cuisines[c.id] : k);
+    return FS.CUISINES.map((c, k) => ({ c, r: rank(c, k) })).filter((x) => S.cuisines[x.c.id]).sort((a, b) => b.r - a.r).map((x) => x.c);
+  };
   Game.unlockState = () => U;
   // Recomputes what is unlocked. Unless quiet, announces anything new.
   Game.refreshUnlocks = function (quiet) {
