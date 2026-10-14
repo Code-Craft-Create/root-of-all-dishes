@@ -96,6 +96,8 @@ body.placing #map { cursor: crosshair; }
 .recipe-row { border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; cursor: pointer; background: #fff; }
 .recipe-row:hover { border-color: var(--accent2); }
 .recipe-row.active { border-color: var(--accent); background: #e9f5ec; }
+.recipe-list .tile-group { padding-top: 6px; }
+.recipe-list .tile-group:first-child { padding-top: 0; }
 .rr-out { display: flex; gap: 6px; align-items: center; font-size: 13px; }
 .rr-emoji { font-size: 18px; }
 .rr-meta { display: flex; flex-wrap: wrap; gap: 4px; font-size: 11px; margin-top: 2px; align-items: center; }
