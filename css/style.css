@@ -289,7 +289,22 @@ nav button span { display: none; }
 @media (max-width: 1100px) and (min-width: 1020px) { .brand .ico { display: none; } }
 @media (max-width: 1019px) {
   #topbar { flex-wrap: wrap; height: auto; padding: 6px; }
-  #main { top: 106px; }
+  #main { top: calc(var(--tb-h, 80px) + 26px); }
+}
+/* Phones held upright: three fixed rows, so bigger numbers (money, day, toques) or newly unlocked buttons never add a
+   fourth. Row 1 money, toques, dishes, season; row 2 logo, clock, speed; row 3 the window buttons sharing the width. */
+@media (max-width: 600px) {
+  #topbar { padding: 4px 6px; row-gap: 2px; column-gap: 4px; justify-content: space-between; font-size: 14px; }
+  #topbar::before { content: ''; order: 1; flex-basis: 100%; height: 0; }
+  .brand, #clock, .speed { order: 2; }
+  .brand .ico { width: 28px; height: 28px; margin: -2px 0; }
+  .brand .ver { margin-bottom: 3px; }
+  nav { order: 3; flex: 1 1 100%; margin-left: 0; }
+  nav button { flex: 1 1 0; min-width: 0; padding: 3px 0; }
+}
+@media (max-width: 360px) {
+  #topbar { font-size: 12px; column-gap: 2px; }
+  .pill { padding: 3px 5px; }
 }
 @media (max-width: 760px) {
   #buildbar { width: 120px; }
