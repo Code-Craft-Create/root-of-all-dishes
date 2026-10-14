@@ -390,10 +390,17 @@ nav button span { display: none; }
 /* Playtest 3 additions */
 body.insp-open:not(.modal-open) #toasts { right: 368px; }
 @media (max-width: 760px) { body.insp-open #toasts { right: 14px; } }
-/* Toasts step aside from open windows: bottom-left while a window is open, left of the Town panel and zoom buttons in town */
+/* Toasts step aside from open windows: left of the Town panel and zoom buttons in town */
 body.town-mode:not(.modal-open) #toasts { right: 480px; }
 @media (max-width: 1100px) { body.town-mode:not(.modal-open) #toasts { right: 400px; } }
-body.modal-open #toasts { right: auto; left: 14px; align-items: flex-start; }
+/* While a window is open the top bar sits under its backdrop, so the newest toast shows there as one slim line, above the
+   window instead of over its bottom rows (the Test Kitchen grid, the Production plan, the Blueprint bar under a splash). */
+body.modal-open #toasts { top: 6px; bottom: auto; left: 50%; right: auto; transform: translateX(-50%); align-items: center; transition: none; }
+body.modal-open .toast:not(:last-child) { display: none; }
+body.modal-open .toast { -webkit-line-clamp: 1; max-width: min(620px, calc(100vw - 28px)); max-height: 36px; padding: 6px 14px; line-height: 24px; }
+body.modal-open .toast img { max-height: 20px; vertical-align: -5px; }
+/* The Blueprint bar: toasts stack above it (its height is kept in --bp-h by bpBar) */
+body.bp-open:not(.modal-open) #toasts { bottom: calc(var(--bp-h, 110px) + 24px); }
 .tile.empty { background: #f4f1ea; opacity: 0.6; }
 .tile.empty:hover { opacity: 1; }
 .rates { margin: 3px 0; }

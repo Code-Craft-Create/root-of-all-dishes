@@ -2102,6 +2102,7 @@
     const bar = $('#bpbar'), bp = ui.bp;
     if (!bar) return;
     bar.hidden = !bp;
+    document.body.classList.toggle('bp-open', !!bp);
     if (!bp) { bar.innerHTML = ''; return; }
     const cost = Game.blueprintCost(bp.items), n = bp.items.length, bad = bp.items.filter((it) => it.err).length;
     const lk = Game.blueprintLinks(bp.items), short = Game.S.money < cost;
@@ -2117,6 +2118,8 @@
         <button class="small" data-action="bp-rotate" title="Turn the way the chain grows (R)">↻ Rotate</button>
         <button class="small primary" data-action="bp-build" ${!bp.pinned || bad || short ? 'disabled' : ''} title="Enter">✅ Build 💰${money(cost)}</button>
         <button class="small" data-action="bp-cancel" title="Esc">✕ Cancel</button></div>`;
+    // Toasts stack above the bar (css: body.bp-open #toasts), however tall its note makes it.
+    document.body.style.setProperty('--bp-h', bar.offsetHeight + 'px');
   }
 
   // =================== HOVER TIPS ===================
