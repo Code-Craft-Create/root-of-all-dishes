@@ -21,6 +21,20 @@
     for (const r of FS.byBuilding.kitchen || []) FS.dishRecipe[r.primary] = r;
   };
 
+  // For items with multiple production routes, prefer early-game / canonical recipes
+  // so guided steps and early supply chains read naturally and do not route through late-game buildings.
+  const PREFERRED_RECIPES = {
+    molasses: (r) => r.inputs && r.inputs.sugar_beet, // Sugar beet in Sugar Refinery (Stage A), not sugarcane in Tropical Greenhouse
+    animal_feed: (r) => r.inputs && r.inputs.barley && r.inputs.wheat_bran, // Barley + wheat bran (Stage A), not corn + soybean meal (Oil Press)
+    whey: (r) => r.primary === 'cheddar', // Cheddar from cow milk (Stage A), not late cheese curds
+    salt: (r) => r.building === 'saltpan', // Coastal Salt Pan (Stage A), not Salt Mine (Stage C)
+    shrimp: (r) => r.building === 'dock', // Coastal Dock (Stage A), not Aquaculture Pond (Stage D)
+    white_sugar: (r) => r.inputs && r.inputs.sugar_beet, // Sugar beet in Sugar Refinery (Stage A)
+    yeast: (r) => r.inputs && r.inputs.molasses, // Molasses in Fermentation Cellar (Stage A)
+    baking_soda: (r) => r.inputs && r.inputs.trona, // Trona (Stage B), not limestone / Solvay process (Stage D)
+    mozzarella: (r) => r.inputs && r.inputs.cow_milk, // Cow milk, not water buffalo milk
+  };
+
   function computeValues() {
     const val = {};
     const best = {};
@@ -60,8 +74,9 @@
     }
     for (const id in FS.items) {
       FS.items[id].value = Math.max(0.1, Math.round(val[id] * 100) / 100);
-      // Prefer a recipe whose primary output is the item, so chains read naturally.
-      FS.items[id].bestRecipe = best[id] && best[id].primary === id ? best[id] : (FS.byOutput[id].find((r) => r.primary === id) || best[id] || FS.byOutput[id][0]);
+      // Prefer a canonical early recipe where defined, else a recipe whose primary output is the item, so chains read naturally.
+      const pref = PREFERRED_RECIPES[id] && (FS.byOutput[id] || []).find(PREFERRED_RECIPES[id]);
+      FS.items[id].bestRecipe = pref || (best[id] && best[id].primary === id ? best[id] : ((FS.byOutput[id] || []).find((r) => r.primary === id) || best[id] || (FS.byOutput[id] || [])[0]));
     }
   }
 
