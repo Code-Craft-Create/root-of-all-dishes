@@ -135,6 +135,7 @@
       : S.loan ? `Loan owed: ${money(S.loan)} (a quarter of your income pays it back)` : 'Money';
     $('#toques').textContent = '🎩 ' + (S.toques || 0);
     $('#clock').textContent = clock;
+    document.querySelectorAll('.m-clock').forEach((c) => (c.textContent = clock));
     $('#season').innerHTML = `${se.icon} <span class="lbl">${esc(se.name)} · </span>${we.icon} <span class="lbl">${esc(we.name)}</span>`;
     $('#season').title = `${se.msg}\nNow: ${we.name}${Game.cheat.weather ? '' : `, for about ${Math.max(1, Math.round(Game.weatherLeft() / Game.HOUR))} more hours`}. ${we.effect}\n` + (Game.cheat.season !== null || Game.cheat.weather ? 'Forced from the cheat console (` key). Type "clear" there to go back to normal.' : `Next season in ${dur(Game.seasonLeft() / 1)} of game time.`);
     $('#season').classList.toggle('forced', Game.cheat.season !== null || !!Game.cheat.weather);
@@ -479,6 +480,7 @@
     const top = fresh ? 0 : body.scrollTop;
     $('#modal-title').innerHTML = m.title;
     $('#modal-card').className = 'modal-card ' + (m.cls || '');
+    modalSpeed(m.speed);
     // A window can update itself in place when its layout hasn't changed (see the Test Kitchen).
     if (!fresh && m.patch && m.patch(body)) return;
     body.innerHTML = m.html;
@@ -491,6 +493,17 @@
     }
   }
   ui.refresh = () => { renderModal(false); renderTownPanel(); };
+  // Windows you often wait in (an order or an experiment waiting on an ingredient) set speed: true and get the clock and
+  // the speed buttons in their header, since the window's backdrop covers the top bar. The top bar's update keeps both live.
+  function modalSpeed(on) {
+    const el = $('#modal-speed');
+    if (!on) { if (el.firstChild) el.innerHTML = ''; return; }
+    if (el.firstChild) return;
+    const S = Game.S;
+    el.innerHTML = `<span class="m-clock" title="Game time">${$('#clock').textContent}</span>`
+      + [[0, '⏸', 'Pause'], [1, '▶', 'Normal'], [3, '⏩', 'Fast'], [8, '⏭', 'Very fast']].map(([v, ic, t]) =>
+        `<button class="small${v === S.speed ? ' active' : ''}" data-action="speed" data-arg="${v}" title="${t} (Space pauses)">${ic}</button>`).join('');
+  }
   // The Cookbook's cuisine strip: arrows only show where there is more to scroll to (with a fade at that edge).
   function czArrows() {
     const st = document.querySelector('.cz-strip');
@@ -843,7 +856,7 @@
     // of tiles itself changes (a new ingredient, a search, a group filter, the group menu opening).
     const key = [q, cat, ui.dd === 'tkcat', miss, ids.join()].join('|');
     return {
-      title: `🧪 Test Kitchen ${qm('Combine 2–8 different ingredients. The exact set makes a dish: you discover it, and if you have enough of each it is cooked straight away. Experiments are free, and you can use anything you have ever had.')}`, cls: 'wide',
+      title: `🧪 Test Kitchen ${qm('Combine 2–8 different ingredients. The exact set makes a dish: you discover it, and if you have enough of each it is cooked straight away. Experiments are free, and you can use anything you have ever had.')}`, cls: 'wide', speed: true,
       html: `<div class="tk" data-key="${esc(key)}">
         <div class="tk-left">${left}</div>
         <div class="tk-right">
@@ -2102,6 +2115,7 @@
     const bar = $('#bpbar'), bp = ui.bp;
     if (!bar) return;
     bar.hidden = !bp;
+    document.body.classList.toggle('bp-open', !!bp);
     if (!bp) { bar.innerHTML = ''; return; }
     const cost = Game.blueprintCost(bp.items), n = bp.items.length, bad = bp.items.filter((it) => it.err).length;
     const lk = Game.blueprintLinks(bp.items), short = Game.S.money < cost;
@@ -2117,6 +2131,8 @@
         <button class="small" data-action="bp-rotate" title="Turn the way the chain grows (R)">↻ Rotate</button>
         <button class="small primary" data-action="bp-build" ${!bp.pinned || bad || short ? 'disabled' : ''} title="Enter">✅ Build 💰${money(cost)}</button>
         <button class="small" data-action="bp-cancel" title="Esc">✕ Cancel</button></div>`;
+    // Toasts stack above the bar (css: body.bp-open #toasts), however tall its note makes it.
+    document.body.style.setProperty('--bp-h', bar.offsetHeight + 'px');
   }
 
   // =================== HOVER TIPS ===================
