@@ -1444,7 +1444,7 @@
       Game.emit('inv');
       const res = { kind: isNew ? 'new' : 'known', dish: dish.id, cooked };
       // The combo was another dish: still say how it stands against the target.
-      if (target && target !== dish.id && !S.discovered[target]) { const h = targetHint(target, ids, new Set(ids)); res.target = h.msg; res.targetCats = h.cats; }
+      if (target && target !== dish.id && !S.discovered[target]) { const h = targetHint(target, ids, new Set(ids)); res.target = h.msg; res.targetCats = h.cats; res.targetFit = h.fit; }
       return res;
     }
     const sel = new Set(ids);
@@ -1463,11 +1463,15 @@
     const ins = Object.keys(FS.dishRecipe[best.d.id].inputs);
     return { kind: 'warm', dish: best.d.id, cats: missingCats(ins, sel), msg: warmMsg(best.d, ins, ids, sel, best.missing) };
   };
+  // About the target dish the Test Kitchen colours each tried ingredient (fit: which belong), so the text stays short.
   function targetHint(target, ids, sel) {
     const t = FS.items[target], ins = Object.keys(FS.dishRecipe[target].inputs);
-    const overlap = ins.filter((i) => sel.has(i)).length;
-    if (!overlap) return { kind: 'fail', dish: target, msg: `None of these go into ${t.name}.` };
-    return { kind: 'warm', dish: target, cats: missingCats(ins, sel), msg: warmMsg(t, ins, ids, sel, ins.length - overlap) };
+    const fit = { good: ids.filter((i) => ins.includes(i)), bad: ids.filter((i) => !ins.includes(i)) };
+    if (!fit.good.length) return { kind: 'fail', dish: target, fit, msg: `None of these go into ${t.name}.` };
+    const missing = ins.filter((i) => !sel.has(i)), cats = missingCats(ins, sel);
+    const msg = missing.length ? `Still needs ${missing.length} more: ${cats.map((c) => (FS.catInfo[c] || ['', c])[1]).join(', ')}.`
+      : 'Everything it needs is here: take out the ones that don\'t belong.';
+    return { kind: 'warm', dish: target, cats, fit, msg };
   }
   // The groups of the ingredients still missing (the hint names them), for the Test Kitchen's group filter.
   const missingCats = (ins, sel) => [...new Set(ins.filter((i) => !sel.has(i)).map((i) => FS.items[i].cat))];
