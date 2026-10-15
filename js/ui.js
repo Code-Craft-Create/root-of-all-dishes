@@ -567,6 +567,7 @@
     body.scrollTop = top;
     body.querySelectorAll('[data-scroll]').forEach((s) => { if (scrolls[s.dataset.scroll]) s.scrollTop = scrolls[s.dataset.scroll]; if (scrolls[s.dataset.scroll + ':x']) s.scrollLeft = scrolls[s.dataset.scroll + ':x']; });
     czArrows();
+    if (m.after) m.after(body, fresh);
     if (focus) {
       const f = body.querySelector(`[data-search="${focus}"]`);
       if (f) { f.focus(); try { f.setSelectionRange(sel, sel); } catch (e) {} }
@@ -1488,55 +1489,128 @@
     const sig = [townMapSig(), ui.townTab, r ? [r.served, r.missed, r.reviews.length, r.menu.map(have).join()].join(':') : '', Math.floor(S.money / 500), Game.criticDone(), S.critic && S.critic.rumour, S.critic && S.critic.history && S.critic.history.length].join('|');
     if (sig !== ui.townSig && !ui.mouseDown && !(ae && ae.tagName === 'SELECT')) { ui.townSig = sig; renderTownPanel(); }
   }
-  // ----- Cuisines: five stages of three cuisines, and the guided first steps -----
+  // ----- Cuisines: five stages, each a red menu book on a shelf. Its three cuisines are the menu's three courses. -----
+  // Clicking a book takes it off the shelf: it flies up, grows and opens (ui.czBook = the open stage, ui.czAnim = play it).
+  const COURSES = ['Starter', 'Main course', 'Dessert'];
+  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+  const reduceMotion = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // done | current | next (known, not open yet) | secret (only shown as a plain book)
+  const bookState = (st) => !Game.stageKnown(st.id) ? 'secret' : Game.stageDone(st.id) ? 'done' : Game.stageOpen(st.id) ? 'current' : 'next';
+  function menuCover(st) {
+    const S = Game.S, state = bookState(st), i = FS.STAGES.indexOf(st);
+    const medal = (c) => state === 'secret' ? '<span class="mc-medal"></span>'
+      : state === 'next' ? `<span class="mc-medal sil">${FSI.img(c.item)}</span>`
+      : `<span class="mc-medal${(S.cuisineDone || {})[c.id] ? ' won' : ''}${S.cuisines[c.id] ? '' : ' shut'}">${FSI.img('cz_' + c.id)}</span>`;
+    return `<div class="mc is-${state}"><span class="mc-spine"></span><div class="mc-frame">
+      <div class="mc-kicker">Menu</div><div class="mc-no">${ROMAN[i]}</div>
+      <div class="mc-title${Math.max(...st.name.split(' ').map((w) => w.length)) > 10 ? ' long' : ''}">${state === 'secret' ? '<span class="mc-q">?</span>' : esc(st.name)}</div>
+      <div class="mc-medals">${st.cuisines.map(medal).join('')}</div></div>
+      ${state === 'done' ? '<span class="mc-seal">✓</span>' : ''}${state === 'current' ? '<span class="mc-ribbon"></span>' : ''}</div>`;
+  }
+  ui.czBusy = 0;
   modals.cuisines = () => {
     const S = Game.S, cur = Game.currentStage(), ready = Game.cuisinesReady();
     if (ready) S.czSeen = cur.id;
-    const steps = FS.STEPS.filter((st) => st.goal).map((st) => {
-      const g = Game.goals.find((x) => x.id === st.goal), done = S.goalsDone[st.goal];
-      return `<div class="stage ${done ? 'done' : ''}"><span>${done ? '✅' : '🔒'}</span><div><b>${esc(st.name)}</b><div class="small muted">${esc(st.desc)}</div>
-        ${done ? '' : `<div class="small">🎯 Unlocks when you complete: ${esc(g.text)}${goalProg(g)}</div>`}</div></div>`;
-    }).join('');
-    // Reached stages show in full, the next one as a teaser with silhouettes, later ones only as a count.
-    const later = FS.STAGES.filter((st) => !Game.stageKnown(st.id)).length;
-    const stages = FS.STAGES.filter((st) => Game.stageKnown(st.id)).map((st) => {
-      const open = Game.stageOpen(st.id), done = Game.stageDone(st.id), prev = FS.STAGES[FS.STAGES.indexOf(st) - 1];
-      const what = st.rating && !Game.restaurantsUnlocked() ? 'a new challenge' : `${st.rating ? `serve ${st.target} dishes of each cuisine at 🏙️ restaurants rated ${'★'.repeat(st.rating)} or better` : `cook ${st.target} dishes in each cuisine`} · +${st.toques} 🎩 per cuisine${st.unlock ? ` · then unlocks ${Game.featureText(st.unlock)}` : ''}`;
-      if (!open) {
-        const sils = st.cuisines.map((c) => `<div class="pack locked cz-tease"><div class="pack-head"><span class="pack-icon sil">${FSI.img(c.item)}</span><div><b>❔ A new cuisine</b></div></div>
-          <p class="small">${esc(c.hint)}</p><div class="small muted">🔒 Opens when ${esc(prev.name)} is done</div></div>`).join('');
-        return `<section class="cz-stage locked"><h4>🔒 Next: ${esc(st.name)} <span class="muted small">${what}</span></h4>
-          <p class="small cz-teaser">✨ ${esc(st.teaser)}</p><div class="packs">${sils}</div></section>`;
-      }
-      const cards = st.cuisines.map((c) => {
-        const isOpen = !!S.cuisines[c.id], n = Game.cuisineCooked(c), cost = Game.cuisineCost(c);
-        const rated = st.rating ? Game.cuisineRated(c, st.rating) : n;
-        const known = c.dishIds.filter((id) => S.discovered[id]).length;
-        let foot;
-        if (isOpen) {
-          foot = `<div class="gprog cz-prog" title="${st.rating ? `Dishes served at restaurants rated ${'★'.repeat(st.rating)} or better` : 'Dishes cooked towards the stage target'}"><span class="gbar"><i style="width:${Game.cuisineTargetMet(c) ? 100 : Math.min(100, Math.round((rated / st.target) * 100))}%"></i></span>${Game.cuisineTargetMet(c) ? st.target : Math.min(rated, st.target)} / ${st.target} ${st.rating ? `served at ${'★'.repeat(st.rating)}` : 'cooked'}${(S.cuisineDone || {})[c.id] ? ' ✅' : ''}</div>
-            ${Game.sigOpen(st.id) && (!(S.cuisineDone || {})[c.id] || Game.sigCount(c)) ? sigList(st, false, c) : ''}
-            <div class="small muted">${n} of ${c.dishIds.length} dishes cooked · ${known} discovered${(S.cuisineGold || {})[c.id] ? ' · 🏆 every dish cooked' : ''}</div>
-            <button class="small" data-action="cz-dishes" data-arg="${esc(c.name)}">📖 Show its dishes</button>`;
-        } else if (open) {
-          const pv = Game.cuisinePreview(c.id);
-          foot = `<div class="small">${c.dishIds.length} dishes · ${pv.recipes} new production steps${pv.buildings.length ? `<div class="pack-b">${pv.buildings.length} new building${pv.buildings.length > 1 ? 's' : ''}: ${pv.buildings.map((b) => `<span title="${esc(FS.buildings[b].name)}">${FSI.img('b_' + b)}</span>`).join('')}</div>` : ''}</div>
-            <button class="primary" data-action="open-cuisine" data-arg="${c.id}" ${ready && S.money >= cost ? '' : 'disabled'}>Open for 💰${money(cost)}</button>`;
-        }
-        return `<div class="pack ${isOpen ? 'owned' : ''} ${open ? '' : 'locked'}"><div class="pack-head"><span class="pack-icon">${FSI.img('cz_' + c.id)}</span><div><b>${esc(c.name)}</b></div></div>
-          <p class="small">${esc(c.desc)}</p>${foot}</div>`;
-      }).join('');
-      return `<section class="cz-stage ${done ? 'done' : ''}"><h4>${done ? '✅' : '👉'} ${esc(st.name)} <span class="muted small">${what}</span></h4>
-        <div class="packs">${cards}</div></section>`;
-    }).join('') + (later ? `<p class="small muted cz-more">🗺️ ${later === 1 ? 'One more stage lies' : `${later} more stages lie`} beyond, still a secret. Finish the next one to see where the road leads.</p>` : '');
+    // The book of the stage you are on lies open the first time; after that the window remembers your choice.
+    if (ui.czBook === undefined) ui.czBook = cur.id;
+    if (ui.czBook && !Game.stageKnown(ui.czBook)) ui.czBook = null;
+    const st = ui.czBook && Game.stageById(ui.czBook);
+    const shelf = `<div class="mb-shelf${st ? ' compact' : ''}"><div class="mb-row">${FS.STAGES.map((s) => {
+      const state = bookState(s), n = s.cuisines.filter((c) => (S.cuisineDone || {})[c.id]).length;
+      const tip = state === 'secret' ? 'Still a secret' : `${s.name}${state === 'next' ? ': next' : state === 'done' ? ': finished' : `: ${n} of 3 cuisines at the target`}`;
+      return `<button class="mb-book is-${state}${st === s ? ' taken' : ''}" data-action="czbook" data-arg="${s.id}" data-tip="${esc(tip)}">${menuCover(s)}</button>`;
+    }).join('')}</div><div class="mb-ledge"></div></div>`;
     return {
-      title: `🍽️ Cuisines ${qm(`Every dish belongs to one cuisine. Opening a cuisine unlocks every building and production step its dishes need and puts its dishes in your 📖 Cookbook. Cook the stage's target in each of its three cuisines${FS.STAGES.some((st) => Game.sigOpen(st.id)) ? ', then its ⭐ Chef\'s Challenge,' : ''} to open the next stage. Each cuisine target earns 🎩 toques (they pay for 💡 hints${Game.featureKnown('academy') ? ', 🎓 Academy chefs' : ''}${Game.featureKnown('mastery') ? ', ⭐ dish mastery' : ''}${Game.featureKnown('restaurants') ? ' and 👨‍🍳 head chefs' : ''}), and cooking every dish of a cuisine earns extra toques.`)}`, cls: 'wide',
-      html: `${ready ? ''
-        : '<p class="warn">🔒 Farmhouse Kitchen is open from the start. Cook your first dish in the 🧪 Test Kitchen to open more cuisines.</p>'}
-        ${stages}
-        <h4>Guided first steps (${esc(FS.STAGES[0].name)})</h4><div class="stages">${steps}</div>`,
+      title: `🍽️ Cuisines ${qm(`Every stage is a menu of three cuisines. Opening a cuisine unlocks every building and production step its dishes need and puts its dishes in your 📖 Cookbook. Cook the stage's target in each of its three cuisines${FS.STAGES.some((s) => Game.sigOpen(s.id)) ? ', then its ⭐ Chef\'s Challenge,' : ''} to open the next stage. Each cuisine target earns 🎩 toques (they pay for 💡 hints${Game.featureKnown('academy') ? ', 🎓 Academy chefs' : ''}${Game.featureKnown('mastery') ? ', ⭐ dish mastery' : ''}${Game.featureKnown('restaurants') ? ' and 👨‍🍳 head chefs' : ''}), and cooking every dish of a cuisine earns extra toques.`)}`, cls: 'wide',
+      html: `<div class="mb-room">${ready ? '' : '<p class="warn mb-note">🔒 Farmhouse Kitchen is open from the start. Cook your first dish in the 🧪 Test Kitchen to open more cuisines.</p>'}
+        ${shelf}${st ? menuBook(st, ready) : '<p class="mb-pick">Pick a menu from the shelf.</p>'}</div>`,
+      after: (body, fresh) => openBookAnim(body, fresh || ui.czAnim),
+      // While the book flies up and opens, a redraw would snap it open: wait and redraw once it has settled.
+      patch: () => {
+        if (performance.now() > ui.czBusy) return false;
+        clearTimeout(ui.czLater); ui.czLater = setTimeout(() => { if (ui.modal === 'cuisines') ui.refresh(); }, ui.czBusy - performance.now() + 30);
+        return true;
+      },
     };
   };
+  // The open book: on the left the stage (and the guided first steps in the first one), on the right its three courses.
+  function menuBook(st, ready) {
+    const S = Game.S, state = bookState(st), i = FS.STAGES.indexOf(st), prev = FS.STAGES[i - 1];
+    const what = st.rating && !Game.restaurantsUnlocked() ? 'A new challenge' : `${st.rating ? `Serve ${st.target} dishes of each cuisine at 🏙️ restaurants rated ${'★'.repeat(st.rating)} or better` : `Cook ${st.target} dishes in each cuisine`} · +${st.toques} 🎩 per cuisine${st.unlock ? ` · then unlocks ${Game.featureText(st.unlock)}` : ''}`;
+    const nDone = st.cuisines.filter((c) => (S.cuisineDone || {})[c.id]).length;
+    const status = state === 'done' ? '✅ Finished' : state === 'current' ? `👉 Your menu now · ${nDone} of 3 cuisines at the target` : `🔒 Opens when ${esc(prev.name)} is done`;
+    const steps = !st.cuisines.some((c) => c.steps) ? '' : `<h5 class="mb-h">Guided first steps</h5><div class="stages">${FS.STEPS.filter((x) => x.goal).map((x) => {
+      const g = Game.goals.find((y) => y.id === x.goal), done = S.goalsDone[x.goal];
+      return `<div class="stage ${done ? 'done' : ''}"><span>${done ? '✅' : '🔒'}</span><div><b>${esc(x.name)}</b><div class="small muted">${esc(x.desc)}</div>
+        ${done ? '' : `<div class="small">🎯 Unlocks when you complete: ${esc(g.text)}${goalProg(g)}</div>`}</div></div>`;
+    }).join('')}</div>`;
+    const left = `<div class="mb-no">No. ${ROMAN[i]}</div><h3 class="mb-name">${esc(st.name)}</h3><div class="mb-orn"><i></i></div>
+      <p class="mb-status">${status}</p><p class="mb-what">${what}</p>${state === 'next' ? `<p class="mb-teaser">✨ ${esc(st.teaser)}</p>` : ''}${steps}
+      <div class="mb-foot"><div class="mb-orn small"><i></i></div>Bon appétit</div>`;
+    const courses = st.cuisines.map((c, k) => {
+      if (state === 'next') return `<div class="mb-course tease"><div class="mb-ctag">${COURSES[k]}</div>
+        <div class="mb-cname"><span class="sil">${FSI.img(c.item)}</span> ❔ A new cuisine</div><p class="mb-cdesc">${esc(c.hint)}</p></div>`;
+      const isOpen = !!S.cuisines[c.id], n = Game.cuisineCooked(c), cost = Game.cuisineCost(c);
+      const rated = st.rating ? Game.cuisineRated(c, st.rating) : n;
+      const known = c.dishIds.filter((id) => S.discovered[id]).length;
+      let foot;
+      if (isOpen) {
+        foot = `<div class="gprog cz-prog" title="${st.rating ? `Dishes served at restaurants rated ${'★'.repeat(st.rating)} or better` : 'Dishes cooked towards the stage target'}"><span class="gbar"><i style="width:${Game.cuisineTargetMet(c) ? 100 : Math.min(100, Math.round((rated / st.target) * 100))}%"></i></span>${Game.cuisineTargetMet(c) ? st.target : Math.min(rated, st.target)} / ${st.target} ${st.rating ? `served at ${'★'.repeat(st.rating)}` : 'cooked'}${(S.cuisineDone || {})[c.id] ? ' ✅' : ''}</div>
+          ${Game.sigOpen(st.id) && (!(S.cuisineDone || {})[c.id] || Game.sigCount(c)) ? sigList(st, false, c) : ''}
+          <div class="small muted">${n} of ${c.dishIds.length} dishes cooked · ${known} discovered${(S.cuisineGold || {})[c.id] ? ' · 🏆 every dish cooked' : ''}</div>
+          <button class="small" data-action="cz-dishes" data-arg="${esc(c.name)}">📖 Show its dishes</button>`;
+      } else {
+        const pv = Game.cuisinePreview(c.id);
+        foot = `<div class="small">${c.dishIds.length} dishes · ${pv.recipes} new production steps${pv.buildings.length ? `<div class="pack-b">${pv.buildings.length} new building${pv.buildings.length > 1 ? 's' : ''}: ${pv.buildings.map((b) => `<span data-tip="${esc(FS.buildings[b].name)}">${FSI.img('b_' + b)}</span>`).join('')}</div>` : ''}</div>
+          <button class="primary" data-action="open-cuisine" data-arg="${c.id}" ${ready && S.money >= cost ? '' : 'disabled'}>Open for 💰${money(cost)}</button>`;
+      }
+      return `<div class="mb-course${isOpen ? ' owned' : ''}"><div class="mb-ctag">${COURSES[k]}</div>
+        <div class="mb-cname">${FSI.img('cz_' + c.id)} ${esc(c.name)}</div><p class="mb-cdesc">${esc(c.desc)}</p>${foot}</div>`;
+    }).join('<div class="mb-orn small"><i></i></div>');
+    return `<div class="mb-stage"><div class="mbook is-${state}" data-stage="${st.id}">
+      <div class="mb-pages"><div class="mb-page mb-left" data-scroll="mbl">${left}</div><div class="mb-page mb-right" data-scroll="mbr">${courses}</div></div>
+      <div class="mb-cover"><div class="mb-front">${menuCover(st)}</div><div class="mb-back"></div></div></div>
+      <button class="mb-close" data-action="czbook-close">Put the menu back</button></div>`;
+  }
+  // FLIP: the open book starts where its cover stands on the shelf (scaled down to it), then grows into place and opens.
+  function bookFrom(body, book) {
+    const slot = body.querySelector(`.mb-book[data-arg="${book.dataset.stage}"] .mc`), cover = book.querySelector('.mb-cover');
+    if (!slot || !cover) return null;
+    const a = slot.getBoundingClientRect(), b = cover.getBoundingClientRect(), bb = book.getBoundingClientRect();
+    if (!b.width) return null;
+    return { origin: `${b.left - bb.left}px ${b.top - bb.top}px`, transform: `translate(${a.left - b.left}px, ${a.top - b.top}px) scale(${a.width / b.width})` };
+  }
+  function openBookAnim(body, anim) {
+    ui.czAnim = false;
+    const book = body.querySelector('.mbook');
+    if (!book) return;
+    const from = anim && !reduceMotion() && bookFrom(body, book);
+    if (!from) { book.classList.add('is-open', 'still'); return; }
+    book.querySelectorAll('.mb-page').forEach((p) => { p.scrollTop = 0; });
+    book.style.transformOrigin = from.origin;
+    book.style.transform = from.transform;
+    book.classList.add('still');
+    void book.offsetWidth; // start from the shelf before the transitions run
+    book.classList.remove('still');
+    book.style.transform = '';
+    book.classList.add('is-open');
+    ui.czBusy = performance.now() + 1250;
+    SFX.play('page');
+  }
+  // Putting it back: the cover closes, then the book shrinks back onto its place on the shelf.
+  function closeBook() {
+    const body = $('#modal-body'), book = body && body.querySelector('.mbook');
+    const done = () => { ui.czBook = null; ui.czBusy = 0; if (ui.modal === 'cuisines') ui.refresh(); };
+    const from = book && !reduceMotion() && bookFrom(body, book);
+    if (!from) { done(); return; }
+    SFX.play('page');
+    book.style.transformOrigin = from.origin;
+    book.classList.remove('is-open', 'still');
+    book.classList.add('closing');
+    book.style.transform = from.transform;
+    ui.czBusy = performance.now() + 950;
+    setTimeout(done, 950);
+  }
 
   // ----- Orders -----
   // What each stage's orders add. Shown in the "About orders" tab, with a peek at what the next stage brings.
@@ -2208,6 +2282,13 @@
       case 'town-price': { const [rid, k] = String(arg).split('|'); Game.setPriceLevel(+rid, +k); ui.refresh(); break; }
       case 'menu-add': case 'menu-del': { const [rid, id] = String(arg).split('|'); Game.setMenu(+rid, id, action === 'menu-add'); ui.refresh(); break; }
       case 'cz-dishes': ui.filter.cuisine = arg; openModal('cookbook'); break;
+      case 'czbook': {
+        // A secret book stays shut and only gives a little wobble.
+        if (!Game.stageKnown(arg)) { const el = document.querySelector(`.mb-book[data-arg="${arg}"]`); if (el) { el.classList.remove('nope'); void el.offsetWidth; el.classList.add('nope'); } SFX.play('error'); break; }
+        if (ui.czBook === arg) { closeBook(); break; }
+        ui.czBook = arg; ui.czAnim = true; ui.czBusy = 0; ui.refresh(); break;
+      }
+      case 'czbook-close': closeBook(); break;
       case 'reveal': Game.reveal(arg); ui.refresh(); break;
       case 'master': Game.masterDish(arg); ui.refresh(); break;
       case 'head-promote': { const [cid, rid] = String(arg).split('|'); Game.promoteChef(+cid, +rid); ui.refresh(); break; }

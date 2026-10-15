@@ -1394,3 +1394,127 @@ body.touch-placing #toasts { bottom: 128px; }
   .mc-drawer { gap: 8px; padding: 8px 10px; }
   .mc-text { font-size: 12px; }
 }
+/* Cuisines window: every stage is a red leather menu book standing on a shelf, cover in gold with its three cuisines as
+   medallions. Clicking one takes it off the shelf: it grows into place and the cover swings open (ui.js openBookAnim) on
+   a cream menu card, the stage on the left page, its three cuisines as Starter, Main course and Dessert on the right.
+   A phone shows one page: the cover swings away and the card scrolls. */
+#modal-body:has(> .mb-room) { background-color: #4a2c1c; background-attachment: local; border-radius: 0 0 14px 14px;
+  background-image: repeating-linear-gradient(176deg, rgba(255, 220, 170, 0.035) 0 2px, transparent 2px 9px, rgba(0, 0, 0, 0.05) 9px 11px, transparent 11px 23px),
+    radial-gradient(ellipse at 50% 20%, rgba(255, 190, 120, 0.22), transparent 70%), linear-gradient(#5a3522, #3d2416); }
+.mb-room { --red: #9b1d1f; --red-d: #6a0f12; --gold: #e2bd62; --gold-l: #f6dc95; --paper: #fbf5e6; --ink: #3b2414;
+  display: flex; flex-direction: column; align-items: center; min-height: 100%; }
+.mb-note { align-self: stretch; }
+.mb-pick { color: #f3dfbd; font-family: Georgia, 'Times New Roman', serif; font-style: italic; margin: 18px 0; }
+.mb-shelf { width: min(100%, 720px); margin: 4px 0 14px; }
+.mb-row { display: flex; justify-content: center; align-items: flex-end; gap: clamp(6px, 2.4%, 22px); padding: 0 10px; }
+.mb-ledge { height: 14px; border-radius: 3px; background: linear-gradient(#b47c45, #7d5028 70%, #5d3a1c); box-shadow: 0 5px 8px rgba(0, 0, 0, 0.45); }
+.mb-book { flex: 0 1 140px; min-width: 0; padding: 0; border: 0; background: none; border-radius: 3px 7px 7px 3px; cursor: pointer;
+  transform-origin: 50% 100%; transition: transform 0.18s ease-out, flex-basis 0.3s; }
+.mb-book:hover { transform: translateY(-6px) rotate(-1.5deg); }
+.mb-book:focus { outline: none; }
+.mb-book:focus-visible { outline: 2px solid var(--gold-l); outline-offset: 3px; }
+.mb-book.taken .mc { visibility: hidden; }
+.mb-book.taken::after { content: ''; display: block; margin-top: -4px; height: 4px; border-radius: 3px; background: rgba(0, 0, 0, 0.3); }
+.mb-book.is-secret { cursor: default; }
+.mb-book.is-secret:hover { transform: none; }
+.mb-book.nope { animation: mb-nope 0.4s; }
+@keyframes mb-nope { 25% { transform: rotate(-4deg); } 50% { transform: rotate(3deg); } 75% { transform: rotate(-2deg); } }
+.mb-shelf.compact .mb-book { flex-basis: 70px; }
+/* The cover. Sizes are in cqw, so the same cover reads the same on the shelf and when it flies up open. */
+.mc { position: relative; container-type: inline-size; aspect-ratio: 1 / 1.4; width: 100%; border-radius: 3px 7px 7px 3px; overflow: hidden;
+  background: radial-gradient(ellipse at 35% 25%, rgba(255, 120, 110, 0.28), transparent 60%), repeating-radial-gradient(circle at 30% 40%, rgba(0, 0, 0, 0.05) 0 1px, transparent 1px 3px),
+    linear-gradient(160deg, var(--red), var(--red-d));
+  box-shadow: inset -2px 0 3px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.18), 2px 3px 6px rgba(0, 0, 0, 0.45); color: var(--gold); text-align: center; }
+.mc-spine { position: absolute; left: 0; top: 0; bottom: 0; width: 9cqw; background: linear-gradient(90deg, rgba(0, 0, 0, 0.45), rgba(255, 255, 255, 0.08) 55%, rgba(0, 0, 0, 0.3));
+  box-shadow: 1px 0 0 rgba(255, 210, 120, 0.25); }
+.mc-frame { position: absolute; inset: 7cqw 6cqw 7cqw 15cqw; border: 1.2cqw double var(--gold); border-width: 2.4cqw; border-radius: 2cqw; display: flex; flex-direction: column; align-items: center;
+  justify-content: space-between; padding: 6cqw 3cqw; font-family: Georgia, 'Times New Roman', serif; text-shadow: 0 0.6cqw 0 rgba(0, 0, 0, 0.45); }
+.mc-kicker { font-size: 12cqw; letter-spacing: 0.25em; text-transform: uppercase; padding-left: 0.25em; color: var(--gold-l); line-height: 1; }
+.mc-no { font-size: 9cqw; line-height: 1; margin-top: -2cqw; }
+.mc-no::before, .mc-no::after { content: ''; display: inline-block; vertical-align: middle; width: 12cqw; height: 0.8cqw; margin: 0 2cqw; background: var(--gold); }
+.mc-title { font-size: 13cqw; line-height: 1.15; font-style: italic; color: var(--gold-l); overflow-wrap: break-word; }
+.mc-title.long { font-size: 9.5cqw; }
+.mc-q { font-size: 34cqw; font-style: normal; line-height: 1; opacity: 0.7; }
+.mc-medals { display: flex; gap: 3cqw; }
+.mc-medal { display: grid; place-items: center; width: 19cqw; height: 19cqw; border-radius: 50%; background: radial-gradient(circle, #fff6dc 55%, #e8d3a0); box-shadow: 0 0 0 1cqw var(--gold), 0 1cqw 1.5cqw rgba(0, 0, 0, 0.4); }
+.mc-medal .ico { width: 13cqw; height: 13cqw; }
+.mc-medal.shut .ico { opacity: 0.45; filter: grayscale(1); }
+.mc-medal.won { box-shadow: 0 0 0 1cqw var(--gold-l), 0 0 3cqw rgba(255, 220, 120, 0.8); }
+.mc.is-secret .mc-medal { background: rgba(0, 0, 0, 0.2); box-shadow: 0 0 0 1cqw rgba(226, 189, 98, 0.45); }
+.mc.is-secret { filter: saturate(0.55) brightness(0.72); }
+.mc.is-next .mc-medal { background: rgba(255, 246, 220, 0.75); }
+.mc-seal { position: absolute; right: 3cqw; bottom: 3cqw; width: 22cqw; height: 22cqw; border-radius: 50%; display: grid; place-items: center; font-size: 13cqw; font-weight: 800;
+  color: #6b4206; background: radial-gradient(circle at 35% 30%, #fff1b0, #e2b13c 55%, #b57d18); box-shadow: 0 0 0 1cqw #c99325, 0 1cqw 2cqw rgba(0, 0, 0, 0.5); text-shadow: none; }
+.mc-ribbon { position: absolute; right: 18cqw; top: -1px; width: 9cqw; height: 26cqw; background: linear-gradient(90deg, #d8a73a, #f6d978, #d8a73a);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 82%, 0 100%); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); }
+/* The open book */
+.mb-stage { display: flex; flex-direction: column; align-items: center; width: 100%; }
+.mbook { position: relative; width: min(100%, 940px, calc((88vh - 290px) * 2 / 1.4)); min-width: min(100%, 520px); aspect-ratio: 2 / 1.4; perspective: 2600px;
+  transition: transform 0.5s cubic-bezier(0.2, 0.75, 0.25, 1); }
+.mb-pages { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; }
+.mb-page { position: relative; display: flex; flex-direction: column; overflow-y: auto; padding: 22px 26px 18px; color: var(--ink); font-family: Georgia, 'Times New Roman', serif; scrollbar-width: thin; }
+.mb-page .gprog, .mb-page .small, .mb-page button, .mb-page .sig-list, .mb-page .stages { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+.mb-right { z-index: 0; border-radius: 0 8px 8px 0; background: linear-gradient(90deg, rgba(90, 50, 10, 0.2), transparent 7%), var(--paper);
+  box-shadow: inset 0 0 0 6px var(--paper), inset 0 0 0 7px rgba(176, 130, 50, 0.55), inset 0 0 0 10px var(--paper), inset 0 0 0 11px rgba(176, 130, 50, 0.35), 4px 6px 14px rgba(0, 0, 0, 0.45); }
+.mb-left { z-index: 2; opacity: 0; text-align: center; transition: opacity 0.35s 0.85s; }
+.mb-cover { position: absolute; z-index: 1; top: 0; bottom: 0; left: 50%; width: 50%; transform-origin: 0 50%; transform-style: preserve-3d;
+  transition: transform 0.75s cubic-bezier(0.45, 0.05, 0.25, 1) 0.4s; }
+.mb-front, .mb-back { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.mb-front .mc { height: 100%; box-shadow: inset -2px 0 3px rgba(0, 0, 0, 0.35), 6px 10px 22px rgba(0, 0, 0, 0.5); }
+.mb-back { transform: rotateY(180deg); border-radius: 0 8px 8px 0; background: linear-gradient(270deg, rgba(90, 50, 10, 0.2), transparent 7%), var(--paper);
+  box-shadow: inset 0 0 0 6px var(--paper), inset 0 0 0 7px rgba(176, 130, 50, 0.55), inset 0 0 0 10px var(--paper), inset 0 0 0 11px rgba(176, 130, 50, 0.35), -4px 6px 14px rgba(0, 0, 0, 0.45); }
+.mb-back::before { content: ''; position: absolute; inset: 0; border-radius: inherit; border-left: 5px solid var(--red-d); }
+.mbook.is-open .mb-cover { transform: rotateY(-180deg); }
+.mbook.is-open .mb-left { opacity: 1; }
+.mbook.still, .mbook.still * { transition: none !important; }
+.mbook.closing .mb-cover { transition-delay: 0s; transition-duration: 0.5s; }
+.mbook.closing .mb-left { transition: opacity 0.12s; }
+.mbook.closing { transition-delay: 0.45s; transition-duration: 0.45s; transition-timing-function: cubic-bezier(0.5, 0, 0.8, 0.3); }
+/* The menu card itself */
+.mb-no { font-size: 13px; letter-spacing: 0.3em; text-transform: uppercase; color: #9a6b2c; }
+.mb-name { margin: 4px 0 2px; font-size: 26px; font-weight: 400; font-style: italic; color: var(--red-d); }
+.mb-orn { display: flex; align-items: center; justify-content: center; margin: 6px auto 10px; width: 70%; }
+.mb-orn::before, .mb-orn::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, #b0823280, #b08232); }
+.mb-orn::after { transform: scaleX(-1); }
+.mb-orn i { width: 7px; height: 7px; margin: 0 8px; transform: rotate(45deg); background: #b08232; }
+.mb-orn.small { width: 40%; margin: 12px auto; }
+.mb-status { margin: 0 0 6px; font-weight: 700; color: var(--ink); }
+.mb-what { margin: 0 0 8px; font-size: 14px; font-style: italic; color: #6a4a2c; }
+.mb-teaser { margin: 10px 0; font-style: italic; }
+.mb-foot { margin-top: auto; padding-top: 14px; font-style: italic; font-size: 18px; color: #9a6b2c; }
+.mb-room:not(:has(.mb-stage)) { justify-content: center; }
+.mb-room:not(:has(.mb-stage)) .mb-shelf { margin-top: -40px; }
+.mb-h { margin: 16px 0 6px; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 400; color: #9a6b2c; }
+.mb-left .stages { text-align: left; }
+.mb-left .stage { background: rgba(255, 255, 255, 0.55); }
+.mb-course { text-align: center; }
+.mb-ctag { font-size: 12px; letter-spacing: 0.3em; text-transform: uppercase; color: #9a6b2c; }
+.mb-cname { margin: 2px 0; font-size: 20px; font-style: italic; color: var(--red-d); display: flex; align-items: center; justify-content: center; gap: 6px; }
+.mb-cname .ico { width: 26px; height: 26px; }
+.mb-cdesc { margin: 0 0 6px; font-size: 14px; color: #6a4a2c; }
+.mb-course .gprog { justify-content: center; }
+.mb-course .gbar { max-width: 180px; }
+.mb-course .sig-list { text-align: left; margin: 6px auto; max-width: 320px; font-size: 13px; }
+.mb-course .pack-b { justify-content: center; }
+.mb-course button { margin-top: 4px; }
+.mb-course.tease .mb-cname, .mb-course.tease .mb-cdesc { color: #8c7a66; }
+.mb-close { margin: 14px 0 4px; background: rgba(255, 240, 215, 0.12); border-color: rgba(255, 230, 190, 0.4); color: #f6e3c0; }
+.mb-close:hover { background: rgba(255, 240, 215, 0.24); }
+/* Phones: one page at a time. The cover covers the whole card, swings away to the left and fades. */
+@media (max-width: 640px) {
+  .mb-shelf { margin-bottom: 10px; }
+  .mb-row { gap: 6px; padding: 0 4px; }
+  .mb-shelf.compact .mb-book { flex-basis: 48px; }
+  .mbook { width: min(100%, calc((94vh - 250px) / 1.4)); min-width: min(100%, 260px); aspect-ratio: 1 / 1.4; }
+  .mb-pages { display: block; overflow-y: auto; border-radius: 0 8px 8px 0; background: linear-gradient(90deg, rgba(90, 50, 10, 0.2), transparent 5%), var(--paper);
+    box-shadow: inset 0 0 0 5px var(--paper), inset 0 0 0 6px rgba(176, 130, 50, 0.55), 3px 5px 12px rgba(0, 0, 0, 0.45); }
+  .mb-page { overflow: visible; padding: 16px 16px 10px; background: none; box-shadow: none; }
+  .mb-foot { display: none; }
+  .mb-right { padding-top: 0; }
+  .mb-right::before { content: ''; display: block; height: 1px; margin: 0 10% 14px; background: #b0823280; }
+  .mb-cover { left: 0; width: 100%; transition: transform 0.75s cubic-bezier(0.45, 0.05, 0.25, 1) 0.4s, opacity 0.25s 0.85s; }
+  .mbook.is-open .mb-cover { opacity: 0; pointer-events: none; }
+  .mbook.closing .mb-cover { transition-delay: 0s, 0s; }
+  .mb-name { font-size: 22px; }
+}
+@media (prefers-reduced-motion: reduce) { .mb-book, .mb-book.nope { transition: none; animation: none; } }
