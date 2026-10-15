@@ -85,7 +85,7 @@
       v: 4, seed, money: 4000, toques: 3, cuisines: { farmhouse_kitchen: true }, land: [MID * PLOTS + MID], time: 0, speed: 1, newB: {},
       tiles: genMap(seed), buildings: [], nextId: 1,
       inv: {}, seen: {}, discovered: {}, revealed: {}, demand: {},
-      orders: [], orderTimer: 30, goalsDone: {},
+      orders: [], orderTimer: 30, goalsDone: {}, skills: {},
       stats: { earned: 0, spent: 0, produced: {}, sold: 0, ordersDone: 0, experiments: 0 },
     };
   }
@@ -1418,6 +1418,26 @@
   }
 
   // ---------- Test Kitchen ----------
+  // Detective skills: the Test Kitchen's helpers, each opened by the number of different dishes cooked (like the dish
+  // goals). Without any, a try only says whether the combination is a dish. Shown in the Mystery Cupboard (ui.js).
+  Game.SKILLS = [
+    { id: 'taste', name: 'Taste Test', at: 0, about: 'Tells you whether a combination is a dish: yes or no.' },
+    { id: 'palate', name: 'Fine Palate', at: 1, about: 'Tells you which dish you are close to, and which tried ingredients belong to it (green) and which don\'t (red).' },
+    { id: 'nose', name: 'Keen Nose', at: 3, about: 'Names the groups of the ingredients still missing.' },
+    { id: 'sweep', name: 'Pantry Sweep', at: 10, about: 'After a hint about your target dish, the group filter can show just the groups still missing.' },
+    { id: 'compass', name: 'Cuisine Compass', at: 25, about: 'With a target dish, a switch shows only ingredients used somewhere in its cuisine. It works together with the group filter.' },
+  ];
+  Game.skill = (id) => Game.dishesCooked() >= Game.SKILLS.find((k) => k.id === id).at;
+  // A splash for each skill as it opens. Saves from before skills existed get the ones they already have quietly.
+  function checkSkills() {
+    const S = Game.S, quiet = !S.skills;
+    S.skills = S.skills || {};
+    for (const k of Game.SKILLS) {
+      if (S.skills[k.id] || !Game.skill(k.id)) continue;
+      S.skills[k.id] = true;
+      if (!quiet && k.at > 0) Game.emit('unlock', 'skill:' + k.id);
+    }
+  }
   // With a target dish (picked via "Try it"), hints only talk about that dish, never a different one that happens to fit better.
   Game.experiment = function (ids, target) {
     const S = Game.S;
@@ -1464,18 +1484,21 @@
       const score = overlap * 2 - extra * 1.5 - missing * 0.5;
       if (!best || score > best.score) best = { d, overlap, extra, missing, score };
     }
-    if (!best || best.overlap < 2 && ids.length > 1) return { kind: 'fail', msg: 'Nothing comes of this combination.' };
+    // Without the Fine Palate a try is only a yes or a no.
+    if (!best || best.overlap < 2 && ids.length > 1 || !Game.skill('palate')) return { kind: 'fail', msg: 'Nothing comes of this combination.' };
     const ins = Object.keys(FS.dishRecipe[best.d.id].inputs);
-    return { kind: 'warm', dish: best.d.id, cats: missingCats(ins, sel), msg: warmMsg(best.d, ins, ids, sel, best.missing) };
+    return { kind: 'warm', dish: best.d.id, cats: Game.skill('nose') ? missingCats(ins, sel) : null, msg: warmMsg(best.d, ins, ids, sel, best.missing) };
   };
   // About the target dish the Test Kitchen colours each tried ingredient (fit: which belong), so the text stays short.
+  // Each detective skill adds to it: the Fine Palate the fit, the Keen Nose the missing groups.
   function targetHint(target, ids, sel) {
     const t = FS.items[target], ins = Object.keys(FS.dishRecipe[target].inputs);
+    if (!Game.skill('palate')) return { kind: 'fail', dish: target, msg: `No, this isn't ${t.name}.` };
     const fit = { good: ids.filter((i) => ins.includes(i)), bad: ids.filter((i) => !ins.includes(i)) };
     if (!fit.good.length) return { kind: 'fail', dish: target, fit, msg: `None of these go into ${t.name}.` };
-    const missing = ins.filter((i) => !sel.has(i)), cats = missingCats(ins, sel);
-    const msg = missing.length ? `Still needs ${missing.length} more: ${cats.map((c) => (FS.catInfo[c] || ['', c])[1]).join(', ')}.`
-      : 'Everything it needs is here: take out the ones that don\'t belong.';
+    const missing = ins.filter((i) => !sel.has(i)), nose = Game.skill('nose'), cats = nose ? missingCats(ins, sel) : null;
+    const msg = !missing.length ? 'Everything it needs is here: take out the ones that don\'t belong.'
+      : nose ? `Still needs ${missing.length} more: ${cats.map((c) => (FS.catInfo[c] || ['', c])[1]).join(', ')}.` : 'Something is still missing.';
     return { kind: 'warm', dish: target, cats, fit, msg };
   }
   // The groups of the ingredients still missing (the hint names them), for the Test Kitchen's group filter.
@@ -1485,7 +1508,7 @@
     const extras = ids.filter((i) => !ins.includes(i)).map((i) => FS.items[i].name);
     const parts = [];
     if (extras.length) parts.push(`${extras.join(', ')} ${extras.length > 1 ? "don't" : "doesn't"} belong`);
-    if (missing) parts.push(`it still needs ${missing} more: ${missingCats.join(', ')}`);
+    if (missing) parts.push(Game.skill('nose') ? `it still needs ${missing} more: ${missingCats.join(', ')}` : 'something is still missing');
     return `Close to ${d.name} (${d.cuisine}): ${parts.join(', and ')}.`;
   }
   // Hints are paid in toques: one per ingredient, two for a dish with a long supply chain (12+ raw ingredients).
@@ -1745,6 +1768,7 @@
   const made = (id) => (Game.S.stats.produced[id] || 0) > 0;
   // Dish goals count dishes you have actually cooked, not just discovered.
   const disc = () => FS.dishList.filter((d) => made(d.id)).length;
+  Game.dishesCooked = disc;
   // Finishing a stage: its target in each of its three cuisines. Progress counts cooked dishes up to each target.
   // Their reward shows on the stage's splash card (splashInfo in ui.js), so no toast.
   function stageGoal(id, reward, toques) {
@@ -1824,6 +1848,7 @@
   function checkGoals() {
     const S = Game.S;
     checkCuisines();
+    checkSkills();
     for (const g of Game.goals) {
       if (S.goalsDone[g.id] || !g.check()) continue;
       S.goalsDone[g.id] = true;

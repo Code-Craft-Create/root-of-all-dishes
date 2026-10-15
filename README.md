@@ -146,6 +146,14 @@ open cuisines that you can make from what is unlocked; the Test Kitchen recognis
 only says where it belongs. It can use any ingredient you have had at least once, so experiments don't need
 everything in stock at once; cooking still needs the real ingredients.
 
+**Detective skills.** The Test Kitchen's hints are skills that open with the number of different dishes cooked
+(`Game.SKILLS` in game.js), each with an unlock splash; the **Mystery Cupboard** (button in the Test Kitchen header,
+next to Clear on phones) shows them, the closed drawers with their name and dish count only. Taste Test (from the
+start: a try is a dish or not), Fine Palate (1 dish: the dish you are close to, green/red fit of each tried ingredient),
+Keen Nose (3: the groups still missing), Pantry Sweep (10: the "Groups of missing ingredients" filter) and Cuisine
+Compass (25: with a target dish, a switch shows only ingredients used in its cuisine, combinable with the group filter).
+Saves from before v1.18.0 get the skills they already qualify for without splashes. Cheat `skill <id>` shows a splash.
+
 **🎩 Toques** are the second currency, for knowledge rather than land and buildings. You start with 3. A special-request
 order pays 1, clue orders 1 to 3, events 2 and party menus 3, contracts 1 and supply contracts 2, regulars from
 level 3 tip one now and then, a cuisine reaching its stage target pays 2 to 6, and cooking every dish of a cuisine pays 4 to 12.

@@ -22,6 +22,7 @@
     stock: { usage: 'stock', about: 'Put 20 freshly cooked plates of every restaurant menu dish in the warehouse (saved)', run: stock },
     target: { usage: 'target [cuisine]', about: 'Show the splash for a cuisine reaching its target (looks only; default: the newest open cuisine)', run: target },
     milestone: { usage: 'milestone [dish25|dish50|dish100|dish200|dishall|choc|complex|gold [cuisine]]', about: 'Show a milestone card (looks only, nothing is paid; gold = a cuisine with every dish cooked)', run: milestone },
+    skill: { usage: 'skill <' + Game.SKILLS.map((k) => k.id).join('|') + '>', about: 'Show the splash for a new Test Kitchen detective skill (looks only)', run: skillCmd },
     finale: { usage: 'finale', about: 'Show the end screen of the Legacy (looks only, nothing is won)', run: () => UI.finale() },
     win: { usage: 'win', about: 'Win the game: finish every stage, take gold from all three critics, buy out Crestwell; the Legacy completes and the finale plays (saved)', run: win },
     clear: { usage: 'clear', about: 'Remove all overrides and hide the dishes the console revealed', run: clear },
@@ -111,6 +112,12 @@
     if (!c) return print(`No such cuisine. Try one of: ${FS.CUISINES.map((x) => x.id).join(', ')}.`, 'err');
     toggle(false);
     UI.splash('czdone:' + c.id);
+  }
+  function skillCmd(arg) {
+    const k = Game.SKILLS.find((x) => x.id === String(arg || '').trim());
+    if (!k) return print(`Try ${COMMANDS.skill.usage}.`, 'err');
+    toggle(false);
+    UI.splash('skill:' + k.id);
   }
   function milestone(arg) {
     const [id = 'dish25', cz] = String(arg || '').split(/\s+/).filter(Boolean);

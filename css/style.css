@@ -1351,3 +1351,36 @@ body.touch-placing #toasts { bottom: 128px; }
   .regulars { grid-template-columns: minmax(0, 1fr); }
   #modal-body:has(.otabs) .stats { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ----- Test Kitchen detective skills: the Mystery Cupboard button, the Cuisine Compass switch, the cupboard window ----- */
+.tk-skills { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; padding: 2px 8px 2px 4px; vertical-align: middle; font-size: 12px; font-weight: 700; }
+.tk-skills .ico { width: 22px; height: 22px; }
+.tk-sk-row { display: none; }
+.tk-cz { display: inline-flex; align-self: flex-start; align-items: center; gap: 5px; max-width: 100%; padding: 4px 8px; border: 1px solid #b4834c; border-radius: 8px; background: #f7ecd9; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.tk-cz input { margin: 0; }
+.tk-cz .ico { width: 20px; height: 20px; flex: none; }
+.tk-cz span { overflow: hidden; text-overflow: ellipsis; }
+.tk-cz.on { border-color: var(--accent); background: #fff6df; box-shadow: 0 0 0 1px var(--accent); }
+.modal-card.mc-card { width: min(620px, 96vw); }
+.mc { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; background: linear-gradient(90deg, #5a331b, #7a4a2a 8%, #6b3f22 92%, #4e2c17); box-shadow: inset 0 0 0 4px #3e2312, inset 0 0 0 7px #8a5a33, 0 6px 16px rgba(0, 0, 0, 0.25); }
+.mc-drawer { position: relative; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 14px; border-radius: 6px; color: #fbe7c4;
+  background: linear-gradient(#9a6a3e, #7d5028); box-shadow: inset 0 1px 0 rgba(255, 230, 190, 0.35), inset 0 -3px 0 rgba(0, 0, 0, 0.25), 0 2px 3px rgba(0, 0, 0, 0.35); }
+.mc-drawer::after { content: ''; position: absolute; right: 14px; top: 50%; width: 26px; height: 6px; margin-top: -3px; border-radius: 3px; background: linear-gradient(#e9c46a, #a87a22); box-shadow: 0 1px 1px rgba(0, 0, 0, 0.4); }
+.mc-drawer.open { margin-left: -6px; margin-right: 6px; color: #3b2b22; background: linear-gradient(#fbf3e2, #efe0c2); box-shadow: inset 0 0 0 2px #c99a5a, 0 4px 8px rgba(0, 0, 0, 0.4); }
+.mc-drawer.open::after { display: none; }
+.mc-icon { flex: none; display: grid; place-items: center; width: 48px; height: 48px; }
+.mc-icon .ico { width: 44px; height: 44px; }
+.mc-drawer:not(.open) .mc-icon .ico { width: 30px; height: 30px; opacity: 0.85; }
+.mc-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; padding-right: 40px; font-size: 13px; }
+.mc-text b { font-size: 15px; }
+.mc-drawer.open .mc-text { padding-right: 0; }
+.mc-bar { display: block; height: 6px; max-width: 220px; margin-top: 3px; border-radius: 3px; background: rgba(0, 0, 0, 0.3); overflow: hidden; }
+.mc-bar i { display: block; height: 100%; max-width: 100%; background: #e9c46a; }
+.mc-count { position: absolute; right: 12px; bottom: 6px; font-size: 11px; font-weight: 700; opacity: 0.85; }
+.mc-foot { justify-content: flex-end; margin-top: 12px; }
+@media (max-width: 600px) {
+  .tk-sk-head { display: none; }
+  .tk-sk-row { display: inline-flex; margin-left: auto; }
+  .mc-drawer { gap: 8px; padding: 8px 10px; }
+  .mc-text { font-size: 12px; }
+}
