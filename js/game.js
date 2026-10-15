@@ -1772,7 +1772,7 @@
   Game.dishesCooked = disc;
   // Finishing a stage: its target in each of its three cuisines. Progress counts cooked dishes up to each target.
   // Their reward shows on the stage's splash card (splashInfo in ui.js), so no toast.
-  // Once the Signature Dishes are revealed, they join the goal and its progress.
+  // Once the challenge dishes are revealed, they join the goal and its progress.
   function stageGoal(id, reward, toques) {
     const st = FS.STAGES.find((x) => x.id === id);
     const progress = () => {
@@ -1780,7 +1780,7 @@
       return [st.cuisines.reduce((n, c) => n + (done(c) ? st.target + c.sigIds.length : (Game.cuisineTargetMet(c) ? st.target : Math.min(st.target, Game.cuisineTargetCount(c))) + (sig ? Game.sigCount(c) : 0)), 0),
         st.cuisines.reduce((n, c) => n + st.target + (sig || done(c) ? c.sigIds.length : 0), 0)];
     };
-    const sigText = () => (Game.sigOpen(id) ? `, then ${st.rating ? 'serve' : 'make'} its ⭐ Signature Dishes` : '');
+    const sigText = () => (Game.sigOpen(id) ? `, then ${st.rating ? 'serve' : 'make'} its ⭐ Chef's Challenge` : '');
     if (st.rating) return { id: 'stage' + id, reward, toques, card: true, open: () => Game.stageOpen(id), check: () => Game.stageDone(id),
       get text() { return Game.stageKnown(id) && Game.restaurantsUnlocked() ? `Finish ${st.name}: serve ${st.target} dishes of each of its cuisines at restaurants rated ${'★'.repeat(st.rating)} or better${sigText()} (🏙️ Town)` : 'Finish a stage yet to be discovered'; },
       progress };
@@ -1873,7 +1873,7 @@
   // Dishes cooked so far in a cuisine (cooked, not just discovered, like the dish goals).
   Game.cuisineCooked = (c) => c.dishIds.filter(made).length;
   Game.stageById = (id) => FS.STAGES.find((st) => st.id === id);
-  // A stage is done once each of its cuisines is complete: target and Signature Dishes (S.cuisineDone keeps that).
+  // A stage is done once each of its cuisines is complete: target and challenge dishes (S.cuisineDone keeps that).
   Game.stageDone = (id) => Game.stageById(id).cuisines.every((c) => (Game.S.cuisineDone || {})[c.id]);
   // The stage being worked on: the first one not done (the last one once everything is).
   Game.currentStage = () => FS.STAGES.find((st) => !Game.stageDone(st.id)) || FS.STAGES[FS.STAGES.length - 1];
@@ -1915,8 +1915,8 @@
     Game.refreshUnlocks();
     Game.emit('unlock', 'cz:' + cid);
   };
-  // ---------- Signature Dishes ----------
-  // Once every cuisine of a stage has reached its target, each cuisine's Signature Dishes (c.sigIds, from unlocks.js)
+  // ---------- Chef's Challenge ----------
+  // Once every cuisine of a stage has reached its target, each cuisine's challenge dishes (c.sigIds, from unlocks.js)
   // are revealed: the stage's final test. A signature dish counts when it is freshly made after the reveal, in the
   // Test Kitchen or by a kitchen building; in a stage with a `rating` (Grand Cuisine), when a restaurant rated that
   // well serves it. S.sig = { open: {stage id: time revealed}, done: {dish id: true} }.
@@ -1937,12 +1937,12 @@
     if (st.rating ? !(how >= st.rating) : how !== 'made') return;
     sigS().done[id] = true;
     const n = Game.sigCount(c);
-    Game.toast(`⭐ Signature Dish ${st.rating ? 'served' : 'made'}: ${FS.items[id].name} (${n} of ${c.sigIds.length} for ${c.name})`, 'good', 'quiet');
+    Game.toast(`⭐ Challenge dish ${st.rating ? 'served' : 'made'}: ${FS.items[id].name} (${n} of ${c.sigIds.length} for ${c.name})`, 'good', 'quiet');
     Game.emit('sig', id);
     checkCuisines();
   }
   Game.sigMade = sigMade;
-  // Cheat helper: 'reveal' opens every cuisine of the current stage at its target; 'make' makes all its Signature Dishes.
+  // Cheat helper: 'reveal' opens every cuisine of the current stage at its target; 'make' makes all its challenge dishes.
   Game.cheatSig = function (how) {
     const S = Game.S, st = Game.currentStage();
     if (Game.stageDone(st.id)) return false;
@@ -1957,7 +1957,7 @@
   Game.cuisineTargetCount = (c) => { const st = Game.stageById(c.stage); return st.rating ? Game.cuisineRated(c, st.rating) : Game.cuisineCooked(c); };
   Game.cuisineTargetMet = (c) => !!(Game.S.cuisineTarget || {})[c.id] || !!(Game.S.cuisineDone || {})[c.id];
 
-  // Reaching a cuisine's target, then making its Signature Dishes, completes it and pays toques; cooking all of it pays
+  // Reaching a cuisine's target, then making its challenge dishes, completes it and pays toques; cooking all of it pays
   // more. When every cuisine of a stage is complete, the next stage opens.
   function checkCuisines() {
     const S = Game.S;
@@ -1967,7 +1967,7 @@
         if (!S.cuisines[c.id]) continue;
         if (!Game.cuisineTargetMet(c) && Game.cuisineTargetCount(c) >= st.target) {
           S.cuisineTarget[c.id] = true;
-          // The last cuisine to reach it gets the Signature Dishes card instead.
+          // The last cuisine to reach it gets the challenge dishes card instead.
           if (!st.cuisines.every(Game.cuisineTargetMet)) Game.emit('unlock', 'cztarget:' + c.id);
         }
         const n = Game.cuisineCooked(c);
@@ -1978,10 +1978,10 @@
         }
       }
       if (Game.stageDone(st.id)) continue;
-      // Every cuisine at its target: the Signature Dishes appear, a surprise until now.
+      // Every cuisine at its target: the challenge dishes appear, a surprise until now.
       if (!Game.sigOpen(st.id) && st.cuisines.every(Game.cuisineTargetMet)) {
         sigS().open[st.id] = S.time;
-        Game.journal({ type: 'msg', kind: 'good', text: `⭐ Signature Dishes for ${st.name}: ${st.cuisines.filter((c) => !S.cuisineDone[c.id]).map((c) => `${c.name}: ${c.sigIds.map((id) => FS.items[id].name).join(', ')}`).join('; ')}.`, quiet: true });
+        Game.journal({ type: 'msg', kind: 'good', text: `⭐ Chef's Challenge for ${st.name}: ${st.cuisines.filter((c) => !S.cuisineDone[c.id]).map((c) => `${c.name}: ${c.sigIds.map((id) => FS.items[id].name).join(', ')}`).join('; ')}.`, quiet: true });
         Game.emit('unlock', 'sig:' + st.id);
       }
       if (!Game.sigOpen(st.id)) continue;

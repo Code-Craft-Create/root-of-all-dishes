@@ -20,7 +20,7 @@
     critic: { usage: 'critic <now|plan>', about: 'Bring all three food critics now (now), or announce a new year\'s visits (plan)', run: criticCmd },
     rival: { usage: 'rival <' + Game.RIVALS.map((x) => x.id).join('|') + '> <rating>', about: 'Set a rival\'s rating (saved)', run: rivalCmd },
     stock: { usage: 'stock', about: 'Put 20 freshly cooked plates of every restaurant menu dish in the warehouse (saved)', run: stock },
-    signature: { usage: 'signature [reveal|make]', about: 'Reveal the current stage\'s Signature Dishes (reaches every cuisine\'s target), or make them all (completes the stage)', run: signature },
+    signature: { usage: 'signature [reveal|make]', about: 'Reveal the current stage\'s Chef\'s Challenge dishes (reaches every cuisine\'s target), or make them all (completes the stage)', run: signature },
     target: { usage: 'target [cuisine]', about: 'Show the splash for a cuisine reaching its target (looks only; default: the newest open cuisine)', run: target },
     milestone: { usage: 'milestone [dish25|dish50|dish100|dish200|dishall|choc|complex|gold [cuisine]]', about: 'Show a milestone card (looks only, nothing is paid; gold = a cuisine with every dish cooked)', run: milestone },
     skill: { usage: 'skill <' + Game.SKILLS.map((k) => k.id).join('|') + '>', about: 'Show the splash for a new Test Kitchen detective skill (looks only)', run: skillCmd },

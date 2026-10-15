@@ -265,7 +265,7 @@ class Bot {
 
   // ----- Targets: dishes to discover and cook, items the goals ask for -----
   cooked(id) { return (this.S.stats.produced[id] || 0) > 0; }
-  // Done with a dish: cooked, and not a revealed Signature Dish that still has to be made fresh.
+  // Done with a dish: cooked, and not a revealed challenge dish that still has to be made fresh.
   done(id) { return this.cooked(id) && !(this.G.sigPending(id) && !this.G.stageById(this.FS.cuisineOf(id).stage).rating); }
   pickTargets() {
     const G = this.G, FS = this.FS, S = this.S, now = S.time;
@@ -304,7 +304,7 @@ class Bot {
         if (pl.blocked) continue;
         const missing = Object.keys(FS.dishRecipe[id].inputs).filter((i) => !S.discovered[id] && !(S.revealed[id] || []).includes(i)).length;
         const cost = pl.list.reduce((n, r) => n + FS.buildings[r.building].cost, 0);
-        // Revealed Signature Dishes come first: they are all that stands between the player and the next stage.
+        // Revealed challenge dishes come first: they are all that stands between the player and the next stage.
         const score = (G.sigPending(id) ? -5 : weight) + cost / 600 + pl.list.length * 0.5 + missing * 0.2 + this.r() * 2.5;
         if (!best || score < best.score) best = { score, id };
       }

@@ -36,7 +36,7 @@
   ];
 
   // Stages of three cuisines. cost: money to open each cuisine of the stage. target: dishes to cook in each cuisine.
-  // signature: each cuisine's Signature Dishes (one per cuisine in the first stage, one more each stage after), kept
+  // signature: each cuisine's Chef's Challenge dishes (one per cuisine in the first stage, one more each stage after), kept
   // secret until every cuisine of the stage has reached the target; each must then be freshly made (stage E: served
   // at a restaurant rated `rating` stars or better) to complete the cuisine.
   // toques: earned when a cuisine reaches the target; gold: earned when every dish of a cuisine has been cooked.
