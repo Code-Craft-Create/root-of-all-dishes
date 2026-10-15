@@ -131,9 +131,9 @@ span.short { color: var(--bad); }
 #modal-speed .m-clock { font-size: 13px; color: var(--muted, #6b6b6b); margin-right: 6px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 #modal-speed button { padding: 2px 7px; min-width: 30px; }
 #modal-speed button.active { background: var(--accent2); border-color: var(--accent2); color: #222; }
-/* Mobile Test Kitchen: full screen covers the top bar, so show speed in its modal header */
+/* Mobile Test Kitchen and Orders: full screen covers the top bar, so show speed in their modal header */
 @media (max-width: 760px) {
-  .modal-card:has(.tk) #modal-speed { display: flex; }
+  .modal-card:has(.tk) #modal-speed, .modal-card:has(.otabs) #modal-speed { display: flex; }
   #modal-speed .m-clock { display: none; }
   #modal-speed button { min-width: 26px; padding: 2px 4px; }
 }
@@ -1157,6 +1157,11 @@ body.touch-placing #toasts { bottom: 128px; }
   .tk .tiles { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
 }
 @media (hover: none) and (pointer: coarse) and (max-width: 760px) { .tk .slot i .ico { width: 11px; height: 11px; } }
+/* Phones: the Orders window is full screen like the Test Kitchen (a centred window clipped the cards), with the speed
+   buttons in its header since it covers the top bar. */
+@media (hover: none) and (pointer: coarse) and (max-width: 760px) {
+  .modal-card:has(.otabs) { width: 100vw; height: 100%; max-height: none; border-radius: 0; }
+}
 /* Phones held upright: order cards stack. The customer line and each good get the full width (names no longer cut to
    "Harbour …" or hidden), quantity sits inside its tile, and reward + Deliver share a row under the goods. */
 @media (hover: none) and (pointer: coarse) and (max-width: 600px) {
