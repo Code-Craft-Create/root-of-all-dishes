@@ -430,25 +430,42 @@
     old_town: { icon: '🏛️', title: 'The Old Town', lines: ['The finest tables in town are open to you.', 'Rent a restaurant by the cathedral, and take on Maison Crestwell.'] },
     finedining: { icon: '🎩', title: 'Fine Dining', lines: ['📜 A permit for a restaurant in the 🏛️ Old Town (once your Harbour restaurant has ★★★★).', '⭐ Dish mastery: perfect dishes you cook often with 🎩 toques, in the 📖 Cookbook.', '👨‍🍳 Head chefs: promote Academy chefs to run your restaurants\' kitchens.'] },
   };
+  // Big moments (milestone goals, a completed stage, a cuisine in gold) get the longer milestone fanfare.
+  const bigSplash = (key) => /^(goal:|czgold:)/.test(key) || /^czdone:.*:stage$/.test(key);
   function showSplash() {
     if (!ui.splashQ.length || ui.modal) return;
     // Wait for a dish discovery card or the easter egg to be closed first.
     if (document.getElementById('discovery') || document.getElementById('easter')) { setTimeout(showSplash, 500); return; }
     openModal('splash');
-    if (ui.splashQ[0].startsWith('goal:')) SFX.play('milestone');
+    if (bigSplash(ui.splashQ[0])) SFX.play('milestone');
     else { SFX.play('fanfare'); setTimeout(() => SFX.play('unlock'), 420); }
   }
-  // Dish milestones (goals with splash: true): every dish cooked so far pops onto the card, with what stands behind them.
+  // A row of dish icons popping in one after another.
+  const dishPops = (ids, MAX = 40) => `<div class="sp-dishes">${ids.slice(0, MAX).map((id, k) => `<span class="dc-pop" style="animation-delay:${0.3 + k * 0.05}s" title="${esc(it(id).name)}">${FSI.img(id)}</span>`).join('')}${ids.length > MAX ? `<span class="dc-more">+${ids.length - MAX}</span>` : ''}</div>`;
+  const rewardPills = (coins, toques, extra = []) => [coins ? `💰 +${money(coins)}` : '', toques ? `🎩 +${toques}` : '', ...extra].filter(Boolean);
+  // Milestone goals (splash: true). Dish counts: every dish cooked so far pops onto the card, with what stands behind them.
+  // Chocolate and the most complex dish: the supply chain itself, raw ingredients ➜ steps ➜ plate.
+  const MILESTONE = {
+    dish25: { title: 'The talk of the village' }, dish50: { title: 'A name in the region' }, dish100: { title: 'A hundred dishes' },
+    dish200: { title: 'A living cookbook', extra: '🏆 A trophy for your farmhouse' }, dishall: { title: 'The whole cookbook', extra: '🥇 A gold medal for your farmhouse' },
+  };
   function milestoneInfo(g) {
-    const S = Game.S, dishes = FS.dishList.filter((d) => S.stats.produced[d.id]).map((d) => d.id), MAX = 40;
+    const S = Game.S, fame = Game.FAME.find((f) => f.goal === g.id);
+    const fameLine = fame ? [`⭐ Dishes sell for ${Math.round((fame.value - 1) * 100)}% more`] : [];
+    if (g.id === 'choc' || g.id === 'complex') {
+      const id = g.id === 'choc' ? 'dark_chocolate' : Game.mostComplexCooked();
+      if (!id) return null;
+      const types = FS.chain(id).buildings, mine = S.buildings.filter((b) => types.has(b.type)).length;
+      return { icon: FSI.img(id), kicker: 'The long road', title: it(id).name, html: chainHtml(id),
+        lines: [`Your farm has ${mine} building${mine === 1 ? '' : 's'} of these kinds.`], rewards: rewardPills(g.reward, g.toques) };
+    }
+    const dishes = FS.dishList.filter((d) => S.stats.produced[d.id]).map((d) => d.id), m = MILESTONE[g.id] || { title: g.text };
     const raw = new Set(), blds = new Set();
     for (const id of dishes) { Object.keys(FS.chain(id).raw).forEach((x) => raw.add(x)); FS.chain(id).buildings.forEach((x) => blds.add(x)); }
-    const all = g.id === 'dishall';
-    return { icon: FSI.img('ui_trophy'), kicker: all ? 'Every dish cooked' : `${dishes.length} dishes cooked`,
-      title: all ? 'The whole cookbook' : 'The talk of the village',
-      html: `<div class="sp-dishes">${dishes.slice(0, MAX).map((id, k) => `<span class="dc-pop" style="animation-delay:${0.3 + k * 0.05}s" title="${esc(it(id).name)}">${FSI.img(id)}</span>`).join('')}${dishes.length > MAX ? `<span class="dc-more">+${dishes.length - MAX}</span>` : ''}</div>`,
-      lines: [`Behind them: ${raw.size} raw ingredients and ${blds.size} kinds of buildings.`],
-      rewards: [`💰 +${money(g.reward)}`, g.toques ? `🎩 +${g.toques}` : '', g.id === Game.FAME.goal ? `⭐ Dishes sell for ${Math.round((Game.FAME.value - 1) * 100)}% more` : ''].filter(Boolean) };
+    const storage = g.id === 'dish50' && S.milestoneCap ? [`📦 Storage: ${S.milestoneCap} of every item`] : [];
+    return { icon: FSI.img('ui_trophy'), kicker: g.id === 'dishall' ? 'Every dish cooked' : `${dishes.length} dishes cooked`, title: m.title,
+      html: dishPops(dishes), lines: [`Behind them: ${raw.size} raw ingredients and ${blds.size} kinds of buildings.`],
+      rewards: rewardPills(g.reward, g.toques, [...fameLine, ...storage, m.extra].filter(Boolean)) };
   }
   // Same warm card as a dish discovery: a floating round icon, a burst of confetti, kicker, title and a few lines.
   function splashInfo(key) {
@@ -457,16 +474,24 @@
       if (c) return { icon: FSI.img('cz_' + c.id), kicker: 'New cuisine', title: c.name,
         lines: [c.desc, `Its buildings and recipes are unlocked, and its ${c.dishIds.length} dishes are waiting in your 📖 Cookbook.`].filter(Boolean) };
     }
-    // A cuisine reached its stage's target ('czdone:<id>', plus ':stage' when that completed the stage).
+    // A cuisine reached its stage's target ('czdone:<id>', plus ':stage' when that completed the stage, with the stage goal's reward).
     if (key && key.startsWith('czdone:')) {
       const [, cid, last] = key.split(':'), c = FS.cuisineById[cid], st = c && Game.stageById(c.stage);
+      const sg = last && Game.goals.find((g) => g.id === 'stage' + st.id);
       if (c) return { icon: FSI.img('cz_' + c.id), kicker: 'Target reached', title: c.name,
         lines: [st.rating ? `${st.target} of its dishes are served at ${'★'.repeat(st.rating)} restaurants.` : `${st.target} of its dishes cooked.`,
-          `+${st.toques} 🎩 toques`, last ? `That completes ${st.name}!` : ''].filter(Boolean) };
+          last ? `That completes ${st.name}!` : ''].filter(Boolean),
+        rewards: rewardPills(sg ? sg.reward : 0, st.toques + (sg && sg.toques || 0)) };
+    }
+    // Every dish of a cuisine cooked: a gold card with all its dishes, toques and a lasting price bonus for that cuisine.
+    if (key && key.startsWith('czgold:')) {
+      const c = FS.cuisineById[key.slice(7)], st = c && Game.stageById(c.stage);
+      if (c) return { icon: FSI.img('cz_' + c.id), iconCls: 'gold', kicker: 'Every dish cooked', title: c.name, html: dishPops(c.dishIds),
+        lines: [], rewards: rewardPills(0, st.gold, [`⭐ Its dishes sell for ${Math.round((Game.GOLD_PERK - 1) * 100)}% more`]) };
     }
     if (key && key.startsWith('goal:')) {
-      const g = Game.goals.find((x) => x.id === key.slice(5));
-      if (g) return milestoneInfo(g);
+      const g = Game.goals.find((x) => x.id === key.slice(5)), info = g && milestoneInfo(g);
+      if (info) return info;
     }
     return SPLASH[key] || { icon: '✨', title: 'Something new', lines: [] };
   }
@@ -474,7 +499,7 @@
     const s = splashInfo(ui.splashQ[0]);
     return { title: '', cls: 'splash',
       html: `<div class="dc-burst">${Array.from({ length: 14 }, (_, k) => `<i style="--a:${k * 25.7}deg;--d:${(k % 3) * 0.06}s"></i>`).join('')}</div>
-        <div class="sp-icon">${s.icon}</div>
+        <div class="sp-icon ${s.iconCls || ''}">${s.icon}</div>
         <p class="dc-kicker">${esc(s.kicker || 'Unlocked')}</p><h2 class="sp-title">${esc(s.title)}</h2>${s.html || ''}
         ${s.rewards ? `<div class="sp-rewards">${s.rewards.map((r, k) => `<span class="dc-pop" style="animation-delay:${1.2 + k * 0.25}s">${esc(r)}</span>`).join('')}</div>` : ''}
         ${s.lines.length > 1 ? `<ul class="sp-lines">${s.lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>` : s.lines.map((l) => `<p class="sp-one">${esc(l)}</p>`).join('')}
@@ -1601,13 +1626,28 @@
   };
 
   // ----- Goals -----
+  // Trophy shelf: every big card earned so far, to see again (looks only). Nothing unearned shows.
+  function trophyShelf() {
+    const S = Game.S, list = [];
+    for (const g of Game.goals) {
+      if (!S.goalsDone[g.id] || !g.splash) continue;
+      const n = /^dish\d+$/.test(g.id) ? g.id.slice(4) : g.id === 'dishall' ? 'all' : '';
+      const icon = g.id === 'choc' ? FSI.img('dark_chocolate') : g.id === 'complex' ? FSI.img(Game.mostComplexCooked() || 'ui_trophy') : FSI.img('ui_trophy');
+      list.push([`goal:${g.id}`, icon + (n ? `<b class="tn">${n}</b>` : ''), MILESTONE[g.id] ? MILESTONE[g.id].title : g.text]);
+    }
+    for (const st of FS.STAGES) if (Game.stageDone(st.id)) { const c = st.cuisines[st.cuisines.length - 1]; list.push([`czdone:${c.id}:stage`, FSI.img('ui_medal_2'), st.name]); }
+    for (const c of FS.CUISINES) if ((S.cuisineGold || {})[c.id]) list.push([`czgold:${c.id}`, FSI.img('cz_' + c.id), `${c.name}: every dish`]);
+    if (S.legacyWon) list.push(['finale', FSI.img('ui_crown'), 'The Legacy']);
+    if (!list.length) return '';
+    return `<h4>Trophies</h4><div class="trophies">${list.map(([k, icon, t]) => `<button class="trophy${k.startsWith('czgold:') ? ' gold' : ''}" data-action="${k === 'finale' ? 'finale' : 'replay'}" data-arg="${esc(k)}" data-tip="${esc(t)}">${icon}</button>`).join('')}</div>`;
+  }
   modals.goals = () => {
     const S = Game.S;
     const next = Game.goals.find((g) => !S.goalsDone[g.id] && Game.goalVisible(g));
     const hidden = Game.goals.filter((g) => !Game.goalVisible(g)).length;
     return {
       title: '🎯 Goals',
-      html: `<div class="goals">${Game.goals.filter(Game.goalVisible).map((g) => `<div class="goal ${S.goalsDone[g.id] ? 'done' : g === next ? 'next' : ''}">
+      html: `${trophyShelf()}<div class="goals">${Game.goals.filter(Game.goalVisible).map((g) => `<div class="goal ${S.goalsDone[g.id] ? 'done' : g === next ? 'next' : ''}">
         <span>${S.goalsDone[g.id] ? '✅' : g === next ? '👉' : '⬜'}</span><span>${esc(g.text)}${goalProg(g)}${stepOf(g.id) ? ` <span class="unlocktag" data-tip="${S.goalsDone[g.id] ? 'Unlocked' : 'Unlocks'} ${esc(stepOf(g.id).name)}">${S.goalsDone[g.id] ? '✅' : '🔓'} ${esc(stepOf(g.id).name)}</span>` : ''}</span><span class="reward">+${money(g.reward)}${g.toques ? ` · 🎩${g.toques}` : ''}</span></div>`).join('')}</div>
         ${hidden ? '<p class="small muted">More goals appear as your farm grows.</p>' : ''}
         <h4>Your farm in numbers</h4><div class="small">Earned 💰${money(S.stats.earned)} · spent 💰${money(S.stats.spent)} · ${S.buildings.length} building${S.buildings.length === 1 ? '' : 's'} · ${Object.keys(S.seen).length} different goods produced · ${S.stats.experiments} experiment${S.stats.experiments === 1 ? '' : 's'}</div>`,
@@ -1898,7 +1938,7 @@
       if (ui.modal === 'orders') ui.refresh();
     });
     // Milestone goals bring their own sound with their card.
-    Game.on('goals', () => { if (!ui.splashQ.some((k) => k.startsWith('goal:'))) setTimeout(() => SFX.play('goal'), document.getElementById('discovery') ? 900 : 0); });
+    Game.on('goals', () => { if (!ui.splashQ.some(bigSplash)) setTimeout(() => SFX.play('goal'), document.getElementById('discovery') ? 900 : 0); });
     Game.on('unlocked', (u) => {
       Game.journal({ type: 'unlock', recipes: u.recipes.length, buildings: u.buildings, quiet: true });
       setTimeout(() => SFX.play('unlock'), 450);
@@ -2044,6 +2084,8 @@
       case 'town-sel': ui.townSel = arg; ui.townTab = 'lot'; ui.search.town = ''; drawTown(); ui.refresh(); break;
       case 'town': ui.setTown(!ui.townMode); break;
       case 'finale': ui.finale(); break;
+      // See an earned card again from the trophy shelf (nothing is paid twice: cards only show).
+      case 'replay': if (!ui.splashQ.includes(arg)) ui.splashQ.unshift(arg); closeModal(); break;
       case 'town-tab': ui.townTab = arg; ui.refresh(); break;
       case 'town-zoom': { const el = $('#town-map'); TownMap.zoomAt(el.clientWidth / 2, el.clientHeight / 2, +arg > 0 ? 1.25 : 0.8); break; }
       case 'town-offer':
@@ -2796,6 +2838,22 @@
     discQueue.push({ id, bg });
     if (discQueue.length === 1) showDiscovery();
   }
+  // The road from field to plate for one item: its raw ingredients ➜ processing steps and buildings ➜ the plate.
+  function chainHtml(id) {
+    const c = FS.complexity(id), d = it(id);
+    const raw = Object.keys(c.raw).sort((a, b) => c.raw[b] - c.raw[a]);
+    const blds = [...FS.chain(id).buildings].filter((b) => b !== 'kitchen' && FS.buildings[b]);
+    const MAX = 8;
+    const icons = (ids, pre, title) => ids.slice(0, MAX).map((x, k) => `<span class="dc-pop" style="animation-delay:${0.25 + k * 0.07}s" title="${esc(title(x))}">${FSI.img(pre + x)}</span>`).join('')
+      + (ids.length > MAX ? `<span class="dc-more">+${ids.length - MAX}</span>` : '');
+    return `<div class="dc-chain">
+        <div class="dc-step"><b>${c.rawCount}</b><span>raw ingredient${c.rawCount === 1 ? '' : 's'} from farms, sea and mines</span><div class="dc-icons">${icons(raw, '', (x) => it(x).name)}</div></div>
+        <div class="dc-arrow">➜</div>
+        <div class="dc-step"><b>${c.steps}</b><span>processing step${c.steps === 1 ? '' : 's'} · ${c.buildings} kinds of buildings, farms included</span><div class="dc-icons">${icons(blds, 'b_', (x) => FS.buildings[x].name)}</div></div>
+        <div class="dc-arrow">➜</div>
+        <div class="dc-step dc-plate"><b>1</b><span>${d.dish ? 'plate' : esc(d.name)}</span><div class="dc-icons"><span class="dc-pop" style="animation-delay:0.9s">${FSI.img(id)}</span></div></div>
+      </div>`;
+  }
   function showDiscovery() {
     const q = discQueue[0];
     if (!q) return;
@@ -2805,11 +2863,6 @@
     const prevSpeed = S.speed;
     S.speed = 0;
     SFX.play('fanfare');
-    const raw = Object.keys(c.raw).sort((a, b) => c.raw[b] - c.raw[a]);
-    const blds = [...FS.chain(id).buildings].filter((b) => b !== 'kitchen' && FS.buildings[b]);
-    const MAX = 8;
-    const icons = (ids, pre, title) => ids.slice(0, MAX).map((x, k) => `<span class="dc-pop" style="animation-delay:${0.25 + k * 0.07}s" title="${esc(title(x))}">${FSI.img(pre + x)}</span>`).join('')
-      + (ids.length > MAX ? `<span class="dc-more">+${ids.length - MAX}</span>` : '');
     const idle = S.buildings.find((b) => b.type === 'kitchen' && !b.recipe);
     const n = Object.keys(S.discovered).length;
     const el = document.createElement('div');
@@ -2820,13 +2873,7 @@
       <p class="dc-kicker">New dish discovered · ${n} / ${FS.dishList.length}</p>
       <h2 id="dc-title">${esc(d.name)}</h2>
       <p class="muted dc-cuisine">${esc(d.cuisine || '')} · ${Object.keys(r.inputs).map((i) => esc(it(i).name)).join(' + ')}</p>
-      <div class="dc-chain">
-        <div class="dc-step"><b>${c.rawCount}</b><span>raw ingredient${c.rawCount === 1 ? '' : 's'} from farms, sea and mines</span><div class="dc-icons">${icons(raw, '', (x) => it(x).name)}</div></div>
-        <div class="dc-arrow">➜</div>
-        <div class="dc-step"><b>${c.steps}</b><span>processing step${c.steps === 1 ? '' : 's'} · ${c.buildings} kinds of buildings, farms included</span><div class="dc-icons">${icons(blds, 'b_', (x) => FS.buildings[x].name)}</div></div>
-        <div class="dc-arrow">➜</div>
-        <div class="dc-step dc-plate"><b>1</b><span>plate</span><div class="dc-icons"><span class="dc-pop" style="animation-delay:0.9s">${FSI.img(id)}</span></div></div>
-      </div>
+      ${chainHtml(id)}
       <div class="row gap dc-btns">
         ${idle ? '<button class="primary" data-dc="cook">👨‍🍳 Cook it in your idle Kitchen</button>' : ''}
         <button data-dc="plan">🗺️ Plan production</button>

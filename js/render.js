@@ -692,6 +692,11 @@
         g.fillStyle = frozen(b) ? 'rgba(215,236,250,0.5)' : 'rgba(60,60,60,0.22)'; g.fillRect(x + 2, y + 2, pw - 4, ph - 4);
       }
       if (b.type === 'farmhouse' || (live && SMOKY[bt.group])) drawSmoke(g, b, x + pw * 0.72, y + 6);
+      // Keepsakes of the great milestones (200 dishes, every dish, the Legacy) stand in a row along the farmhouse front.
+      if (b.type === 'farmhouse') {
+        const ks = Game.keepsakes(), sz = Math.min(pw, ph) * 0.3;
+        ks.forEach((icon, k) => drawIcon(g, icon, x + pw / 2 + (k - (ks.length - 1) / 2) * sz * 1.05, y + ph - sz * 0.55, sz));
+      }
       if (r && b.type !== 'farmhouse' && !onlyOne(b.type) && !tile1) {
         // Product badge: half see-through, bigger on buildings two tiles high or more.
         // It peeks just a little past the building's top-left corner.

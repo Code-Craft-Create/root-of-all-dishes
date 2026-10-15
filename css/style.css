@@ -988,6 +988,15 @@ button.ghost { border: none; background: none; padding: 0 4px; }
 .splash .sp-rewards { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 auto 12px; }
 .splash .sp-rewards > span { padding: 5px 12px; border-radius: 999px; background: #ffe7b0; color: #7a3416; font-weight: 700; font-size: 15px; box-shadow: inset 0 0 0 1px #f0b860; }
 .splash .sp-rewards .ico { width: 18px; height: 18px; vertical-align: -3px; }
+.splash .sp-icon.gold { background: radial-gradient(circle, #fff6c8 52%, #f2c14e); box-shadow: 0 0 0 5px #e3a823, 0 6px 22px rgba(220, 150, 20, 0.6); }
+.splash .dc-chain { text-align: center; }
+/* Trophy shelf in the Goals window: earned cards to see again */
+.trophies { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.trophies .trophy { width: 44px; height: 44px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: radial-gradient(circle, #fff 55%, #ffe7b8); border: 1px solid #f0b860; }
+.trophies .trophy.gold { background: radial-gradient(circle, #fff6c8 52%, #f2c14e); border-color: #e3a823; }
+.trophies .trophy { position: relative; }
+.trophies .trophy .ico { width: 30px; height: 30px; }
+.trophies .trophy .tn { position: absolute; right: -4px; bottom: -4px; min-width: 18px; padding: 0 4px; border-radius: 9px; background: #7a3416; color: #fff; font-size: 10px; line-height: 16px; }
 @media (prefers-reduced-motion: reduce) { .modal-card.splash, .splash .sp-icon { animation: none; } }
 /* Welcome card on a new farm: the splash card with a subtitle and the journey of one dish */
 .welcome .sp-title { margin-bottom: 0; font-size: 30px; }

@@ -119,10 +119,14 @@ orchard, more crops), making salt opens Sugar & yeast, making yeast opens the Ba
 (hens, feed mill), then come Dairy & bees, Kitchen garden, and Butcher & cheesemaker. The 🎯 Goals list shows which
 goal unlocks what.
 
-Dish milestones are goals with `splash: true` (js/game.js): cooking 25 different dishes and cooking every dish each
-open a celebration card (`goal:<id>` in ui.js `milestoneInfo`, own `milestone` sound) with every dish cooked so far,
-what stands behind them, and the reward: coins, toques, and at 25 dishes fame (`Game.FAME`: every dish sells for 10%
-more at the market and in restaurants, `Game.dishMult`). Cheat `milestone [dish25|dishall]` shows the card.
+Milestones are goals with `splash: true` (js/game.js); each opens a celebration card (`goal:<id>`, ui.js `milestoneInfo`,
+own `milestone` sound) with its reward as pills. Dish counts 25 / 50 / 100 / 200 / all show every dish cooked so far and
+what stands behind them; rewards: 25 fame (`Game.FAME`: dishes sell for 10% more, 20% from 100 dishes, via
+`Game.dishMult`), 50 a free storage level, 200 a trophy and all dishes a gold medal on the farmhouse (`Game.keepsakes`,
+drawn in render.js; the Legacy adds a crown). Dark Chocolate and the 15+ raw ingredient dish show their supply chain
+(`chainHtml`, shared with the discovery card). A cuisine with every dish cooked gets a gold card (`czgold:<id>`) and its
+dishes sell for 5% more (`Game.GOLD_PERK`). Stage goals (`card: true`) show their coins and toques on the stage card
+instead of a toast. The Goals window has a trophy shelf to see earned cards again. Cheat: `milestone [id|gold <cuisine>]`.
 
 Every dish belongs to one of 15 cuisines in five stages (**🍽️ Cuisines**, key P):
 
