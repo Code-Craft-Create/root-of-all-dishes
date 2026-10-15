@@ -721,10 +721,14 @@ function runOne(seed, opts) {
       lastEarned.e = S.stats.earned; lastEarned.s = S.stats.spent;
     }
     // Progress and the end
-    const key = Object.keys(S.discovered).length + '/' + cooked + '/' + Object.keys(S.goalsDone).length + '/' + G.restaurants().length + '/' + Object.keys(S.cuisines).length;
+    const key = Object.keys(S.discovered).length + '/' + cooked + '/' + Object.keys(S.goalsDone).length + '/' + G.restaurants().length + '/' + Object.keys(S.cuisines).length + '/' + Object.keys((S.sig || {}).done || {}).length;
     if (key !== progressKey) { progressKey = key; lastProgress = S.time; }
     if (opts.until === 'legacy' ? S.legacyWon : G.stageDone('E')) { status = 'finished'; break; }
-    if (S.time - lastProgress > 15 * G.DAY) { status = 'stalled'; break; }
+    if (S.time - lastProgress > 15 * G.DAY) {
+      status = 'stalled';
+      if (process.env.FS_SIG_DEBUG) console.error(`seed ${seed} stalled at ${G.currentStage().id}: challenge open ${G.sigOpen(G.currentStage().id)}, pending ${FS.dishList.filter((d) => G.sigPending(d.id)).map((d) => d.id).join(',')}, skip ${JSON.stringify(Object.keys(bot.skip).filter((k) => bot.skip[k] > S.time))}`);
+      break;
+    }
   }
   const cooked = FS.dishList.filter((d) => (S.stats.produced[d.id] || 0) > 0).length;
   if (process.env.FS_TOWN_DEBUG) for (const r of G.restaurants()) {
