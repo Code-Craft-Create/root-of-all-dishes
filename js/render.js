@@ -569,11 +569,13 @@
   function coverage(r, now) {
     if (!cover || now - coverAt > 500) { cover = Game.rates(); coverAt = now; }
     let c = Infinity;
-    for (const i in r.inputs) {
-      const used = cover.used[i] || 0;
-      if (used > 0) c = Math.min(c, (cover.made[i] || 0) / used);
-    }
+    for (const i in r.inputs) c = Math.min(c, covOf(i));
     return c;
+  }
+  // Coverage of one ingredient across the farm (Infinity when nobody needs it). Call coverage() first to refresh the cache.
+  function covOf(i) {
+    const used = cover.used[i] || 0;
+    return used > 0 ? (cover.made[i] || 0) / used : Infinity;
   }
   const BAR = { good: '#5cc85a', short: '#ffd34d', low: '#e8513f', full: '#a5652a', frost: '#d8eefa' };
   // Out of season (too cold to grow): the whole building frosts over instead of showing an icon.
@@ -586,8 +588,17 @@
     if (frozen(b)) return { color: BAR.frost, full: true, frost: true };
     const wait = !b.running && (b.status === 'missing' || b.status === 'yield');
     if (!b.running && !wait) return null;
-    const c = coverage(r, now);
-    return { color: c >= 0.999 ? BAR.good : c >= 0.5 ? BAR.short : BAR.low, wait };
+    return { color: covColor(coverage(r, now)), wait };
+  }
+  const covColor = (c) => (c >= 0.999 ? BAR.good : c >= 0.5 ? BAR.short : BAR.low);
+  // A flow link takes the colours of the production bars: the consumer's storage full (brown) or out of season (icy),
+  // else how well the farm covers that one ingredient. Waiting for it: dashed and pulsing, like a waiting bar.
+  function linkColor(b, i, now) {
+    if (b.status === 'full' && !b.running) return BAR.full;
+    if (frozen(b)) return BAR.frost;
+    if (!FS.recipeById[b.recipe]) return BAR.good;
+    coverage(FS.recipeById[b.recipe], now);
+    return covColor(covOf(i));
   }
 
   // A building that can only make one thing (a well draws water) needs no product badge.
@@ -715,10 +726,30 @@
     }
   }
 
-  // Supply-chain links: an arrow from each building to every building that uses what it makes.
-  // Red when the consumer is waiting for that ingredient. All links with the overlay on, else only the selected building's.
+  // Supply-chain links: an arrow from each building to every building that uses what it makes, coloured like the
+  // production bars (linkColor); dashed when the consumer is waiting for that ingredient. All links with the overlay on
+  // (narrowed by the flow filter: R.flowGoods, R.flowTypes), else only the selected building's.
+  R.flowGoods = new Set(); R.flowTypes = new Set();
+  const passes = (i, types) => (!R.flowGoods.size || R.flowGoods.has(i)) && (!R.flowTypes.size || types.some((t) => R.flowTypes.has(t)));
+  // Everything that could be filtered for right now: goods passed between buildings and the building types involved.
+  R.flowOptions = function () {
+    const S = Game.S, goods = new Set(), types = new Set();
+    const makers = {};
+    for (const b of S.buildings) { const r = FS.recipeById[b.recipe]; if (r) for (const o in r.outputs) (makers[o] = makers[o] || []).push(b); }
+    for (const b of S.buildings) {
+      const r = FS.recipeById[b.recipe];
+      if (!r) continue;
+      for (const i in r.inputs) {
+        const ps = (makers[i] || []).filter((p) => p !== b);
+        const orphan = !ps.length && b.status === 'missing' && !b.running && (b.missing || []).includes(i);
+        if (!ps.length && !orphan) continue;
+        goods.add(i); types.add(b.type); for (const p of ps) types.add(p.type);
+      }
+    }
+    return { goods: [...goods], types: [...types] };
+  };
   function drawFlows(g, z) {
-    const S = Game.S;
+    const S = Game.S, now = performance.now();
     if (!R.flows && !R.selected) return;
     const makers = {};
     for (const b of S.buildings) {
@@ -732,16 +763,17 @@
       if (!r) continue;
       for (const i in r.inputs) for (const p of makers[i] || []) {
         const sel = R.selected === b.id || R.selected === p.id;
-        // Water goes almost everywhere, so only draw it for the selected building.
-        if (p === b || (!R.flows && !sel) || (i === 'water' && !sel)) continue;
-        links.push({ p, b, i, bad: b.status === 'missing' && !b.running && (b.missing || []).includes(i) });
+        // Water goes almost everywhere, so only draw it for the selected building or when filtered for.
+        if (p === b) continue;
+        if (!sel && (!R.flows || !passes(i, [p.type, b.type]) || (i === 'water' && !R.flowGoods.has('water')))) continue;
+        links.push({ p, b, i, bad: b.status === 'missing' && !b.running && (b.missing || []).includes(i), color: linkColor(b, i, now) });
       }
     }
     // Missing ingredients that no building on the farm makes: a red dashed stub that leads nowhere.
     const orphans = [];
     for (const b of S.buildings) {
       if (b.status !== 'missing' || b.running || (!R.flows && R.selected !== b.id)) continue;
-      for (const i of b.missing || []) if (!(makers[i] || []).length) orphans.push({ b, i });
+      for (const i of b.missing || []) if (!(makers[i] || []).length && (R.selected === b.id || passes(i, [b.type]))) orphans.push({ b, i });
     }
     if (!links.length && !orphans.length) return;
     g.save();
@@ -749,16 +781,19 @@
     for (const L of links) {
       const [x1, y1] = centre(L.p), [x2, y2] = centre(L.b);
       const mx = (x1 + x2) / 2 + (y2 - y1) * 0.15, my = (y1 + y2) / 2 - (x2 - x1) * 0.15;
-      g.strokeStyle = L.bad ? 'rgba(230,70,58,0.9)' : 'rgba(255,214,77,0.85)';
-      g.lineWidth = 2.5 / Math.max(0.7, z);
+      g.globalAlpha = L.bad ? 0.5 + 0.45 * (0.5 + 0.5 * Math.sin(now / 320)) : 0.95; // pulses like a waiting bar
       g.setLineDash(L.bad ? [6, 5] : []);
-      g.beginPath(); g.moveTo(x1, y1); g.quadraticCurveTo(mx, my, x2, y2); g.stroke();
+      g.beginPath(); g.moveTo(x1, y1); g.quadraticCurveTo(mx, my, x2, y2);
+      // A dark edge under the colour, so green links still stand out on grass.
+      g.strokeStyle = 'rgba(30,24,16,0.45)'; g.lineWidth = 4.5 / Math.max(0.7, z); g.stroke();
+      g.strokeStyle = L.color; g.lineWidth = 2.5 / Math.max(0.7, z); g.stroke();
       // arrow head near the consumer
       const t = 0.82, ax = (1 - t) ** 2 * x1 + 2 * (1 - t) * t * mx + t * t * x2, ay = (1 - t) ** 2 * y1 + 2 * (1 - t) * t * my + t * t * y2;
       const ang = Math.atan2(y2 - ay, x2 - ax), hs = 7 / Math.max(0.7, z);
       g.setLineDash([]); g.fillStyle = g.strokeStyle;
       g.beginPath(); g.moveTo(ax + Math.cos(ang) * hs, ay + Math.sin(ang) * hs);
       g.lineTo(ax + Math.cos(ang + 2.5) * hs, ay + Math.sin(ang + 2.5) * hs); g.lineTo(ax + Math.cos(ang - 2.5) * hs, ay + Math.sin(ang - 2.5) * hs); g.fill();
+      g.globalAlpha = 1;
       if (z >= 0.8) {
         const ex = 0.25 * x1 + 0.5 * mx + 0.25 * x2, ey = 0.25 * y1 + 0.5 * my + 0.25 * y2;
         g.fillStyle = 'rgba(255,255,255,0.85)'; g.beginPath(); g.arc(ex, ey, 8, 0, Math.PI * 2); g.fill();
@@ -882,7 +917,6 @@
       if (b.x + w < x0 || b.x > x1 || b.y + h < y0 || b.y > y1) continue;
       if (b.id === R.ghostMove) { g.globalAlpha = 0.35; drawBuilding(g, b, now); g.globalAlpha = 1; } else drawBuilding(g, b, now);
     }
-    drawFlows(g, z);
     if (R.blueprint) drawBlueprint(g);
     if (R.ghost && R.hover) {
       const bt = FS.buildings[R.ghost];
@@ -926,6 +960,9 @@
     drawSigns(g);
     drawWeather(g, dt);
     drawDaylight(g);
+    // Flows and bars come after the daylight tint, so their colours match and read the same at night.
+    g.setTransform(R.dpr * z, 0, 0, R.dpr * z, -R.cam.x * z * R.dpr, -R.cam.y * z * R.dpr);
+    drawFlows(g, z);
     drawBars(g, now);
   };
 })();

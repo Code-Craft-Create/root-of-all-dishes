@@ -367,6 +367,25 @@ nav button span { display: none; }
 .toast.season { background: #2f5d8a; }
 .mapbtn { position: absolute; left: 12px; bottom: 12px; background: rgba(28, 36, 31, 0.85); color: #fff; border-color: rgba(255, 255, 255, 0.2); }
 .mapbtn.active { background: var(--accent2); color: #2b2a26; }
+/* Flows button with its filter half; the filter panel opens above them. */
+#flowctl { position: absolute; left: 12px; bottom: 12px; display: flex; }
+#flowctl .mapbtn { position: relative; left: auto; bottom: auto; }
+#flows-btn { border-radius: 8px 0 0 8px; }
+#flowf-btn { border-radius: 0 8px 8px 0; border-left: none; padding: 5px 8px; }
+#flowf-btn .badge { background: var(--accent); }
+.mapbtn.active:hover:not(:disabled) { background: var(--accent2); filter: brightness(1.05); }
+.mapbtn:hover:not(:disabled):not(.active) { background: rgba(28, 36, 31, 0.95); }
+#flowf { position: absolute; left: 12px; bottom: 52px; z-index: 5; width: max-content; min-width: 180px; max-width: min(392px, calc(100% - 24px)); max-height: min(60%, 420px); overflow-y: auto; background: rgba(28, 36, 31, 0.92); color: #fff; border-radius: 10px; padding: 8px 10px 10px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3); }
+#flowf[hidden] { display: none; }
+#flowf h4 { margin: 6px 0 4px; font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.7); display: flex; align-items: center; justify-content: space-between; }
+#flowf h4:first-child { margin-top: 0; }
+#flowf .ff-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+#flowf .ff-grid button { width: 34px; height: 34px; padding: 3px; background: rgba(255, 255, 255, 0.1); border: 1px solid transparent; display: inline-flex; align-items: center; justify-content: center; }
+#flowf .ff-grid button:hover { background: rgba(255, 255, 255, 0.22); }
+#flowf .ff-grid button.on { background: var(--accent2); border-color: #fff; }
+#flowf .ff-grid button img { width: 24px; height: 24px; }
+#flowf .ff-clear { background: rgba(255, 255, 255, 0.12); color: #fff; border: none; font-size: 12px; padding: 2px 8px; }
+#flowf .ff-none { font-size: 12px; color: rgba(255, 255, 255, 0.7); }
 @media (max-width: 760px) { .plan-row { grid-template-columns: 1fr; } .plan-s { justify-items: start; } }
 
 /* SVG icons (assets/icons.js) */
@@ -723,7 +742,7 @@ details.settings .ratectl, details.settings .stockctl { background: none; paddin
 /* Blueprints: the offer in Plan production, and the bar while one is being placed */
 .bp-offer { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0 10px; padding: 8px 10px; border-radius: 8px; background: rgba(91, 155, 213, 0.12); border: 1px solid rgba(58, 111, 166, 0.35); }
 .bp-offer span { flex: 1; min-width: 200px; }
-#bpbar { position: absolute; left: 124px; bottom: 12px; width: min(560px, calc(100% - 140px)); background: rgba(28, 36, 31, 0.9); color: #fff; border-radius: 10px; padding: 8px 12px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3); }
+#bpbar { position: absolute; left: 154px; bottom: 12px; width: min(560px, calc(100% - 170px)); background: rgba(28, 36, 31, 0.9); color: #fff; border-radius: 10px; padding: 8px 12px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3); }
 #bpbar .muted { color: rgba(255, 255, 255, 0.7); }
 #bpbar .bp-note { margin: 3px 0 6px; color: rgba(255, 255, 255, 0.85); }
 #bpbar .short { color: #ff9c8f; }

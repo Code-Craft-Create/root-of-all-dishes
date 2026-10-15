@@ -226,7 +226,10 @@ older) no longer load.
 ## Seeing the supply chain
 
 - **🔗 Flows** (button on the map, or `F`) draws arrows from each building to the buildings that use what it
-  makes; red dashed arrows are ingredients a building is waiting for. Selecting a building shows just its links.
+  makes, coloured like the production bars: green when the farm makes enough of that ingredient for everyone
+  who uses it, yellow at 50–99%, red below, brown when the user's storage is full, icy when it is too cold. Dashed
+  and pulsing: the building is waiting for that ingredient. Selecting a building shows just its links. The ▾ next to
+  the button filters the links to chosen goods or building types (remembered in this browser).
 - **🗺️ Plan production** (Codex and Cookbook) lists every step needed to make an item from scratch, what is
   already running, and builds a missing step with the right recipe preset (or, after stage C, the whole chain as a 📐 blueprint).
 - **Where the price goes** in the Codex splits each item's value into farm, processing and kitchen shares.
