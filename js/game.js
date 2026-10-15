@@ -1424,8 +1424,8 @@
     { id: 'taste', name: 'Taste Test', at: 0, about: 'Tells you whether a combination is a dish: yes or no.' },
     { id: 'palate', name: 'Fine Palate', at: 1, about: 'Tells you which dish you are close to, and which tried ingredients belong to it (green) and which don\'t (red).' },
     { id: 'nose', name: 'Keen Nose', at: 3, about: 'Names the groups of the ingredients still missing.' },
-    { id: 'sweep', name: 'Pantry Sweep', at: 6, about: 'After a hint about your target dish, the group filter can show just the groups still missing.' },
-    { id: 'compass', name: 'Cuisine Compass', at: 12, about: 'With a target dish, a switch shows only ingredients used somewhere in its cuisine. It works together with the group filter.' },
+    { id: 'sweep', name: 'Pantry Sweep', at: 10, about: 'After a hint about your target dish, the group filter can show just the groups still missing.' },
+    { id: 'compass', name: 'Cuisine Compass', at: 25, about: 'With a target dish, a switch shows only ingredients used somewhere in its cuisine. It works together with the group filter.' },
   ];
   Game.skill = (id) => Game.dishesCooked() >= Game.SKILLS.find((k) => k.id === id).at;
   // A splash for each skill as it opens. Saves from before skills existed get the ones they already have quietly.

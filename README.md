@@ -150,8 +150,8 @@ everything in stock at once; cooking still needs the real ingredients.
 (`Game.SKILLS` in game.js), each with an unlock splash; the **Mystery Cupboard** (button in the Test Kitchen header,
 next to Clear on phones) shows them, the closed drawers with their name and dish count only. Taste Test (from the
 start: a try is a dish or not), Fine Palate (1 dish: the dish you are close to, green/red fit of each tried ingredient),
-Keen Nose (3: the groups still missing), Pantry Sweep (6: the "Groups of missing ingredients" filter) and Cuisine
-Compass (12: with a target dish, a switch shows only ingredients used in its cuisine, combinable with the group filter).
+Keen Nose (3: the groups still missing), Pantry Sweep (10: the "Groups of missing ingredients" filter) and Cuisine
+Compass (25: with a target dish, a switch shows only ingredients used in its cuisine, combinable with the group filter).
 Saves from before v1.18.0 get the skills they already qualify for without splashes. Cheat `skill <id>` shows a splash.
 
 **🎩 Toques** are the second currency, for knowledge rather than land and buildings. You start with 3. A special-request
