@@ -718,7 +718,7 @@
       addItem(o, q);
       S.stats.produced[o] = (S.stats.produced[o] || 0) + q;
       const i = FS.items[o];
-      if (i.dish) (S.cookedAt = S.cookedAt || {})[o] = S.time; // restaurant guests notice food that has sat around
+      if (i.dish) { (S.cookedAt = S.cookedAt || {})[o] = S.time; sigMade(o, 'made'); } // restaurant guests notice food that has sat around
       day[i.dish ? 'dish' : i.raw ? 'raw' : 'proc'] += i.value * q;
     }
     b.running = false; b.progress = 0; delete b.took;
@@ -1464,6 +1464,7 @@
         addItem(dish.id, 1, true);
         S.stats.produced[dish.id] = (S.stats.produced[dish.id] || 0) + 1;
         cooked = true;
+        sigMade(dish.id, 'made');
       }
       if (isNew) { Game.emit('discovered', dish.id); checkSpecial(dish.id); }
       Game.emit('inv');
@@ -1771,15 +1772,21 @@
   Game.dishesCooked = disc;
   // Finishing a stage: its target in each of its three cuisines. Progress counts cooked dishes up to each target.
   // Their reward shows on the stage's splash card (splashInfo in ui.js), so no toast.
+  // Once the challenge dishes are revealed, they join the goal and its progress.
   function stageGoal(id, reward, toques) {
     const st = FS.STAGES.find((x) => x.id === id);
+    const progress = () => {
+      const done = (c) => !!(Game.S.cuisineDone || {})[c.id], sig = Game.sigOpen(id);
+      return [st.cuisines.reduce((n, c) => n + (done(c) ? st.target + c.sigIds.length : (Game.cuisineTargetMet(c) ? st.target : Math.min(st.target, Game.cuisineTargetCount(c))) + (sig ? Game.sigCount(c) : 0)), 0),
+        st.cuisines.reduce((n, c) => n + st.target + (sig || done(c) ? c.sigIds.length : 0), 0)];
+    };
+    const sigText = () => (Game.sigOpen(id) ? `, then ${st.rating ? 'serve' : 'make'} its ⭐ Chef's Challenge` : '');
     if (st.rating) return { id: 'stage' + id, reward, toques, card: true, open: () => Game.stageOpen(id), check: () => Game.stageDone(id),
-      get text() { return Game.stageKnown(id) && Game.restaurantsUnlocked() ? `Finish ${st.name}: serve ${st.target} dishes of each of its cuisines at restaurants rated ${'★'.repeat(st.rating)} or better (🏙️ Town)` : 'Finish a stage yet to be discovered'; },
-      progress: () => [st.cuisines.reduce((n, c) => n + Math.min(st.target, Game.cuisineRated(c, st.rating)), 0), st.target * st.cuisines.length] };
+      get text() { return Game.stageKnown(id) && Game.restaurantsUnlocked() ? `Finish ${st.name}: serve ${st.target} dishes of each of its cuisines at restaurants rated ${'★'.repeat(st.rating)} or better${sigText()} (🏙️ Town)` : 'Finish a stage yet to be discovered'; },
+      progress };
     return { id: 'stage' + id, reward, toques, card: true, open: () => Game.stageOpen(id),
-      get text() { return Game.stageKnown(id) ? `Finish ${st.name}: cook ${st.target} dishes in each of its cuisines (🍽️ Cuisines)` : 'Finish a stage yet to be discovered'; },
-      check: () => Game.stageDone(id),
-      progress: () => [st.cuisines.reduce((n, c) => n + Math.min(st.target, Game.cuisineCooked(c)), 0), st.target * st.cuisines.length] };
+      get text() { return Game.stageKnown(id) ? `Finish ${st.name}: cook ${st.target} dishes in each of its cuisines${sigText()} (🍽️ Cuisines)` : 'Finish a stage yet to be discovered'; },
+      check: () => Game.stageDone(id), progress };
   }
   // Goals only show once the player can work on them (independent ones, like the dish counts, from the start).
   const canMake = (id) => (FS.byOutput[id] || []).some((r) => !r.dish && Game.recipeUnlocked(r.id) && Game.buildingUnlocked(r.building));
@@ -1866,7 +1873,7 @@
   // Dishes cooked so far in a cuisine (cooked, not just discovered, like the dish goals).
   Game.cuisineCooked = (c) => c.dishIds.filter(made).length;
   Game.stageById = (id) => FS.STAGES.find((st) => st.id === id);
-  // A stage is done once each of its cuisines has reached the target (S.cuisineDone keeps that, even if counts change).
+  // A stage is done once each of its cuisines is complete: target and challenge dishes (S.cuisineDone keeps that).
   Game.stageDone = (id) => Game.stageById(id).cuisines.every((c) => (Game.S.cuisineDone || {})[c.id]);
   // The stage being worked on: the first one not done (the last one once everything is).
   Game.currentStage = () => FS.STAGES.find((st) => !Game.stageDone(st.id)) || FS.STAGES[FS.STAGES.length - 1];
@@ -1908,26 +1915,83 @@
     Game.refreshUnlocks();
     Game.emit('unlock', 'cz:' + cid);
   };
-  // Reaching a cuisine's target, and cooking all of it, pay toques. When every cuisine of a stage is at its target,
-  // the next stage opens.
+  // ---------- Chef's Challenge ----------
+  // Once every cuisine of a stage has reached its target, each cuisine's challenge dishes (c.sigIds, from unlocks.js)
+  // are revealed: the stage's final test. A signature dish counts when it is freshly made after the reveal, in the
+  // Test Kitchen or by a kitchen building; in a stage with a `rating` (Grand Cuisine), when a restaurant rated that
+  // well serves it. S.sig = { open: {stage id: time revealed}, done: {dish id: true} }.
+  const sigS = () => (Game.S.sig = Game.S.sig || { open: {}, done: {} });
+  Game.sigOpen = (stId) => sigS().open[stId] !== undefined;
+  Game.sigDone = (id) => !!sigS().done[id];
+  Game.isSignature = (id) => { const c = FS.cuisineOf(id); return !!c && c.sigIds.includes(id); };
+  // A revealed signature dish of a cuisine that still needs it.
+  Game.sigPending = (id) => {
+    const c = Game.isSignature(id) && FS.cuisineOf(id);
+    return !!c && Game.sigOpen(c.stage) && !Game.sigDone(id) && !(Game.S.cuisineDone || {})[c.id];
+  };
+  Game.sigCount = (c) => c.sigIds.filter(Game.sigDone).length;
+  // how: 'made' (cooked fresh) or a restaurant rating (served there).
+  function sigMade(id, how) {
+    if (!Game.sigPending(id)) return;
+    const c = FS.cuisineOf(id), st = Game.stageById(c.stage);
+    if (st.rating ? !(how >= st.rating) : how !== 'made') return;
+    sigS().done[id] = true;
+    const n = Game.sigCount(c);
+    Game.toast(`⭐ Challenge dish ${st.rating ? 'served' : 'made'}: ${FS.items[id].name} (${n} of ${c.sigIds.length} for ${c.name})`, 'good', 'quiet');
+    Game.emit('sig', id);
+    checkCuisines();
+  }
+  Game.sigMade = sigMade;
+  // Cheat helper: 'reveal' opens every cuisine of the current stage at its target; 'make' makes all its challenge dishes.
+  Game.cheatSig = function (how) {
+    const S = Game.S, st = Game.currentStage();
+    if (Game.stageDone(st.id)) return false;
+    S.cuisineTarget = S.cuisineTarget || {};
+    for (const c of st.cuisines) { S.cuisines[c.id] = S.cuisines[c.id] || 1; S.cuisineTarget[c.id] = true; }
+    Game.refreshUnlocks();
+    checkCuisines();
+    if (how === 'make') for (const c of st.cuisines) for (const id of c.sigIds) sigMade(id, st.rating ? st.rating : 'made');
+    return true;
+  };
+  // A cuisine's target: dishes cooked, or in Grand Cuisine dishes served at well-rated restaurants.
+  Game.cuisineTargetCount = (c) => { const st = Game.stageById(c.stage); return st.rating ? Game.cuisineRated(c, st.rating) : Game.cuisineCooked(c); };
+  Game.cuisineTargetMet = (c) => !!(Game.S.cuisineTarget || {})[c.id] || !!(Game.S.cuisineDone || {})[c.id];
+
+  // Reaching a cuisine's target, then making its challenge dishes, completes it and pays toques; cooking all of it pays
+  // more. When every cuisine of a stage is complete, the next stage opens.
   function checkCuisines() {
     const S = Game.S;
-    S.cuisineDone = S.cuisineDone || {}; S.cuisineGold = S.cuisineGold || {};
-    for (const st of FS.STAGES) for (const c of st.cuisines) {
-      if (!S.cuisines[c.id]) continue;
-      const n = Game.cuisineCooked(c);
-      // Stage E counts dishes on well-rated restaurant menus instead of dishes cooked.
-      if (!S.cuisineDone[c.id] && (st.rating ? Game.cuisineRated(c, st.rating) : n) >= st.target) {
+    S.cuisineDone = S.cuisineDone || {}; S.cuisineGold = S.cuisineGold || {}; S.cuisineTarget = S.cuisineTarget || {};
+    for (const st of FS.STAGES) {
+      for (const c of st.cuisines) {
+        if (!S.cuisines[c.id]) continue;
+        if (!Game.cuisineTargetMet(c) && Game.cuisineTargetCount(c) >= st.target) {
+          S.cuisineTarget[c.id] = true;
+          // The last cuisine to reach it gets the challenge dishes card instead.
+          if (!st.cuisines.every(Game.cuisineTargetMet)) Game.emit('unlock', 'cztarget:' + c.id);
+        }
+        const n = Game.cuisineCooked(c);
+        if (!S.cuisineGold[c.id] && n >= c.dishIds.length) {
+          S.cuisineGold[c.id] = true;
+          Game.addToques(st.gold);
+          Game.emit('unlock', 'czgold:' + c.id);
+        }
+      }
+      if (Game.stageDone(st.id)) continue;
+      // Every cuisine at its target: the challenge dishes appear, a surprise until now.
+      if (!Game.sigOpen(st.id) && st.cuisines.every(Game.cuisineTargetMet)) {
+        sigS().open[st.id] = S.time;
+        Game.journal({ type: 'msg', kind: 'good', text: `⭐ Chef's Challenge for ${st.name}: ${st.cuisines.filter((c) => !S.cuisineDone[c.id]).map((c) => `${c.name}: ${c.sigIds.map((id) => FS.items[id].name).join(', ')}`).join('; ')}.`, quiet: true });
+        Game.emit('unlock', 'sig:' + st.id);
+      }
+      if (!Game.sigOpen(st.id)) continue;
+      for (const c of st.cuisines) {
+        if (S.cuisineDone[c.id] || !c.sigIds.every(Game.sigDone)) continue;
         S.cuisineDone[c.id] = true;
         Game.addToques(st.toques);
         // A splash card, ahead of any feature the stage unlocks; the last cuisine of a stage also says the stage is complete.
         Game.emit('unlock', 'czdone:' + c.id + (Game.stageDone(st.id) ? ':stage' : ''));
         if (Game.stageDone(st.id)) stageFinished(st);
-      }
-      if (!S.cuisineGold[c.id] && n >= c.dishIds.length) {
-        S.cuisineGold[c.id] = true;
-        Game.addToques(st.gold);
-        Game.emit('unlock', 'czgold:' + c.id);
       }
     }
   }
@@ -2364,6 +2428,7 @@
       r.served++; r.earned += pay;
       const rv = Game.rating(r), rated = (town().rated = town().rated || {});
       if (rv !== null && !(rated[id] >= rv)) rated[id] = rv;
+      if (rv !== null) sigMade(id, rv);
       const j = judge(r, id);
       score = j.score;
       // Guests never say which cuisines they want (taste, cover): that only shows in the stars, and the critic tells.
