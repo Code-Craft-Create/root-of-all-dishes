@@ -126,7 +126,7 @@ what stands behind them; rewards: 25 fame (`Game.FAME`: dishes sell for 10% more
 drawn in render.js; the Legacy adds a crown). Dark Chocolate and the 15+ raw ingredient dish show their supply chain
 (`chainHtml`, shared with the discovery card). A cuisine with every dish cooked gets a gold card (`czgold:<id>`) and its
 dishes sell for 5% more (`Game.GOLD_PERK`). Stage goals (`card: true`) show their coins and toques on the stage card
-instead of a toast. The Goals window has a trophy shelf to see earned cards again. Cheat: `milestone [id|gold <cuisine>]`.
+instead of a toast. The Goals window opens the 🏆 Trophy cabinet (`modals.trophies`, `trophyList`/`trophySVG` in ui.js): wooden shelves with a place for every trophy (dish cups growing with the count, stage shields, chocolate bar, scroll, crown, cuisine gold plates); places not won show a dashed outline only, won ones shine and open their card again. Cheat: `milestone [id|gold <cuisine>]`.
 
 Every dish belongs to one of 15 cuisines in five stages (**🍽️ Cuisines**, key P):
 

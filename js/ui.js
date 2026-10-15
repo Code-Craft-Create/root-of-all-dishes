@@ -415,6 +415,8 @@
     if (ui.modal) SFX.play('close');
     ui.modal = null; ui.dd = null; $('#modal').hidden = true; document.body.classList.remove('modal-open');
     if (ui.splashQ.length) setTimeout(showSplash, 250);
+    // A card seen again from the trophy cabinet leads back to the cabinet.
+    else if (ui.afterSplash) { const back = ui.afterSplash; ui.afterSplash = null; setTimeout(() => openModal(back), 250); }
     else setTimeout(flushToasts, 250);
   }
   // ----- Unlock splash: a full card with a fanfare for every new feature, queued behind any open window -----
@@ -1626,28 +1628,82 @@
   };
 
   // ----- Goals -----
-  // Trophy shelf: every big card earned so far, to see again (looks only). Nothing unearned shows.
-  function trophyShelf() {
-    const S = Game.S, list = [];
-    for (const g of Game.goals) {
-      if (!S.goalsDone[g.id] || !g.splash) continue;
-      const n = /^dish\d+$/.test(g.id) ? g.id.slice(4) : g.id === 'dishall' ? 'all' : '';
-      const icon = g.id === 'choc' ? FSI.img('dark_chocolate') : g.id === 'complex' ? FSI.img(Game.mostComplexCooked() || 'ui_trophy') : FSI.img('ui_trophy');
-      list.push([`goal:${g.id}`, icon + (n ? `<b class="tn">${n}</b>` : ''), MILESTONE[g.id] ? MILESTONE[g.id].title : g.text]);
-    }
-    for (const st of FS.STAGES) if (Game.stageDone(st.id)) { const c = st.cuisines[st.cuisines.length - 1]; list.push([`czdone:${c.id}:stage`, FSI.img('ui_medal_2'), st.name]); }
-    for (const c of FS.CUISINES) if ((S.cuisineGold || {})[c.id]) list.push([`czgold:${c.id}`, FSI.img('cz_' + c.id), `${c.name}: every dish`]);
-    if (S.legacyWon) list.push(['finale', FSI.img('ui_crown'), 'The Legacy']);
-    if (!list.length) return '';
-    return `<h4>Trophies</h4><div class="trophies">${list.map(([k, icon, t]) => `<button class="trophy${k.startsWith('czgold:') ? ' gold' : ''}" data-action="${k === 'finale' ? 'finale' : 'replay'}" data-arg="${esc(k)}" data-tip="${esc(t)}">${icon}</button>`).join('')}</div>`;
+  // ----- Trophy cabinet: a glass cupboard with a place for every trophy. Places not won yet show only a dashed outline
+  // of the trophy's shape (no name); a won trophy shines in gold or silver and opens its card again when clicked. -----
+  function trophyList() {
+    const S = Game.S, done = (id) => !!S.goalsDone[id];
+    const DISH = [['dish25', '25'], ['dish50', '50'], ['dish100', '100'], ['dish200', '200'], ['dishall', 'All']];
+    return [
+      { name: 'Dishes cooked', items: DISH.map(([id, n], v) => ({ shape: 'cup', v, won: done(id), key: 'goal:' + id, plaque: n, tip: MILESTONE[id].title })) },
+      { name: 'Stages', items: FS.STAGES.map((st, k) => ({ shape: 'shield', v: k, won: Game.stageDone(st.id), plaque: '★'.repeat(k + 1),
+        key: `czdone:${st.cuisines[st.cuisines.length - 1].id}:stage`, tip: st.name })) },
+      { name: 'Specialities', items: [
+        { shape: 'bar', won: done('choc'), key: 'goal:choc', tip: it('dark_chocolate').name },
+        { shape: 'scroll', won: done('complex'), key: 'goal:complex', tip: 'The long road' },
+        { shape: 'crown', won: !!S.legacyWon, key: 'finale', tip: 'The Legacy' }] },
+      { name: 'Cuisines in gold', small: true, items: FS.CUISINES.map((c) => ({ shape: 'plate', won: !!(S.cuisineGold || {})[c.id], key: 'czgold:' + c.id, icon: 'cz_' + c.id, tip: c.name })) },
+    ];
   }
+  // Trophy shapes, drawn in a 64 x 80 box standing on its bottom edge. Won: filled (gold, silver for stages); else a dashed outline.
+  function trophySVG(t) {
+    const W = t.won, fill = (f) => (W ? f : 'none');
+    const line = W ? 'stroke="#7a4a10" stroke-width="1.6"' : 'stroke="rgba(255,240,215,0.55)" stroke-width="1.8" stroke-dasharray="4 3"';
+    const gold = fill('url(#tc-gold)'), silver = fill('url(#tc-silver)');
+    let body = '';
+    if (t.shape === 'cup') {
+      // Five cups that grow with the milestone: handles from 50, a taller bowl from 100, a lid from 200, a star on the last.
+      const v = t.v, top = 22 - v * 4;
+      const handles = `M17 ${top + 4} C5 ${top + 4} 6 ${top + 22} 20 ${top + 24} M47 ${top + 4} C59 ${top + 4} 58 ${top + 22} 44 ${top + 24}`;
+      if (v >= 1) body += W ? `<path d="${handles}" fill="none" stroke="#7a4a10" stroke-width="5.5"/><path d="${handles}" fill="none" stroke="#f2c14e" stroke-width="3"/>` : `<path d="${handles}" fill="none" ${line}/>`;
+      body += `<path d="M16 ${top} H48 C48 ${top + 20} 42 50 32 52 C22 50 16 ${top + 20} 16 ${top} Z" fill="${gold}" ${line}/>`;
+      if (v >= 3) body += `<path d="M18 ${top} C18 ${top - 9} 46 ${top - 9} 46 ${top} Z" fill="${gold}" ${line}/><circle cx="32" cy="${top - 9}" r="3" fill="${gold}" ${line}/>`;
+      if (v >= 4) body += `<path d="M32 ${top + 6} l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9-4.3-4.1 5.9-.8Z" fill="${fill('#fff3b0')}" ${line}/>`;
+      body += `<rect x="29" y="52" width="6" height="8" fill="${gold}" ${line}/><path d="M20 60 H44 L46 66 H18 Z" fill="${gold}" ${line}/>`;
+      // Bigger milestones, bigger cups (scaled from the foot).
+      const k = [0.74, 0.82, 0.9, 0.96, 1][v];
+      body = `<g transform="translate(32 66) scale(${k}) translate(-32 -66)">${body}</g>`;
+    } else if (t.shape === 'shield') {
+      body = `<path d="M32 8 L54 16 V38 C54 54 44 64 32 72 C20 64 10 54 10 38 V16 Z" fill="${silver}" ${line}/>
+        <path d="M32 15 L48 21 V38 C48 50 41 58 32 64 C23 58 16 50 16 38 V21 Z" fill="${fill('rgba(255,255,255,0.25)')}" ${W ? 'stroke="rgba(90,100,120,0.5)"' : 'stroke="none"'}/>`;
+    } else if (t.shape === 'plate') {
+      body = `<rect x="29" y="58" width="6" height="10" fill="${gold}" ${line}/><path d="M20 68 H44 L46 74 H18 Z" fill="${gold}" ${line}/>
+        <circle cx="32" cy="34" r="24" fill="${gold}" ${line}/><circle cx="32" cy="34" r="17" fill="${fill('#fff6d8')}" ${W ? 'stroke="#c99a2a"' : 'stroke="none"'}/>`;
+    } else if (t.shape === 'bar') {
+      body = `<rect x="18" y="8" width="28" height="50" rx="3" fill="${fill('#6b3a1e')}" ${line}/>
+        ${W ? '<path d="M18 30 H46 M18 44 H46 M32 30 V58" stroke="#4a2410" stroke-width="1.4"/><path d="M18 8 H46 V26 L40 30 L32 25 L24 30 L18 27 Z" fill="url(#tc-gold)" stroke="#7a4a10" stroke-width="1.2"/>' : ''}
+        <path d="M12 62 H52 V70 H12 Z" fill="${gold}" ${line}/>`;
+    } else if (t.shape === 'scroll') {
+      body = `<rect x="16" y="14" width="32" height="44" fill="${fill('#f3e2b8')}" ${line}/>
+        <rect x="11" y="8" width="42" height="8" rx="4" fill="${fill('#c99a5a')}" ${line}/><rect x="11" y="56" width="42" height="8" rx="4" fill="${fill('#c99a5a')}" ${line}/>
+        ${W ? '<path d="M22 24 H42 M22 31 H42 M22 38 H38 M22 45 H40" stroke="#a07a4a" stroke-width="1.6"/><circle cx="40" cy="52" r="4" fill="#b0302a"/>' : ''}
+        <path d="M14 66 H50 V72 H14 Z" fill="${gold}" ${line}/>`;
+    } else if (t.shape === 'crown') {
+      body = `<path d="M8 54 L11 18 L23 34 L32 10 L41 34 L53 18 L56 54 Z" fill="${gold}" ${line}/><rect x="8" y="54" width="48" height="9" rx="2" fill="${gold}" ${line}/>
+        ${W ? '<circle cx="32" cy="44" r="4" fill="#c0283a"/><circle cx="19" cy="46" r="3" fill="#2a7ac0"/><circle cx="45" cy="46" r="3" fill="#2a9a5a"/>' : ''}
+        <path d="M14 66 H50 V72 H14 Z" fill="${gold}" ${line}/>`;
+    }
+    return `<svg viewBox="0 0 64 80" class="tc-svg" aria-hidden="true">${body}</svg>`;
+  }
+  modals.trophies = () => {
+    const shelves = trophyList(), all = shelves.flatMap((sh) => sh.items), won = all.filter((t) => t.won).length;
+    const defs = `<svg width="0" height="0" style="position:absolute"><defs>
+      <linearGradient id="tc-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff1a8"/><stop offset="0.45" stop-color="#f2c14e"/><stop offset="1" stop-color="#b9781c"/></linearGradient>
+      <linearGradient id="tc-silver" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="0.5" stop-color="#c8d0dc"/><stop offset="1" stop-color="#7d8798"/></linearGradient></defs></svg>`;
+    const slot = (t) => {
+      const inner = trophySVG(t) + (t.won && t.icon ? `<span class="tc-icon">${FSI.img(t.icon)}</span>` : '') + (t.plaque ? `<span class="tc-plaque">${t.won ? esc(t.plaque) : ''}</span>` : '');
+      return t.won ? `<button class="tc-slot won ${t.shape}" data-action="${t.key === 'finale' ? 'finale' : 'replay'}" data-arg="${esc(t.key)}" data-tip="${esc(t.tip)}">${inner}</button>`
+        : `<span class="tc-slot ${t.shape}" data-tip="Not won yet">${inner}</span>`;
+    };
+    return { title: `🏆 Trophy cabinet <span class="muted">${won} / ${all.length}</span>`, cls: 'cabinet-card',
+      html: `${defs}<div class="cabinet">${shelves.map((sh) => `<div class="tc-shelf${sh.small ? ' small' : ''}"><div class="tc-row">${sh.items.map(slot).join('')}</div><div class="tc-ledge">${esc(sh.name)}</div></div>`).join('')}</div>` };
+  };
   modals.goals = () => {
     const S = Game.S;
     const next = Game.goals.find((g) => !S.goalsDone[g.id] && Game.goalVisible(g));
     const hidden = Game.goals.filter((g) => !Game.goalVisible(g)).length;
     return {
       title: '🎯 Goals',
-      html: `${trophyShelf()}<div class="goals">${Game.goals.filter(Game.goalVisible).map((g) => `<div class="goal ${S.goalsDone[g.id] ? 'done' : g === next ? 'next' : ''}">
+      html: `<button class="tc-open" data-action="modal" data-arg="trophies">🏆 Trophy cabinet <span class="muted">${trophyList().flatMap((sh) => sh.items).filter((t) => t.won).length} won</span></button><div class="goals">${Game.goals.filter(Game.goalVisible).map((g) => `<div class="goal ${S.goalsDone[g.id] ? 'done' : g === next ? 'next' : ''}">
         <span>${S.goalsDone[g.id] ? '✅' : g === next ? '👉' : '⬜'}</span><span>${esc(g.text)}${goalProg(g)}${stepOf(g.id) ? ` <span class="unlocktag" data-tip="${S.goalsDone[g.id] ? 'Unlocked' : 'Unlocks'} ${esc(stepOf(g.id).name)}">${S.goalsDone[g.id] ? '✅' : '🔓'} ${esc(stepOf(g.id).name)}</span>` : ''}</span><span class="reward">+${money(g.reward)}${g.toques ? ` · 🎩${g.toques}` : ''}</span></div>`).join('')}</div>
         ${hidden ? '<p class="small muted">More goals appear as your farm grows.</p>' : ''}
         <h4>Your farm in numbers</h4><div class="small">Earned 💰${money(S.stats.earned)} · spent 💰${money(S.stats.spent)} · ${S.buildings.length} building${S.buildings.length === 1 ? '' : 's'} · ${Object.keys(S.seen).length} different goods produced · ${S.stats.experiments} experiment${S.stats.experiments === 1 ? '' : 's'}</div>`,
@@ -2085,7 +2141,7 @@
       case 'town': ui.setTown(!ui.townMode); break;
       case 'finale': ui.finale(); break;
       // See an earned card again from the trophy shelf (nothing is paid twice: cards only show).
-      case 'replay': if (!ui.splashQ.includes(arg)) ui.splashQ.unshift(arg); closeModal(); break;
+      case 'replay': if (!ui.splashQ.includes(arg)) ui.splashQ.unshift(arg); ui.afterSplash = ui.modal; closeModal(); break;
       case 'town-tab': ui.townTab = arg; ui.refresh(); break;
       case 'town-zoom': { const el = $('#town-map'); TownMap.zoomAt(el.clientWidth / 2, el.clientHeight / 2, +arg > 0 ? 1.25 : 0.8); break; }
       case 'town-offer':
