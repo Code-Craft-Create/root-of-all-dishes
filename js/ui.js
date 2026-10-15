@@ -705,7 +705,7 @@
               <button data-action="as-none" ${selling ? '' : 'disabled'} data-tip="Auto-sell off for every item you have now. New goods still start on Default.">Turn all off</button></div></div>
           </div>
           <div class="ws-card ws-rules"><h5>Hold back ${qm('These win over the default amount for items on Default. An item you set yourself in the Stock tab keeps your setting.')}</h5>
-            ${Game.KEEP_RULES.map((R) => { const v = Game.keepRuleOf(R.id), mode = v == null ? 'off' : v === 'all' ? 'all' : 'n';
+            ${Game.KEEP_RULES.filter((R) => R.id !== 'menu' || Game.restaurantsUnlocked()).map((R) => { // the Town stays a secret until it opens const v = Game.keepRuleOf(R.id), mode = v == null ? 'off' : v === 'all' ? 'all' : 'n';
               const n = Object.keys(Game.S.inv).filter((o) => have(o) > 0 && Game.autosellOf(o) === 'd' && (() => { const k = Game.keepRule(o); return k && k.rule.id === R.id; })()).length;
               const o = (k, label) => `<option value="${k}" ${mode === k ? 'selected' : ''}>${label}</option>`;
               return `<div class="ws-rule"><span class="ws-rn">${esc(R.name)} ${qm(R.tip)}</span><span class="small muted">${n ? `${n} in stock now` : R.id === 'winter' && Game.seasonIndex() < 2 ? 'from autumn' : ''}</span>
