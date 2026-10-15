@@ -22,6 +22,7 @@
   // "Sell above": how many of each item to keep, remembered in this browser (not in the save).
   ui.sellAbove = 25;
   try { const v = +localStorage.getItem('rootdishes-sell-above'); if (localStorage.getItem('rootdishes-sell-above') != null && v >= 0) ui.sellAbove = Math.round(v); } catch (e) { /* keep default */ }
+  try { const f = JSON.parse(localStorage.getItem('rootdishes-flow-filter')); if (f) { Render.flowGoods = new Set((f.goods || []).filter((i) => FS.items[i])); Render.flowTypes = new Set((f.types || []).filter((t) => FS.buildings[t])); } } catch (e) { /* show all */ }
   try { const m = JSON.parse(localStorage.getItem('rootdishes-market-sort')); if (m && ['group', 'value', 'stock', 'price', 'name'].includes(m.by) && (m.dir === 1 || m.dir === -1)) ui.mkSort = m; } catch (e) { /* keep default */ }
 
   // English plural of a building name: Creamery ➜ Creameries, Press ➜ Presses, Bakery ➜ Bakeries.
@@ -126,7 +127,7 @@
     const next = Game.goals.find((g) => !S.goalsDone[g.id] && Game.goalVisible(g));
     const se = Game.season(), we = Game.weather();
     const canFill = S.orders.filter(Game.orderReady).length;
-    const key = [S.journalN, S.journalRead, canFill, Math.floor(S.money), Math.floor(S.loan || 0), clock, S.speed, S.orders.length, disc, next && next.id, next && String(Game.goalProgress(next)), se.id, we.name, Render.flows, S.toques, czNew(), townOut()].join('|');
+    const key = [S.journalN, S.journalRead, canFill, Math.floor(S.money), Math.floor(S.loan || 0), clock, S.speed, S.orders.length, disc, next && next.id, next && String(Game.goalProgress(next)), se.id, we.name, Render.flows, Render.flowGoods.size + Render.flowTypes.size, S.toques, czNew(), townOut()].join('|');
     if (key === lastTop) return;
     lastTop = key;
     $('#money').textContent = '💰 ' + money(S.money);
@@ -140,6 +141,8 @@
     $('#season').title = `${se.msg}\nNow: ${we.name}${Game.cheat.weather ? '' : `, for about ${Math.max(1, Math.round(Game.weatherLeft() / Game.HOUR))} more hours`}. ${we.effect}\n` + (Game.cheat.season !== null || Game.cheat.weather ? 'Forced from the cheat console (` key). Type "clear" there to go back to normal.' : `Next season in ${dur(Game.seasonLeft() / 1)} of game time.`);
     $('#season').classList.toggle('forced', Game.cheat.season !== null || !!Game.cheat.weather);
     $('#flows-btn').classList.toggle('active', !!Render.flows);
+    $('#flowf-btn').classList.toggle('active', !!Render.flows);
+    $('#flowf-n').textContent = (Render.flowGoods.size + Render.flowTypes.size) || '';
     $('#dishcount').textContent = `📖 ${disc}/${FS.dishList.length}`;
     document.querySelectorAll('[data-action="speed"]').forEach((b) => b.classList.toggle('active', +b.dataset.arg === S.speed));
     // Orders badge: how many you can deliver right now; faded with the order count when none can be filled yet.
@@ -1783,6 +1786,25 @@
   document.addEventListener('click', (e) => {
     if (performance.now() - (ui.popAt || 0) < 500 && e.target.closest && e.target.closest('#buildbar')) { e.preventDefault(); e.stopPropagation(); }
   }, true);
+  // Flow filter: icon toggles for the goods passed between buildings and the building types involved, A–Z.
+  // Nothing picked shows every link; picking anything also turns Flows on.
+  function flowFilter() {
+    const el = $('#flowf');
+    if (el.hidden) return;
+    const o = Render.flowOptions(), G = Render.flowGoods, T = Render.flowTypes;
+    const goods = [...new Set([...o.goods, ...G])].sort((a, b) => it(a).name.localeCompare(it(b).name));
+    const types = [...new Set([...o.types, ...T])].sort((a, b) => FS.buildings[a].name.localeCompare(FS.buildings[b].name));
+    const chip = (act, id, name, on, icon, emoji) => `<button class="${on ? 'on' : ''}" data-action="${act}" data-arg="${id}" data-tip="${esc(name)}">${FSI.img(icon) || esc(emoji || '?')}</button>`;
+    const clear = (k, set) => (set.size ? `<button class="ff-clear" data-action="ff-clear" data-arg="${k}">✕ ${set.size}</button>` : '');
+    el.innerHTML = goods.length || types.length
+      ? `<h4>Goods ${clear('goods', G)}</h4><div class="ff-grid">${goods.map((i) => chip('ff-good', i, it(i).name, G.has(i), i, it(i).emoji)).join('')}</div>
+        <h4>Buildings ${clear('types', T)}</h4><div class="ff-grid">${types.map((t) => chip('ff-type', t, FS.buildings[t].name, T.has(t), 'b_' + t, FS.buildings[t].icon)).join('')}</div>`
+      : '<div class="ff-none">No goods move between your buildings yet.</div>';
+  }
+  function saveFlowFilter() {
+    try { localStorage.setItem('rootdishes-flow-filter', JSON.stringify({ goods: [...Render.flowGoods], types: [...Render.flowTypes] })); } catch (e) { /* not remembered */ }
+    lastTop = '';
+  }
   function closeBuildPop() {
     if (!document.body.classList.contains('bb-open')) return;
     document.body.classList.remove('bb-open');
@@ -1909,6 +1931,13 @@
       case 'sell': { const n = Math.min(+el.dataset.qty, have(arg)), got = Game.sell(arg, n); if (got) { SFX.play('sell'); toast(`Sold ${n} ${it(arg).name} for 💰${coins(got)}`, 'good'); } ui.refresh(); break; }
       case 'buy': spend(() => Game.buy(arg, +el.dataset.qty)); ui.refresh(); break;
       case 'flows': Render.flows = !Render.flows; break;
+      case 'flow-filter': $('#flowf').hidden = !$('#flowf').hidden; flowFilter(); break;
+      case 'ff-good': case 'ff-type': case 'ff-clear': {
+        const set = action === 'ff-good' ? Render.flowGoods : action === 'ff-type' ? Render.flowTypes : null;
+        if (set) { if (set.has(arg)) set.delete(arg); else set.add(arg); Render.flows = true; }
+        else (arg === 'goods' ? Render.flowGoods : Render.flowTypes).clear();
+        saveFlowFilter(); flowFilter(); break;
+      }
       case 'plan': ui.planItem = arg; S.stats.plans = (S.stats.plans || 0) + 1; openModal('plan'); break;
       case 'plan-build': {
         const r = FS.recipeById[arg];
@@ -2204,6 +2233,7 @@
   function bindInput() {
     document.addEventListener('click', (e) => {
       if (ui.dd && !e.target.closest('.dd')) { ui.dd = null; if (!e.target.closest('[data-action]')) ui.refresh(); }
+      if (!$('#flowf').hidden && !e.target.closest('#flowf, #flowf-btn')) $('#flowf').hidden = true;
       const a = e.target.closest('[data-action]');
       if (a && !a.disabled) { if (!OWN_SOUND.has(a.dataset.action)) SFX.play('click'); act(a.dataset.action, a.dataset.arg, a); e.preventDefault(); return; }
       if (e.target.closest('button, [data-item], [data-dc], [data-egg-close]')) SFX.play('click');
