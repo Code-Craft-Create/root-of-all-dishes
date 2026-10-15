@@ -21,6 +21,7 @@
     rival: { usage: 'rival <' + Game.RIVALS.map((x) => x.id).join('|') + '> <rating>', about: 'Set a rival\'s rating (saved)', run: rivalCmd },
     stock: { usage: 'stock', about: 'Put 20 freshly cooked plates of every restaurant menu dish in the warehouse (saved)', run: stock },
     target: { usage: 'target [cuisine]', about: 'Show the splash for a cuisine reaching its target (looks only; default: the newest open cuisine)', run: target },
+    milestone: { usage: 'milestone [dish25|dishall]', about: 'Show the celebration card for a dish milestone (looks only, nothing is paid)', run: milestone },
     finale: { usage: 'finale', about: 'Show the end screen of the Legacy (looks only, nothing is won)', run: () => UI.finale() },
     win: { usage: 'win', about: 'Win the game: finish every stage, take gold from all three critics, buy out Crestwell; the Legacy completes and the finale plays (saved)', run: win },
     clear: { usage: 'clear', about: 'Remove all overrides and hide the dishes the console revealed', run: clear },
@@ -110,6 +111,12 @@
     if (!c) return print(`No such cuisine. Try one of: ${FS.CUISINES.map((x) => x.id).join(', ')}.`, 'err');
     toggle(false);
     UI.splash('czdone:' + c.id);
+  }
+  function milestone(arg) {
+    const id = String(arg || 'dish25');
+    if (!Game.goals.some((g) => g.id === id && g.splash)) return print(`Try ${COMMANDS.milestone.usage}.`, 'err');
+    toggle(false);
+    UI.splash('goal:' + id);
   }
   function win() {
     if (Game.S.legacyWon) return print('The Legacy is already won. Type finale to see the end screen again.', 'err');

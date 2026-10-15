@@ -119,6 +119,11 @@ orchard, more crops), making salt opens Sugar & yeast, making yeast opens the Ba
 (hens, feed mill), then come Dairy & bees, Kitchen garden, and Butcher & cheesemaker. The 🎯 Goals list shows which
 goal unlocks what.
 
+Dish milestones are goals with `splash: true` (js/game.js): cooking 25 different dishes and cooking every dish each
+open a celebration card (`goal:<id>` in ui.js `milestoneInfo`, own `milestone` sound) with every dish cooked so far,
+what stands behind them, and the reward: coins, toques, and at 25 dishes fame (`Game.FAME`: every dish sells for 10%
+more at the market and in restaurants, `Game.dishMult`). Cheat `milestone [dish25|dishall]` shows the card.
+
 Every dish belongs to one of 15 cuisines in five stages (**🍽️ Cuisines**, key P):
 
 | Stage | Cuisines | Target per cuisine | Then unlocks |

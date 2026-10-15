@@ -850,7 +850,7 @@
     Game.S.money += Game.SPECIAL.bonus; dayStats().bonus += Game.SPECIAL.bonus;
     Game.emit('easteregg', id);
   }
-  Game.sellPrice = (id) => Math.max(0.05, FS.items[id].value * (Game.S.demand[id] || 1) * Game.seasonPrice(id) * specialMult(id) * Game.masterMult(id));
+  Game.sellPrice = (id) => Math.max(0.05, FS.items[id].value * (Game.S.demand[id] || 1) * Game.seasonPrice(id) * specialMult(id) * Game.dishMult(id));
   Game.buyPrice = (id) => FS.items[id].value * 2.5 + 0.5;
   // Raw ingredients you have unlocked or had can be imported. So can the starter kit's processed goods (butter, bread,
   // yeast...) until you unlock a recipe for them: otherwise selling the kit would leave no way to make the first dishes.
@@ -1508,6 +1508,10 @@
   Game.masteryUnlocked = () => Game.stageDone('D');
   Game.mastered = (id) => !!(Game.S.mastered && Game.S.mastered[id]);
   Game.masterMult = (id) => (Game.mastered(id) ? Game.MASTERY.value : 1);
+  // Fame: after cooking 25 different dishes, every dish sells for 10% more, at the market and in restaurants.
+  Game.FAME = { goal: 'dish25', value: 1.1 };
+  Game.famous = () => !!Game.S.goalsDone[Game.FAME.goal];
+  Game.dishMult = (id) => Game.masterMult(id) * (FS.items[id].dish && Game.famous() ? Game.FAME.value : 1);
   Game.masterCost = (id) => { const rc = FS.complexity(id).rawCount; return Game.MASTERY.cost[rc >= 12 ? 2 : rc >= 8 ? 1 : 0]; };
   Game.masterDish = function (id) {
     const S = Game.S, M = Game.MASTERY, d = FS.items[id];
@@ -1773,7 +1777,8 @@
     { id: 'cheese', text: 'Make a cheese at the Creamery', reward: 400, open: () => Object.keys(FS.items).some((i) => FS.items[i].cat === 'cheese' && canMake(i)), check: () => Object.keys(Game.S.stats.produced).some((i) => FS.items[i].cat === 'cheese') },
     { id: 'meat', text: 'Butcher an animal into cuts', reward: 400, open: () => MEAT_CUTS.some(canMake), check: () => MEAT_CUTS.some(made) },
     stageGoal('A', 2000),
-    { id: 'dish25', text: 'Cook 25 different dishes', reward: 1000, check: () => disc() >= 25, progress: () => [disc(), 25] },
+    // A milestone: a celebration card, toques, and fame (every dish sells for more from now on).
+    { id: 'dish25', text: 'Cook 25 different dishes', reward: 2500, toques: 3, splash: true, check: () => disc() >= 25, progress: () => [disc(), 25] },
     stageGoal('B', 4000),
     // Opens the town, but says nothing about it: the town is a surprise (unlock splash).
     { id: 'town', reward: 5000, get text() { return `Discover ${Game.townDishes()} dishes`; },
@@ -1792,7 +1797,7 @@
     { id: 'legacy', reward: 100000, open: () => Game.featureKnown('restaurants') && Game.stageOpen('E'),
       get text() { return Game.featureKnown('restaurants') && Game.stageOpen('E') ? 'The Legacy: finish Grand Cuisine, win gold from all three food critics in the same year, and buy out the Crestwell Group (🏙️ Town)' : 'A final challenge yet to be discovered'; },
       check: () => !!Game.S.legacyWon, progress: () => [Game.legacy().filter((x) => x.done).length, Game.legacy().length] },
-    { id: 'dishall', get text() { return `Cook every dish (${FS.dishList.length} in all)`; }, reward: 50000, check: () => disc() >= FS.dishList.length, progress: () => [disc(), FS.dishList.length] },
+    { id: 'dishall', get text() { return `Cook every dish (${FS.dishList.length} in all)`; }, reward: 50000, toques: 10, splash: true, check: () => disc() >= FS.dishList.length, progress: () => [disc(), FS.dishList.length] },
   ];
   // Shown in the goal bar and Goals window: done goals, and open ones the player can work on now.
   Game.goalVisible = (g) => !!Game.S.goalsDone[g.id] || !g.open || g.open();
@@ -1808,7 +1813,10 @@
       if (S.goalsDone[g.id] || !g.check()) continue;
       S.goalsDone[g.id] = true;
       S.money += g.reward; dayStats().bonus += g.reward;
-      Game.toast(`🎯 Goal complete: ${g.text} (+${g.reward})`, 'good', 'quiet');
+      if (g.toques) Game.addToques(g.toques);
+      // Milestones get their own celebration card instead of a toast.
+      if (g.splash) Game.emit('unlock', 'goal:' + g.id);
+      else Game.toast(`🎯 Goal complete: ${g.text} (+${g.reward}${g.toques ? ` and 🎩${g.toques}` : ''})`, 'good', 'quiet');
       if (g.done) g.done();
       Game.emit('goals');
       if (FS.STEPS.some((st) => st.goal === g.id)) Game.refreshUnlocks();
@@ -2311,7 +2319,7 @@
       Game.emit('guest', { lot: r.spot, miss: true });
     } else {
       S.inv[id] -= 1;
-      const pay = FS.items[id].value * Game.TOWN.prices[r.price].mult * Game.masterMult(id);
+      const pay = FS.items[id].value * Game.TOWN.prices[r.price].mult * Game.dishMult(id);
       earn(pay, id, 1, 'guests');
       r.served++; r.earned += pay;
       const rv = Game.rating(r), rated = (town().rated = town().rated || {});
