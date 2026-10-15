@@ -2620,7 +2620,7 @@
     }
     if (Game.legacy().every((x) => x.done)) {
       S.legacyWon = S.time || 1;
-      Game.toast('👑 The Legacy is complete: Grand Cuisine mastered, three golds from the critics, and Crestwell bought out. From earth to eat, you did it all!', 'good', 'quiet');
+      Game.toast('👑 The Legacy is complete: Grand Cuisine mastered, three golds from the critics, and Crestwell bought out. From root to dish, you did it all!', 'good', 'quiet');
       Game.emit('legacy');
     }
   }

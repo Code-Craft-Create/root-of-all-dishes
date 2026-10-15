@@ -2219,7 +2219,7 @@
     const blob = new Blob([Game.exportSave()], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `earth-to-eat-day-${Game.dayOf() + 1}-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `root-of-all-dishes-day-${Game.dayOf() + 1}-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     toast('Save file downloaded.');
