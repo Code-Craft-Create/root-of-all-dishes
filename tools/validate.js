@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const root = path.join(__dirname, '..');
-const files = ['js/data/core.js', 'js/data/buildings.js', 'js/data/raw.js', 'js/data/processing.js', 'js/data/dishes.js', 'js/data/unlocks.js', 'js/model.js'];
+const files = ['js/data/core.js', 'js/data/buildings.js', 'js/data/raw.js', 'js/data/processing.js', 'js/data/dishes.js', 'js/data/about.js', 'js/data/unlocks.js', 'js/model.js'];
 const ctx = { console };
 ctx.globalThis = ctx;
 vm.createContext(ctx);
@@ -45,7 +45,7 @@ for (const d of FS.dishList) if (!placed[d.id]) errors.push(`Dish ${d.id} is in 
 FS.STAGES.forEach((st, k) => { for (const c of st.cuisines) if (c.sigIds.length !== k + 1) errors.push(`Cuisine ${c.name} has ${c.sigIds.length} signature dishes, its stage needs ${k + 1}`); });
 for (const st of FS.STAGES) for (const c of st.cuisines) if (c.dishIds.length < st.target + c.sigIds.length) errors.push(`Cuisine ${c.name} has fewer dishes than its target ${st.target}`);
 for (const n in FS.ABOUT) if (!FS.items[FS.slug(n)]) errors.push(`FS.ABOUT: unknown dish ${n}`);
-for (const c of FS.CUISINES.filter((x) => x.stage === 'E')) for (const id of c.dishIds) if (!FS.items[id].about) errors.push(`${c.name}: ${FS.items[id].name} has no FS.ABOUT text`);
+for (const d of FS.dishList) if (!d.about) errors.push(`${d.cuisine}: ${d.name} has no FS.ABOUT text (js/data/about.js)`);
 const stepsU = FS.computeUnlocks(FS.STEPS.map((s) => s.id), []);
 for (const c of FS.CUISINES.filter((x) => x.steps)) for (const id of c.dishIds) for (const i of Object.keys(FS.dishRecipe[id].inputs))
   if (!stepsU.items.has(i)) errors.push(`${c.name}: ${FS.items[id].name} needs ${i}, which no guided step unlocks`);
