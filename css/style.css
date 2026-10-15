@@ -500,6 +500,77 @@ body.bp-open:not(.modal-open) #toasts { bottom: calc(var(--bp-h, 110px) + 24px);
 .regcard { display: flex; gap: 8px; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; }
 .regcard .pack-icon .ico { width: 30px; height: 30px; }
 .regcard .muted { margin-top: 1px; }
+/* The Orders window is a pinboard by the kitchen pass: a steel ticket rail behind the title, a cork board in a wooden
+   frame, and every order a paper ticket pinned to it. The ticket paper and the pin are coloured by the kind of order,
+   a perforated line runs under the customer, the bottom edge is torn off the pad, and a ticket you can fill now gets a
+   green ink stamp. Regulars are index cards; About and the Dispatcher are a sheet from a notepad. */
+.modal-card:has(.otabs) header { border-radius: 14px 14px 0 0; border-bottom: 4px solid #8e979d;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.3) 0 1px, transparent 1px 3px, rgba(110, 120, 126, 0.07) 3px 4px),
+    linear-gradient(180deg, #f4f6f7 0%, #dfe3e6 58%, #c9cfd3 82%, #eef0f2 86%, #d4d9dc 100%);
+  box-shadow: 0 2px 4px rgba(40, 30, 20, 0.25); position: relative; z-index: 1; }
+#modal-body:has(> .otabs) { border-radius: 0 0 14px 14px; padding: 14px 18px 18px; background-color: #c99d6b; background-attachment: local;
+  background-image: radial-gradient(rgba(96, 58, 24, 0.38) 0.9px, transparent 1.5px), radial-gradient(rgba(255, 238, 205, 0.4) 0.9px, transparent 1.5px),
+    radial-gradient(rgba(120, 76, 34, 0.28) 1.4px, transparent 2px), radial-gradient(ellipse at 30% 20%, rgba(255, 230, 190, 0.25), transparent 60%);
+  background-size: 7px 7px, 11px 11px, 17px 17px, 100% 100%; background-position: 0 0, 3px 5px, 8px 2px, 0 0;
+  box-shadow: inset 0 0 0 6px #9a6a3e, inset 0 0 0 7px #6f4625, inset 0 3px 10px 7px rgba(60, 35, 15, 0.35); }
+.otabs button:not(.active) { background: #fffdf6; border-color: #b78b5c; box-shadow: 0 2px 0 rgba(90, 55, 25, 0.35); }
+.otabs button.active { box-shadow: 0 2px 0 #1d5634; }
+#modal-body:has(> .otabs) .sortbar, .o-strip { width: fit-content; max-width: 100%; box-sizing: border-box; padding: 4px 10px; border-radius: 3px;
+  background: #fffdf6; box-shadow: 0 1px 0 rgba(90, 55, 25, 0.3), 0 2px 5px rgba(60, 35, 15, 0.2); }
+#modal-body:has(> .otabs) .sortbar { margin-bottom: 14px; }
+#modal-body:has(> .otabs) .sortbar .muted { color: #6b6455; }
+.o-strip.hint, .o-strip.muted { color: #5f594c; }
+p.o-strip { margin: 10px 0 0; }
+p.o-strip.disp-line { margin: 0 0 10px; }
+/* A ticket: kind-coloured paper and pin. --pin is the pin colour. */
+#modal-body .order { --paper: #fffdf6; --pin: #d0473a; position: relative; border: 0; border-radius: 2px 2px 0 0; background: var(--paper);
+  padding: 13px 12px 12px; margin-bottom: 18px; filter: drop-shadow(0 1px 0 rgba(90, 55, 25, 0.35)) drop-shadow(0 4px 4px rgba(50, 28, 10, 0.25)); }
+#modal-body .order::after { content: ''; position: absolute; left: 0; right: 0; bottom: -6px; height: 6px;
+  background: linear-gradient(135deg, var(--paper) 4px, transparent 4.5px) 0 0 / 9px 6px repeat-x, linear-gradient(225deg, var(--paper) 4px, transparent 4.5px) 0 0 / 9px 6px repeat-x; }
+#modal-body .order::before { content: ''; position: absolute; top: -5px; left: calc(50% - 7px); width: 14px; height: 14px; border-radius: 50%; z-index: 1;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.85) 0 2px, transparent 3px), var(--pin);
+  box-shadow: inset -2px -2px 3px rgba(0, 0, 0, 0.3), 1px 3px 2px rgba(40, 20, 5, 0.4); }
+#modal-body .order:nth-child(3n + 2)::before { left: calc(44% - 7px); }
+#modal-body .order:nth-child(3n)::before { left: calc(57% - 7px); }
+#modal-body .order.special { --paper: #fff6d6; --pin: #e2a52c; background: var(--paper); }
+#modal-body .order.regular { --paper: #fff1f1; --pin: #d9475f; }
+#modal-body .order.clue { --paper: #effaf1; --pin: #3f9a5a; }
+#modal-body .order.contract { --paper: #f4f0ff; --pin: #7a5fc4; }
+#modal-body .order.event { --paper: #fff1e2; --pin: #e07a2c; background: var(--paper); }
+#modal-body .order .o-head { padding-bottom: 7px; border-bottom: 2px dashed rgba(120, 100, 70, 0.28); }
+#modal-body .order .o-head > b { font-size: 15px; }
+#modal-body .order .o-time, #modal-body .order .ot-qty { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+#modal-body .order .o-time { font-size: 12px; color: #6b6455; }
+#modal-body .order .o-time.soon { color: #b23a26; }
+#modal-body .order .o-want { margin-top: 8px; }
+#modal-body .order .otile { background: rgba(255, 255, 255, 0.75); border-color: rgba(150, 130, 100, 0.3); border-left-width: 4px; }
+#modal-body .order .otile.ok { background: rgba(232, 246, 236, 0.9); border-color: #c4e2cb; border-left-color: #3f9a5a; }
+#modal-body .order .otile.short { background: rgba(253, 236, 232, 0.9); border-color: #efc9c1; border-left-color: #c9503a; }
+#modal-body .order .otile.unknown { background: rgba(240, 237, 231, 0.9); border-left-color: #b9b2a5; }
+#modal-body .order .otile[data-item]:hover { border-color: var(--accent2); }
+/* Ready to deliver: a round green ink stamp with a tick, pressed on slightly crooked. */
+#modal-body .order.ready .o-pay { position: relative; }
+#modal-body .order.ready .o-pay::before { content: '✓'; position: absolute; top: -34px; right: -6px; width: 30px; height: 30px; box-sizing: border-box;
+  display: grid; place-items: center; border: 2.5px solid rgba(47, 125, 79, 0.75); border-radius: 50%; outline: 1px solid rgba(47, 125, 79, 0.45); outline-offset: 2px;
+  color: rgba(47, 125, 79, 0.85); font-weight: 900; font-size: 17px; line-height: 1; transform: rotate(-14deg); pointer-events: none; }
+/* Regulars: index cards with a red rule under the customer's name. */
+#modal-body .regulars { gap: 12px; }
+#modal-body .regcard { border: 0; border-radius: 2px; padding: 9px 10px 8px; background: #fffefa; box-shadow: 0 1px 0 rgba(90, 55, 25, 0.3), 0 3px 6px rgba(50, 28, 10, 0.25); }
+#modal-body .regcard > div { flex: 1; min-width: 0; }
+#modal-body .regcard > div > b:first-child { display: block; padding-bottom: 2px; margin-bottom: 3px; border-bottom: 2px solid #e2726e; }
+#modal-body .regcard .pack-icon { align-self: flex-start; }
+/* About and the Dispatcher: a notepad sheet with a red margin line; About's text sits on blue rules. */
+.o-sheet { position: relative; padding: 14px 16px 12px 46px; border-radius: 2px; background: #fffefa linear-gradient(90deg, transparent 33px, rgba(226, 114, 110, 0.6) 33px 35px, transparent 35px);
+  box-shadow: 0 1px 0 rgba(90, 55, 25, 0.3), 0 4px 8px rgba(50, 28, 10, 0.28); }
+.o-sheet.lined { padding-top: 16px; padding-bottom: 16px; line-height: 24px;
+  background-image: linear-gradient(90deg, transparent 33px, rgba(226, 114, 110, 0.6) 33px 35px, transparent 35px), repeating-linear-gradient(180deg, transparent 0 23px, rgba(90, 140, 200, 0.24) 23px 24px);
+  background-origin: border-box, content-box; }
+.o-sheet.lined p { margin: 0 0 24px; line-height: 24px; }
+.o-sheet::before { content: ''; position: absolute; top: -5px; left: calc(50% - 7px); width: 14px; height: 14px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.85) 0 2px, transparent 3px), #3a73c4;
+  box-shadow: inset -2px -2px 3px rgba(0, 0, 0, 0.3), 1px 3px 2px rgba(40, 20, 5, 0.4); }
+.o-sheet > p:first-child, .o-sheet > .warn:first-child, .o-sheet > .hint:first-child { margin-top: 0; }
+.o-sheet > :last-child, .o-sheet.lined > p:last-child { margin-bottom: 0; }
 #money { cursor: pointer; }
 #inspector > input.search { display: block; width: 100%; box-sizing: border-box; }
 
@@ -1252,7 +1323,13 @@ body.touch-placing #toasts { bottom: 128px; }
 /* Phones held upright: order cards stack. The customer line and each good get the full width (names no longer cut to
    "Harbour …" or hidden), quantity sits inside its tile, and reward + Deliver share a row under the goods. */
 @media (hover: none) and (pointer: coarse) and (max-width: 600px) {
-  #modal-body:has(.otabs) { padding: 10px; }
+  #modal-body:has(.otabs) { padding: 12px 12px 14px; border-radius: 0; }
+  .modal-card:has(.otabs) header { border-radius: 0; }
+  #modal-body .order { padding: 12px 10px 10px; }
+  #modal-body .order.ready .o-pay::before { display: none; }
+  .o-sheet { padding: 12px 12px 10px 30px; background-image: linear-gradient(90deg, transparent 19px, rgba(226, 114, 110, 0.6) 19px 21px, transparent 21px); }
+  .o-sheet.lined { padding-top: 12px; padding-bottom: 12px; background-image: linear-gradient(90deg, transparent 19px, rgba(226, 114, 110, 0.6) 19px 21px, transparent 21px),
+    repeating-linear-gradient(180deg, transparent 0 23px, rgba(90, 140, 200, 0.24) 23px 24px); }
   .otabs { flex-wrap: wrap; gap: 4px; }
   .otabs button { flex: 1 1 auto; white-space: nowrap; padding: 5px 9px; font-size: 14px; }
   .order { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "main main" "pay act"; gap: 8px 10px; padding: 8px; }

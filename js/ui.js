@@ -1599,13 +1599,13 @@
           <span class="small">${nextAt !== undefined ? `${nextAt - xp} more to level ${lv + 1}` : 'best friends'}</span>
           <div class="small muted">${tip ? `🎩 tip every ${tip === 2 ? '2nd' : '3rd'} delivery` : '🎩 tips from level 3'}</div></div></div>`;
       }).join('')}</div>` : '';
-      body += `<p class="small muted">${regs.length ? 'Every delivery makes a regular fonder: bigger orders and better pay. ' : ''}Every cuisine you open has a regular customer. They start ordering once you have cooked one of that cuisine's dishes.</p>`;
+      body += `<p class="small muted o-strip">${regs.length ? 'Every delivery makes a regular fonder: bigger orders and better pay. ' : ''}Every cuisine you open has a regular customer. They start ordering once you have cooked one of that cuisine's dishes.</p>`;
     } else if (tab === 'dispatch') {
-      body = dispatcherTab();
+      body = `<div class="o-sheet">${dispatcherTab()}</div>`;
     } else if (tab === 'about') {
-      body = ORDER_INTRO.slice(0, tier + 1).map((t) => `<p>${t}</p>`).join('')
+      body = '<div class="o-sheet lined">' + ORDER_INTRO.slice(0, tier + 1).map((t) => `<p>${t}</p>`).join('')
         + (tier < 3 ? `<p class="small muted">Next stage: ${ORDER_INTRO[tier + 1].split('. ')[0]}.</p>` : '')
-        + `<p class="small muted">Orders delivered so far: ${S.stats.ordersDone}</p>`;
+        + `<p class="small muted">Orders delivered so far: ${S.stats.ordersDone}</p></div>`;
     } else {
       // Sort: 'time' soonest to expire, 'ready' what you can deliver now first, 'reward' toques first, then money.
       const end = (o) => (o.kind === 'supply' ? o.dayEnd : o.expires);
@@ -1616,9 +1616,9 @@
         || (by === 'reward' ? toq(b) - toq(a) || pay(b) - pay(a) : 0) || end(a) - end(b));
       const sb = (id, label, tip) => `<button class="${by === id ? 'active' : ''}" data-action="osort" data-arg="${id}" data-tip="${tip}">${label}</button>`;
       body = `<div class="sortbar small"><span class="muted">Sort by</span><div class="seg">${sb('ready', 'Ready', 'Orders you can deliver now first')}${sb('time', '⏱ Time left', 'Soonest to expire first')}${sb('reward', 'Reward', 'Most 🎩 toques first, then most money')}</div></div><div class="orders">${list.map(orderCard).join('')}</div>`;
-      if (!list.length) body = '<p class="hint">No orders right now. New customers come once you have produced some goods.</p>';
+      if (!list.length) body = '<p class="hint o-strip">No orders right now. New customers come once you have produced some goods.</p>';
       const D = S.dispatcher;
-      if (D) body = `<p class="small muted disp-line">📦 ${D.on ? `The Dispatcher delivers ${Game.DISPATCH_GROUPS.some((g) => D.skip[g.id] && g.tier <= tier) ? 'the types you chose' : 'orders'} for you and keeps ${D.keep} of each good.` : 'The Dispatcher is off duty.'} <a href="#" data-action="otab" data-arg="dispatch">Settings</a></p>` + body;
+      if (D) body = `<p class="small muted disp-line o-strip">📦 ${D.on ? `The Dispatcher delivers ${Game.DISPATCH_GROUPS.some((g) => D.skip[g.id] && g.tier <= tier) ? 'the types you chose' : 'orders'} for you and keeps ${D.keep} of each good.` : 'The Dispatcher is off duty.'} <a href="#" data-action="otab" data-arg="dispatch">Settings</a></p>` + body;
     }
     const tb = (id, label) => `<button class="${tab === id ? 'active' : ''}" data-action="otab" data-arg="${id}">${label}</button>`;
     return {
