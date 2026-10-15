@@ -1509,9 +1509,12 @@
   Game.mastered = (id) => !!(Game.S.mastered && Game.S.mastered[id]);
   Game.masterMult = (id) => (Game.mastered(id) ? Game.MASTERY.value : 1);
   // Fame: after cooking 25 different dishes, every dish sells for 10% more, at the market and in restaurants.
-  Game.FAME = { goal: 'dish25', value: 1.1 };
-  Game.famous = () => !!Game.S.goalsDone[Game.FAME.goal];
-  Game.dishMult = (id) => Game.masterMult(id) * (FS.items[id].dish && Game.famous() ? Game.FAME.value : 1);
+  // Fame grows again at 100 dishes. A cuisine with every dish cooked (gold) sells its own dishes for 5% more on top.
+  Game.FAME = [{ goal: 'dish25', value: 1.1 }, { goal: 'dish100', value: 1.2 }];
+  Game.GOLD_PERK = 1.05;
+  Game.fameMult = () => Game.FAME.reduce((m, f) => (Game.S.goalsDone[f.goal] ? f.value : m), 1);
+  Game.goldMult = (id) => (Game.S.cuisineGold && Game.S.cuisineGold[FS.cuisineOf(id).id] ? Game.GOLD_PERK : 1);
+  Game.dishMult = (id) => Game.masterMult(id) * (FS.items[id].dish ? Game.fameMult() * Game.goldMult(id) : 1);
   Game.masterCost = (id) => { const rc = FS.complexity(id).rawCount; return Game.MASTERY.cost[rc >= 12 ? 2 : rc >= 8 ? 1 : 0]; };
   Game.masterDish = function (id) {
     const S = Game.S, M = Game.MASTERY, d = FS.items[id];
@@ -1743,12 +1746,13 @@
   // Dish goals count dishes you have actually cooked, not just discovered.
   const disc = () => FS.dishList.filter((d) => made(d.id)).length;
   // Finishing a stage: its target in each of its three cuisines. Progress counts cooked dishes up to each target.
-  function stageGoal(id, reward) {
+  // Their reward shows on the stage's splash card (splashInfo in ui.js), so no toast.
+  function stageGoal(id, reward, toques) {
     const st = FS.STAGES.find((x) => x.id === id);
-    if (st.rating) return { id: 'stage' + id, reward, open: () => Game.stageOpen(id), check: () => Game.stageDone(id),
+    if (st.rating) return { id: 'stage' + id, reward, toques, card: true, open: () => Game.stageOpen(id), check: () => Game.stageDone(id),
       get text() { return Game.stageKnown(id) && Game.restaurantsUnlocked() ? `Finish ${st.name}: serve ${st.target} dishes of each of its cuisines at restaurants rated ${'★'.repeat(st.rating)} or better (🏙️ Town)` : 'Finish a stage yet to be discovered'; },
       progress: () => [st.cuisines.reduce((n, c) => n + Math.min(st.target, Game.cuisineRated(c, st.rating)), 0), st.target * st.cuisines.length] };
-    return { id: 'stage' + id, reward, open: () => Game.stageOpen(id),
+    return { id: 'stage' + id, reward, toques, card: true, open: () => Game.stageOpen(id),
       get text() { return Game.stageKnown(id) ? `Finish ${st.name}: cook ${st.target} dishes in each of its cuisines (🍽️ Cuisines)` : 'Finish a stage yet to be discovered'; },
       check: () => Game.stageDone(id),
       progress: () => [st.cuisines.reduce((n, c) => n + Math.min(st.target, Game.cuisineCooked(c)), 0), st.target * st.cuisines.length] };
@@ -1779,26 +1783,37 @@
     stageGoal('A', 2000),
     // A milestone: a celebration card, toques, and fame (every dish sells for more from now on).
     { id: 'dish25', text: 'Cook 25 different dishes', reward: 2500, toques: 3, splash: true, check: () => disc() >= 25, progress: () => [disc(), 25] },
+    // Further milestones: 50 adds a storage level, 100 more fame, 200 a trophy on the farmhouse (Game.keepsakes).
+    { id: 'dish50', text: 'Cook 50 different dishes', reward: 5000, toques: 4, splash: true, check: () => disc() >= 50, progress: () => [disc(), 50],
+      done: () => { if (Game.STORAGE[Game.storageLevel() + 1]) { Game.S.storage = Game.storageLevel() + 1; Game.S.milestoneCap = Game.capacity(); Game.emit('inv'); } } },
     stageGoal('B', 4000),
     // Opens the town, but says nothing about it: the town is a surprise (unlock splash).
     { id: 'town', reward: 5000, get text() { return `Discover ${Game.townDishes()} dishes`; },
       check: () => Game.restaurantsUnlocked(), progress: () => [Math.min(Object.keys(Game.S.discovered).length, Game.townDishes()), Game.townDishes()] },
-    { id: 'gold3', reward: 1500,
+    { id: 'gold3', reward: 1500, toques: 3,
       get text() { return `Cook every dish in 3 cuisines${Game.featureKnown('dispatcher') ? ' to hire 📦 the Dispatcher (📋 Orders)' : ''}`; },
       check: () => Object.keys(Game.S.cuisineGold || {}).length >= 3, progress: () => [Math.min(3, Object.keys(Game.S.cuisineGold || {}).length), 3],
       done: () => Game.emit('unlock', 'dispatcher') },
-    { id: 'choc', text: 'Make Dark Chocolate (cocoa takes 6 processing steps!)', reward: 1500, open: () => canMake('dark_chocolate'), check: () => made('dark_chocolate') },
-    { id: 'complex', text: 'Cook a dish with 15+ raw ingredients in its supply chain', reward: 1500,
+    { id: 'choc', get text() { return `Make Dark Chocolate (cocoa takes ${FS.complexity('dark_chocolate').steps} processing steps!)`; }, reward: 1500, toques: 2, splash: true, open: () => canMake('dark_chocolate'), check: () => made('dark_chocolate') },
+    { id: 'dish100', text: 'Cook 100 different dishes', reward: 10000, toques: 6, splash: true, check: () => disc() >= 100, progress: () => [disc(), 100] },
+    { id: 'complex', text: 'Cook a dish with 15+ raw ingredients in its supply chain', reward: 3000, toques: 4, splash: true,
       open: () => FS.dishList.some((d) => Game.S.cuisines[FS.cuisineOf(d.id).id] && FS.complexity(d.id).rawCount >= 15),
       check: () => FS.dishList.some((d) => made(d.id) && FS.complexity(d.id).rawCount >= 15) },
-    stageGoal('C', 8000),
-    stageGoal('D', 15000),
-    stageGoal('E', 30000),
+    stageGoal('C', 8000, 3),
+    stageGoal('D', 15000, 5),
+    { id: 'dish200', text: 'Cook 200 different dishes', reward: 20000, toques: 8, splash: true, check: () => disc() >= 200, progress: () => [disc(), 200] },
+    stageGoal('E', 30000, 8),
     { id: 'legacy', reward: 100000, open: () => Game.featureKnown('restaurants') && Game.stageOpen('E'),
       get text() { return Game.featureKnown('restaurants') && Game.stageOpen('E') ? 'The Legacy: finish Grand Cuisine, win gold from all three food critics in the same year, and buy out the Crestwell Group (🏙️ Town)' : 'A final challenge yet to be discovered'; },
       check: () => !!Game.S.legacyWon, progress: () => [Game.legacy().filter((x) => x.done).length, Game.legacy().length] },
     { id: 'dishall', get text() { return `Cook every dish (${FS.dishList.length} in all)`; }, reward: 50000, toques: 10, splash: true, check: () => disc() >= FS.dishList.length, progress: () => [disc(), FS.dishList.length] },
   ];
+  // The cooked dish with the longest supply chain (most raw ingredients): the showcase of the 'complex' goal.
+  Game.mostComplexCooked = () => FS.dishList.filter((d) => made(d.id)).map((d) => d.id)
+    .sort((a, b) => FS.complexity(b).rawCount - FS.complexity(a).rawCount)[0] || null;
+  // Keepsakes on the farmhouse roof, one per great milestone reached: [goal id, icon id].
+  Game.KEEPSAKES = [['dish200', 'ui_trophy'], ['dishall', 'ui_medal_1'], ['legacy', 'ui_crown']];
+  Game.keepsakes = () => Game.KEEPSAKES.filter(([g]) => Game.S.goalsDone[g]).map(([, icon]) => icon);
   // Shown in the goal bar and Goals window: done goals, and open ones the player can work on now.
   Game.goalVisible = (g) => !!Game.S.goalsDone[g.id] || !g.open || g.open();
   Game.nextGoal = () => Game.goals.find((g) => !Game.S.goalsDone[g.id] && Game.goalVisible(g));
@@ -1816,7 +1831,7 @@
       if (g.toques) Game.addToques(g.toques);
       // Milestones get their own celebration card instead of a toast.
       if (g.splash) Game.emit('unlock', 'goal:' + g.id);
-      else Game.toast(`🎯 Goal complete: ${g.text} (+${g.reward}${g.toques ? ` and 🎩${g.toques}` : ''})`, 'good', 'quiet');
+      else if (!g.card) Game.toast(`🎯 Goal complete: ${g.text} (+${g.reward}${g.toques ? ` and 🎩${g.toques}` : ''})`, 'good', 'quiet');
       if (g.done) g.done();
       Game.emit('goals');
       if (FS.STEPS.some((st) => st.goal === g.id)) Game.refreshUnlocks();
@@ -1887,7 +1902,7 @@
       if (!S.cuisineGold[c.id] && n >= c.dishIds.length) {
         S.cuisineGold[c.id] = true;
         Game.addToques(st.gold);
-        Game.toast(`🏆 Every ${c.name} dish cooked! +${st.gold} 🎩 toques`, 'good', 'quiet');
+        Game.emit('unlock', 'czgold:' + c.id);
       }
     }
   }

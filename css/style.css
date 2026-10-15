@@ -988,6 +988,32 @@ button.ghost { border: none; background: none; padding: 0 4px; }
 .splash .sp-rewards { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 auto 12px; }
 .splash .sp-rewards > span { padding: 5px 12px; border-radius: 999px; background: #ffe7b0; color: #7a3416; font-weight: 700; font-size: 15px; box-shadow: inset 0 0 0 1px #f0b860; }
 .splash .sp-rewards .ico { width: 18px; height: 18px; vertical-align: -3px; }
+.splash .sp-icon.gold { background: radial-gradient(circle, #fff6c8 52%, #f2c14e); box-shadow: 0 0 0 5px #e3a823, 0 6px 22px rgba(220, 150, 20, 0.6); }
+.splash .dc-chain { text-align: center; }
+/* Trophy cabinet: a wooden cupboard with glass shelves; places not won yet show a dashed outline */
+.tc-open { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font-weight: 700; }
+.modal-card.cabinet-card { width: min(760px, 96vw); }
+.cabinet { padding: 14px 14px 4px; border-radius: 12px; background: linear-gradient(90deg, #5a331b, #7a4a2a 8%, #6b3f22 92%, #4e2c17); box-shadow: inset 0 0 0 4px #3e2312, inset 0 0 0 7px #8a5a33, 0 6px 16px rgba(0, 0, 0, 0.25); }
+.tc-shelf { margin-bottom: 12px; border-radius: 6px 6px 0 0; background: linear-gradient(160deg, rgba(220, 240, 250, 0.22), rgba(140, 175, 195, 0.1) 45%, rgba(220, 240, 250, 0.16)), #3a2416; box-shadow: inset 0 6px 12px rgba(0, 0, 0, 0.35); }
+.tc-row { display: flex; flex-wrap: wrap; justify-content: space-around; align-items: flex-end; gap: 6px 2px; padding: 12px 8px 2px; }
+.tc-ledge { height: 20px; line-height: 20px; border-radius: 0 0 4px 4px; background: linear-gradient(#a8743f, #7d5028); color: #fbe7c4; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; text-align: center; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4); box-shadow: 0 3px 4px rgba(0, 0, 0, 0.35); }
+.tc-slot { position: relative; display: flex; flex-direction: column; align-items: center; width: 74px; padding: 0; border: 0; background: none; }
+.tc-slot .tc-svg { width: 60px; height: 75px; }
+.tc-slot.won { cursor: pointer; transition: transform 0.15s; }
+.tc-slot.won .tc-svg { filter: drop-shadow(0 0 6px rgba(255, 210, 90, 0.55)) drop-shadow(0 3px 2px rgba(0, 0, 0, 0.4)); }
+.tc-slot.won:hover { transform: translateY(-3px); }
+.tc-slot.won.shield .tc-svg { filter: drop-shadow(0 0 5px rgba(220, 230, 255, 0.5)) drop-shadow(0 3px 2px rgba(0, 0, 0, 0.4)); }
+.tc-plaque { min-width: 34px; height: 15px; margin-top: 2px; padding: 0 5px; border-radius: 3px; background: linear-gradient(#e9c46a, #b98a2c); color: #4a2a0a; font-size: 10px; font-weight: 800; line-height: 15px; }
+.tc-slot:not(.won) .tc-plaque { background: rgba(255, 240, 215, 0.12); }
+.tc-slot.shield .tc-plaque { color: #4a2a0a; letter-spacing: -1px; }
+.tc-shelf.small .tc-row { display: grid; grid-template-columns: repeat(8, 1fr); justify-items: center; }
+.tc-shelf.small .tc-slot { width: 50px; }
+@media (max-width: 600px) { .tc-shelf.small .tc-row { grid-template-columns: repeat(5, 1fr); } }
+.tc-shelf.small .tc-svg { width: 42px; height: 52px; }
+.tc-icon { position: absolute; left: 50%; top: 14px; width: 24px; height: 24px; margin-left: -12px; display: grid; place-items: center; }
+.tc-icon .ico { width: 24px; height: 24px; }
+.tc-shelf.small .tc-icon { top: 8px; width: 20px; height: 20px; margin-left: -10px; }
+.tc-shelf.small .tc-icon .ico { width: 20px; height: 20px; }
 @media (prefers-reduced-motion: reduce) { .modal-card.splash, .splash .sp-icon { animation: none; } }
 /* Welcome card on a new farm: the splash card with a subtitle and the journey of one dish */
 .welcome .sp-title { margin-bottom: 0; font-size: 30px; }
