@@ -491,6 +491,11 @@
       if (c) return { icon: FSI.img('cz_' + c.id), iconCls: 'gold', kicker: 'Every dish cooked', title: c.name, html: dishPops(c.dishIds),
         lines: [], rewards: rewardPills(0, st.gold, [`⭐ Its dishes sell for ${Math.round((Game.GOLD_PERK - 1) * 100)}% more`]) };
     }
+    // A new detective skill for the Test Kitchen.
+    if (key && key.startsWith('skill:')) {
+      const k = Game.SKILLS.find((x) => x.id === key.slice(6));
+      if (k) return { icon: FSI.img('sk_' + k.id), kicker: 'New detective skill', title: k.name, lines: [k.about] };
+    }
     if (key && key.startsWith('goal:')) {
       const g = Game.goals.find((x) => x.id === key.slice(5)), info = g && milestoneInfo(g);
       if (info) return info;
@@ -868,6 +873,9 @@
   // Everything you have in stock or have ever had: experiments are free, so you can discover a dish without stocking
   // everything at once. Cooking it still needs the real ingredients.
   const MISS = '@miss';
+  // Every ingredient that goes into at least one dish of a cuisine (the Cuisine Compass filter), worked out once per cuisine.
+  const czIns = {};
+  const cuisineIns = (cid) => czIns[cid] || (czIns[cid] = new Set(FS.cuisineById[cid].dishIds.flatMap((d) => Object.keys(FS.dishRecipe[d].inputs))));
   const tkPool = () => FS.ingredientList.map((i) => i.id).filter((id) => have(id) > 0 || Game.S.seen[id]);
   const tkTile = (id) => `<div class="tile ${ui.tkSlots.includes(id) ? 'picked' : ''} ${have(id) > 0 ? '' : 'empty'}" data-action="tk-add" data-arg="${id}" ${have(id) > 0 ? '' : 'title="None left: you can still experiment with it"'}>
             <span class="t-emoji">${FSI.img(id)}</span><span class="t-name">${esc(it(id).name)}</span><span class="t-qty">${have(id)}</span></div>`;
@@ -880,15 +888,20 @@
     }
     return slots.join('');
   };
+  // The Mystery Cupboard button: in the window's header, or next to Clear on phones (the header has no room there).
+  const skBtn = (cls) => `<button class="small tk-skills ${cls}" data-action="modal" data-arg="skills" data-tip="Mystery Cupboard: your detective skills">${FSI.img('ui_detective')}<span>${Game.SKILLS.filter((k) => Game.skill(k.id)).length} / ${Game.SKILLS.length}</span></button>`;
   modals.testkitchen = () => {
     const S = Game.S;
     const q = (ui.search.tk || '').toLowerCase();
     // After a hint about the target dish, the group filter offers the groups of the ingredients still missing.
-    const miss = ui.tkTarget && ui.tkMiss && ui.tkMiss.target === ui.tkTarget && !S.discovered[ui.tkTarget] ? ui.tkMiss.cats : null;
+    // (Pantry Sweep skill.) With the Cuisine Compass a switch narrows the shelves to what the target's cuisine uses.
+    const miss = Game.skill('sweep') && ui.tkTarget && ui.tkMiss && ui.tkMiss.target === ui.tkTarget && !S.discovered[ui.tkTarget] ? ui.tkMiss.cats : null;
     if (!miss && ui.filter.tkcat === MISS) ui.filter.tkcat = '';
     const cat = ui.filter.tkcat;
     const inCat = (id) => (cat === MISS ? miss.includes(it(id).cat) : !cat || it(id).cat === cat);
-    const pool = tkPool();
+    const cz = ui.tkTarget && !S.discovered[ui.tkTarget] && FS.dishRecipe[ui.tkTarget] && Game.skill('compass') ? FS.cuisineOf(ui.tkTarget) : null;
+    const czSet = cz && ui.tkCz ? cuisineIns(cz.id) : null;
+    const pool = tkPool().filter((id) => !czSet || czSet.has(id));
     const ids = pool.filter((id) => (!q || it(id).name.toLowerCase().includes(q)) && inCat(id))
       .sort((a, b) => groupRank(a) - groupRank(b) || it(a).name.localeCompare(it(b).name));
     const counts = countBy(pool.filter((id) => !q || it(id).name.toLowerCase().includes(q)));
@@ -898,20 +911,22 @@
     const left = `${hasKitchen ? '' : '<p class="warn">You need to build a 👩‍🍳 Kitchen before you can experiment.</p>'}
           ${targetBox()}
           <div class="slots">${tkSlotsHtml()}</div>
-          <div class="row gap"><button class="primary" data-action="tk-cook" ${hasKitchen ? '' : 'disabled'}>🧪 Try this combination</button><button data-action="tk-clear">Clear</button></div>
+          <div class="row gap"><button class="primary" data-action="tk-cook" ${hasKitchen ? '' : 'disabled'}>🧪 Try this combination</button><button data-action="tk-clear">Clear</button>${skBtn('tk-sk-row')}</div>
           ${(ui.tkLog = ui.tkLog.filter((l) => !(Game.S.time - (l.t || 0) > 3 * Game.DAY))).length > 1 ? `<button class="small tk-hist" data-action="tk-hist">${ui.tkHist ? '▴ Hide' : '▾ Show'} earlier tries (${ui.tkLog.length - 1})</button>` : ''}
           <div class="tk-log${ui.tkHist ? ' open' : ''}">${ui.tkLog.map((l, n) => `<div class="log ${l.kind}">${l.html}${l.aim && l.aim.dish !== ui.tkTarget && !S.discovered[l.aim.dish] ? ` <button class="small tk-aim" data-action="tk-aim" data-arg="${n}" title="Aim for this dish: hints then only talk about it">🎯 Make it the target</button>` : ''}</div>`).join('')}</div>`;
     // The ingredient grid can hold hundreds of tiles, and drawing them all again took seconds on a big farm, so a pick or a
     // stock change only redraws the left side and updates the tiles in place. The grid is drawn again only when the list
     // of tiles itself changes (a new ingredient, a search, a group filter, the group menu opening).
-    const key = [q, cat, ui.dd === 'tkcat', miss, ids.join()].join('|');
+    const key = [q, cat, ui.dd === 'tkcat', miss, cz && cz.id, !!czSet, ids.join()].join('|');
+    const czBox = cz ? `<label class="tk-cz${czSet ? ' on' : ''}" data-tip="${esc(`Cuisine Compass: only ingredients used in ${cz.name} dishes`)}"><input type="checkbox" data-change="tk-cz" ${czSet ? 'checked' : ''}>${FSI.img('cz_' + cz.id)}<span>${esc(cz.name)}</span></label>` : '';
     return {
-      title: `🧪 Test Kitchen ${qm('Combine 2–8 different ingredients. The exact set makes a dish: you discover it, and if you have enough of each it is cooked straight away. Experiments are free, and you can use anything you have ever had.')}`, cls: 'wide', speed: true,
+      title: `🧪 Test Kitchen ${qm('Combine 2–8 different ingredients. The exact set makes a dish: you discover it, and if you have enough of each it is cooked straight away. Experiments are free, and you can use anything you have ever had.')}
+        ${skBtn('tk-sk-head')}`, cls: 'wide', speed: true,
       html: `<div class="tk" data-key="${esc(key)}">
         <div class="tk-left">${left}</div>
         <div class="tk-right">
           <div class="row gap"><input type="search" class="search" data-search="tk" placeholder="Search ingredients…" value="${esc(ui.search.tk || '')}">
-          ${catPicker('tkcat', counts, 'All groups', extra)}</div>
+          ${catPicker('tkcat', counts, 'All groups', extra)}</div>${czBox}
           <div class="tiles small" data-scroll="tkpick">${ids.map((id, n) => `${n && it(ids[n - 1]).cat === it(id).cat ? '' : `<div class="tile-group">${catIcon(it(id).cat)} ${esc(catName(it(id).cat))}</div>`}${tkTile(id)}`).join('') || '<p class="hint">No ingredients in stock.</p>'}</div>
         </div></div>`,
       patch: (body) => {
@@ -929,6 +944,20 @@
         return true;
       },
     };
+  };
+
+  // ----- Mystery Cupboard: the detective skills, one drawer each. An open drawer says what its skill does; a closed one
+  // only its name and how many dishes it takes. -----
+  modals.skills = () => {
+    const n = Game.dishesCooked(), open = Game.SKILLS.filter((k) => Game.skill(k.id)).length;
+    const drawer = (k) => Game.skill(k.id)
+      ? `<div class="mc-drawer open"><span class="mc-icon">${FSI.img('sk_' + k.id)}</span><div class="mc-text"><b>${esc(k.name)}</b><span>${esc(k.about)}</span></div></div>`
+      : `<div class="mc-drawer"><span class="mc-icon">${FSI.img('ui_lock')}</span><div class="mc-text"><b>${esc(k.name)}</b>
+          <span>Opens at ${k.at} dish${k.at === 1 ? '' : 'es'} cooked</span><span class="mc-bar"><i style="width:${Math.round((n / k.at) * 100)}%"></i></span></div>
+          <span class="mc-count">${n} / ${k.at}</span></div>`;
+    return { title: `${FSI.img('ui_detective')} Mystery Cupboard <span class="muted">${open} / ${Game.SKILLS.length}</span>`, cls: 'mc-card',
+      html: `<div class="mc">${Game.SKILLS.map(drawer).join('')}</div>
+        <div class="row gap mc-foot"><button class="primary" data-action="modal" data-arg="testkitchen">🧪 Back to the Test Kitchen</button></div>` };
   };
 
   const revealTip = () => `Reveals one ingredient for toques (2 for a dish with a long supply chain). You have ${Game.S.toques || 0}; special requests, clue orders, events and cuisine targets earn more.`;
@@ -2192,7 +2221,7 @@
         if (ui.tkTarget) {
           const cats = res.kind === 'warm' && res.dish === ui.tkTarget ? res.cats : res.targetCats;
           if (cats) ui.tkMiss = cats.length ? { target: ui.tkTarget, cats } : null;
-        } else if (res.kind === 'warm' && res.cats) aim = { dish: res.dish, cats: res.cats };
+        } else if (res.kind === 'warm' && res.dish) aim = { dish: res.dish, cats: res.cats };
         ui.tkLog.unshift({ kind: res.kind, html, aim, t: Game.S.time });
         ui.tkLog = ui.tkLog.slice(0, 8);
         if ((res.kind === 'new' || res.kind === 'known') && !res.target) ui.tkSlots = [];
@@ -2383,6 +2412,7 @@
     document.addEventListener('change', (e) => { if (e.target.dataset.rate) Game.setRate(Render.selected, e.target.value / 100); });
     document.addEventListener('change', (e) => {
       if (e.target.dataset.change === 'town-stock') { ui.townStock = e.target.checked; ui.refresh(); }
+      if (e.target.dataset.change === 'tk-cz') { ui.tkCz = e.target.checked; ui.refresh(); { const l = document.querySelector('[data-scroll="tkpick"]'); if (l) l.scrollTop = 0; } }
     });
     // Per-item auto-sell in the Market: Off, the Wholesaler's default, or a number to keep.
     document.addEventListener('change', (e) => {
