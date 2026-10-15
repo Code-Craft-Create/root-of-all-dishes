@@ -161,7 +161,7 @@
     $('#town-badge').textContent = out > 0 ? '!' : out === 0 && !Game.restaurants().length ? 'NEW' : '';
     $('#town-badge').title = out > 0 ? `${out} restaurant${out > 1 ? 's have' : ' has'} a dish out of stock` : '';
     const st = next && stepOf(next.id);
-    $('#goalbar').innerHTML = next ? `🎯 <b>Next goal:</b> ${esc(next.text)}${goalProg(next)} <span class="muted">(+${next.reward}${st ? ` · 🔓 unlocks ${esc(st.name)}` : ''})</span>` : '🏆 All goals complete!';
+    $('#goalbar').innerHTML = next ? `🎯 <b>Next goal:</b> ${esc(next.text)}${goalProg(next)} <span class="muted">(+${next.reward}${next.toques ? ` · 🎩${next.toques}` : ''}${st ? ` · 🔓 unlocks ${esc(st.name)}` : ''})</span>` : '🏆 All goals complete!';
   }
 
   // Progress for count goals ("Cook 10 different dishes"): "3 / 10" with a small bar.
@@ -432,8 +432,23 @@
   };
   function showSplash() {
     if (!ui.splashQ.length || ui.modal) return;
+    // Wait for a dish discovery card or the easter egg to be closed first.
+    if (document.getElementById('discovery') || document.getElementById('easter')) { setTimeout(showSplash, 500); return; }
     openModal('splash');
-    SFX.play('fanfare'); setTimeout(() => SFX.play('unlock'), 420);
+    if (ui.splashQ[0].startsWith('goal:')) SFX.play('milestone');
+    else { SFX.play('fanfare'); setTimeout(() => SFX.play('unlock'), 420); }
+  }
+  // Dish milestones (goals with splash: true): every dish cooked so far pops onto the card, with what stands behind them.
+  function milestoneInfo(g) {
+    const S = Game.S, dishes = FS.dishList.filter((d) => S.stats.produced[d.id]).map((d) => d.id), MAX = 40;
+    const raw = new Set(), blds = new Set();
+    for (const id of dishes) { Object.keys(FS.chain(id).raw).forEach((x) => raw.add(x)); FS.chain(id).buildings.forEach((x) => blds.add(x)); }
+    const all = g.id === 'dishall';
+    return { icon: FSI.img('ui_trophy'), kicker: all ? 'Every dish cooked' : `${dishes.length} dishes cooked`,
+      title: all ? 'The whole cookbook' : 'The talk of the village',
+      html: `<div class="sp-dishes">${dishes.slice(0, MAX).map((id, k) => `<span class="dc-pop" style="animation-delay:${0.3 + k * 0.05}s" title="${esc(it(id).name)}">${FSI.img(id)}</span>`).join('')}${dishes.length > MAX ? `<span class="dc-more">+${dishes.length - MAX}</span>` : ''}</div>`,
+      lines: [`Behind them: ${raw.size} raw ingredients and ${blds.size} kinds of buildings.`],
+      rewards: [`💰 +${money(g.reward)}`, g.toques ? `🎩 +${g.toques}` : '', g.id === Game.FAME.goal ? `⭐ Dishes sell for ${Math.round((Game.FAME.value - 1) * 100)}% more` : ''].filter(Boolean) };
   }
   // Same warm card as a dish discovery: a floating round icon, a burst of confetti, kicker, title and a few lines.
   function splashInfo(key) {
@@ -449,6 +464,10 @@
         lines: [st.rating ? `${st.target} of its dishes are served at ${'★'.repeat(st.rating)} restaurants.` : `${st.target} of its dishes cooked.`,
           `+${st.toques} 🎩 toques`, last ? `That completes ${st.name}!` : ''].filter(Boolean) };
     }
+    if (key && key.startsWith('goal:')) {
+      const g = Game.goals.find((x) => x.id === key.slice(5));
+      if (g) return milestoneInfo(g);
+    }
     return SPLASH[key] || { icon: '✨', title: 'Something new', lines: [] };
   }
   modals.splash = () => {
@@ -456,7 +475,8 @@
     return { title: '', cls: 'splash',
       html: `<div class="dc-burst">${Array.from({ length: 14 }, (_, k) => `<i style="--a:${k * 25.7}deg;--d:${(k % 3) * 0.06}s"></i>`).join('')}</div>
         <div class="sp-icon">${s.icon}</div>
-        <p class="dc-kicker">${esc(s.kicker || 'Unlocked')}</p><h2 class="sp-title">${esc(s.title)}</h2>
+        <p class="dc-kicker">${esc(s.kicker || 'Unlocked')}</p><h2 class="sp-title">${esc(s.title)}</h2>${s.html || ''}
+        ${s.rewards ? `<div class="sp-rewards">${s.rewards.map((r, k) => `<span class="dc-pop" style="animation-delay:${1.2 + k * 0.25}s">${esc(r)}</span>`).join('')}</div>` : ''}
         ${s.lines.length > 1 ? `<ul class="sp-lines">${s.lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>` : s.lines.map((l) => `<p class="sp-one">${esc(l)}</p>`).join('')}
         <div class="sp-go"><button class="primary" data-action="close-modal">Let's go!</button></div>` };
   };
@@ -779,7 +799,7 @@
         ${d.about ? `<div class="small about">${esc(d.about)}</div>` : ''}
         <div class="small cplx">${cplxLine(d.id)}</div>
         ${d.note ? `<div class="small note">${esc(d.note)}</div>` : ''}
-        <div class="small muted">Value 💰${price(d.value * Game.masterMult(d.id))} · cooked ${S.stats.produced[d.id] || 0}× · in stock ${have(d.id)}</div>
+        <div class="small muted">Value 💰${price(d.value * Game.dishMult(d.id))} · cooked ${S.stats.produced[d.id] || 0}× · in stock ${have(d.id)}</div>
         <div class="card-foot row gap"><button class="small" data-action="plan" data-arg="${d.id}">🗺️ Plan production</button>${masterBtn(d.id)}</div></div>`;
     }
     const rev = S.revealed[d.id] || [];
@@ -1172,7 +1192,7 @@
     const menu = r.menu.map((id) => {
       const n = have(id);
       return `<div class="tw-dish ${n < 1 ? 'out' : ''}"><span class="ico-l">${FSI.img(id)}</span><div><b data-item="${id}" class="link">${esc(it(id).name)}</b>${knownWrong(d, id) ? ` <span class="warnc" title="The critic says this cuisine doesn't belong here">✗</span>` : ''}
-        <div class="small muted">${esc(it(id).cuisine)} · <span class="nowrap">💰${price(it(id).value * T.prices[r.price].mult * Game.masterMult(id))} a plate</span>${Game.mastered(id) ? ' · <span class="okc" title="Mastered">⭐</span>' : ''}${Game.headBonus(r, id) ? ` · <span class="okc" title="${esc(r.chef.name)}'s speciality">👨‍🍳</span>` : ''}</div></div>
+        <div class="small muted">${esc(it(id).cuisine)} · <span class="nowrap">💰${price(it(id).value * T.prices[r.price].mult * Game.dishMult(id))} a plate</span>${Game.mastered(id) ? ' · <span class="okc" title="Mastered">⭐</span>' : ''}${Game.headBonus(r, id) ? ` · <span class="okc" title="${esc(r.chef.name)}'s speciality">👨‍🍳</span>` : ''}</div></div>
         <span class="small ${n < 1 ? 'short' : ''}" title="In your warehouse">${n < 1 ? 'out of stock' : `📦 ${n}`}</span>
         <button class="small" data-action="plan" data-arg="${id}" title="Plan production for this dish">🗺️</button>
         <button class="small" data-action="menu-del" data-arg="${r.id}|${id}" title="Take it off the menu">✕</button></div>`;
@@ -1588,7 +1608,7 @@
     return {
       title: '🎯 Goals',
       html: `<div class="goals">${Game.goals.filter(Game.goalVisible).map((g) => `<div class="goal ${S.goalsDone[g.id] ? 'done' : g === next ? 'next' : ''}">
-        <span>${S.goalsDone[g.id] ? '✅' : g === next ? '👉' : '⬜'}</span><span>${esc(g.text)}${goalProg(g)}${stepOf(g.id) ? ` <span class="unlocktag" data-tip="${S.goalsDone[g.id] ? 'Unlocked' : 'Unlocks'} ${esc(stepOf(g.id).name)}">${S.goalsDone[g.id] ? '✅' : '🔓'} ${esc(stepOf(g.id).name)}</span>` : ''}</span><span class="reward">+${money(g.reward)}</span></div>`).join('')}</div>
+        <span>${S.goalsDone[g.id] ? '✅' : g === next ? '👉' : '⬜'}</span><span>${esc(g.text)}${goalProg(g)}${stepOf(g.id) ? ` <span class="unlocktag" data-tip="${S.goalsDone[g.id] ? 'Unlocked' : 'Unlocks'} ${esc(stepOf(g.id).name)}">${S.goalsDone[g.id] ? '✅' : '🔓'} ${esc(stepOf(g.id).name)}</span>` : ''}</span><span class="reward">+${money(g.reward)}${g.toques ? ` · 🎩${g.toques}` : ''}</span></div>`).join('')}</div>
         ${hidden ? '<p class="small muted">More goals appear as your farm grows.</p>' : ''}
         <h4>Your farm in numbers</h4><div class="small">Earned 💰${money(S.stats.earned)} · spent 💰${money(S.stats.spent)} · ${S.buildings.length} building${S.buildings.length === 1 ? '' : 's'} · ${Object.keys(S.seen).length} different goods produced · ${S.stats.experiments} experiment${S.stats.experiments === 1 ? '' : 's'}</div>`,
     };
@@ -1877,7 +1897,8 @@
       orderN = n;
       if (ui.modal === 'orders') ui.refresh();
     });
-    Game.on('goals', () => setTimeout(() => SFX.play('goal'), document.getElementById('discovery') ? 900 : 0));
+    // Milestone goals bring their own sound with their card.
+    Game.on('goals', () => { if (!ui.splashQ.some((k) => k.startsWith('goal:'))) setTimeout(() => SFX.play('goal'), document.getElementById('discovery') ? 900 : 0); });
     Game.on('unlocked', (u) => {
       Game.journal({ type: 'unlock', recipes: u.recipes.length, buildings: u.buildings, quiet: true });
       setTimeout(() => SFX.play('unlock'), 450);

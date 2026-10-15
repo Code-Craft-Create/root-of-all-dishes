@@ -249,6 +249,14 @@
       chord([60, 67, 72, 76, 79, 84], 2.8, 2.6, 0.08);
       for (let k = 0; k < 24; k++) tone({ f: [2600 + Math.random() * 1400, 1800], type: 'triangle', at: 1 + Math.random() * 3, dur: 0.08, vol: 0.05 });
     },
+    // A dish milestone (25 dishes, every dish): the fanfare, a drum roll into a rising run, a big chord and a few coins.
+    milestone: () => {
+      SOUNDS.fanfare();
+      for (let k = 0; k < 10; k++) noise({ at: 0.9 + k * 0.045, dur: 0.05, vol: 0.05 + k * 0.008, filter: 'bandpass', freq: 900, q: 1.2 });
+      [72, 76, 79, 84, 88].forEach((n, k) => tone({ f: note(n), type: 'triangle', at: 1.35 + k * 0.08, dur: 0.3, vol: 0.12 }));
+      chord([60, 64, 67, 72, 76, 84], 1.8, 2.2, 0.07);
+      for (let k = 0; k < 10; k++) tone({ f: [2600 + Math.random() * 1400, 1800], type: 'triangle', at: 1.9 + Math.random() * 1.4, dur: 0.08, vol: 0.045 });
+    },
     // Goal complete: a rising three-note chime.
     goal: () => { [72, 76, 79, 84].forEach((n, k) => tone({ f: note(n), type: 'sine', at: k * 0.09, dur: 0.5, vol: 0.16 })); },
     // New buildings or production steps unlocked: a sparkly arpeggio.
