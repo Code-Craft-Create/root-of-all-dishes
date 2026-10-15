@@ -42,7 +42,8 @@ for (const st of FS.STEPS) if (st.goal && !gameSrc.includes(`id: '${st.goal}'`))
 const placed = {};
 for (const c of FS.CUISINES) for (const id of c.dishIds) { if (placed[id]) errors.push(`Dish ${id} is in ${placed[id]} and ${c.name}`); placed[id] = c.name; }
 for (const d of FS.dishList) if (!placed[d.id]) errors.push(`Dish ${d.id} is in no cuisine`);
-for (const st of FS.STAGES) for (const c of st.cuisines) if (c.dishIds.length < st.target) errors.push(`Cuisine ${c.name} has fewer dishes than its target ${st.target}`);
+FS.STAGES.forEach((st, k) => { for (const c of st.cuisines) if (c.sigIds.length !== k + 1) errors.push(`Cuisine ${c.name} has ${c.sigIds.length} signature dishes, its stage needs ${k + 1}`); });
+for (const st of FS.STAGES) for (const c of st.cuisines) if (c.dishIds.length < st.target + c.sigIds.length) errors.push(`Cuisine ${c.name} has fewer dishes than its target ${st.target}`);
 for (const n in FS.ABOUT) if (!FS.items[FS.slug(n)]) errors.push(`FS.ABOUT: unknown dish ${n}`);
 for (const c of FS.CUISINES.filter((x) => x.stage === 'E')) for (const id of c.dishIds) if (!FS.items[id].about) errors.push(`${c.name}: ${FS.items[id].name} has no FS.ABOUT text`);
 const stepsU = FS.computeUnlocks(FS.STEPS.map((s) => s.id), []);

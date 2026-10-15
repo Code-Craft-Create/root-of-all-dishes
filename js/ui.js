@@ -433,7 +433,7 @@
     finedining: { icon: '🎩', title: 'Fine Dining', lines: ['📜 A permit for a restaurant in the 🏛️ Old Town (once your Harbour restaurant has ★★★★).', '⭐ Dish mastery: perfect dishes you cook often with 🎩 toques, in the 📖 Cookbook.', '👨‍🍳 Head chefs: promote Academy chefs to run your restaurants\' kitchens.'] },
   };
   // Big moments (milestone goals, a completed stage, a cuisine in gold) get the longer milestone fanfare.
-  const bigSplash = (key) => /^(goal:|czgold:)/.test(key) || /^czdone:.*:stage$/.test(key);
+  const bigSplash = (key) => /^(goal:|czgold:|sig:)/.test(key) || /^czdone:.*:stage$/.test(key);
   function showSplash() {
     if (!ui.splashQ.length || ui.modal) return;
     // Wait for a dish discovery card or the easter egg to be closed first.
@@ -469,6 +469,18 @@
       html: dishPops(dishes), lines: [`Behind them: ${raw.size} raw ingredients and ${blds.size} kinds of buildings.`],
       rewards: rewardPills(g.reward, g.toques, [...fameLine, ...storage, m.extra].filter(Boolean)) };
   }
+  // A stage's Signature Dishes by cuisine, names only, with ✅ once made and a button to try the rest in the Test Kitchen.
+  // splash: the reveal card (cuisines already complete are left out); otherwise one cuisine's list (pass only: c).
+  function sigList(st, splash, only) {
+    const S = Game.S;
+    const row = (id) => {
+      const done = Game.sigDone(id), try_ = !done && (!st.rating || !S.discovered[id]);
+      return `<li class="${done ? 'done' : ''}">${done ? '✅' : '⬜'} ${esc(it(id).name)}${try_ ? ` <button class="small" data-action="tk-try" data-arg="${id}">🧪 Try now</button>` : ''}</li>`;
+    };
+    const czs = only ? [only] : st.cuisines.filter((c) => !(S.cuisineDone || {})[c.id]);
+    return `<div class="sig-list${splash ? ' sig-splash' : ''}">${czs.map((c) => `<div class="sig-cz">${only ? '<b>⭐ Signature Dishes</b>' : `<b>${FSI.img('cz_' + c.id)} ${esc(c.name)}</b>`}
+      <ul>${c.sigIds.map(row).join('')}</ul></div>`).join('')}</div>`;
+  }
   // Same warm card as a dish discovery: a floating round icon, a burst of confetti, kicker, title and a few lines.
   function splashInfo(key) {
     if (key && key.startsWith('cz:')) {
@@ -476,12 +488,25 @@
       if (c) return { icon: FSI.img('cz_' + c.id), kicker: 'New cuisine', title: c.name,
         lines: [c.desc, `Its buildings and recipes are unlocked, and its ${c.dishIds.length} dishes are waiting in your 📖 Cookbook.`].filter(Boolean) };
     }
-    // A cuisine reached its stage's target ('czdone:<id>', plus ':stage' when that completed the stage, with the stage goal's reward).
+    // A cuisine reached its stage's target ('cztarget:<id>'); the last one of a stage reveals the Signature Dishes instead.
+    if (key && key.startsWith('cztarget:')) {
+      const c = FS.cuisineById[key.slice(9)], st = c && Game.stageById(c.stage);
+      if (c) return { icon: FSI.img('cz_' + c.id), kicker: 'Target reached', title: c.name,
+        lines: [st.rating ? `${st.target} of its dishes are served at ${'★'.repeat(st.rating)} restaurants.` : `${st.target} of its dishes cooked.`] };
+    }
+    // Every cuisine of a stage at its target ('sig:<stage id>'): the Signature Dishes, by name only.
+    if (key && key.startsWith('sig:')) {
+      const st = Game.stageById(key.slice(4));
+      if (st) return { icon: FSI.img('ui_star'), kicker: 'The final test', title: 'Signature Dishes', html: sigList(st, true),
+        lines: [st.rating ? `Serve each one at a restaurant rated ${'★'.repeat(st.rating)} or better to complete its cuisine.`
+          : 'Make each one fresh, in the 🧪 Test Kitchen or in a kitchen, to complete its cuisine.'] };
+    }
+    // A cuisine made its Signature Dishes ('czdone:<id>', plus ':stage' when that completed the stage, with the stage goal's reward).
     if (key && key.startsWith('czdone:')) {
       const [, cid, last] = key.split(':'), c = FS.cuisineById[cid], st = c && Game.stageById(c.stage);
-      const sg = last && Game.goals.find((g) => g.id === 'stage' + st.id);
-      if (c) return { icon: FSI.img('cz_' + c.id), kicker: 'Target reached', title: c.name,
-        lines: [st.rating ? `${st.target} of its dishes are served at ${'★'.repeat(st.rating)} restaurants.` : `${st.target} of its dishes cooked.`,
+      const sg = last && Game.goals.find((g) => g.id === 'stage' + st.id), k = c && c.sigIds.length;
+      if (c) return { icon: FSI.img('cz_' + c.id), kicker: 'Cuisine complete', title: c.name,
+        lines: [`${k === 1 ? 'Its Signature Dish is' : `Its ${k} Signature Dishes are`} ${st.rating ? `served at ${'★'.repeat(st.rating)} restaurants` : 'made'}.`,
           last ? `That completes ${st.name}!` : ''].filter(Boolean),
         rewards: rewardPills(sg ? sg.reward : 0, st.toques + (sg && sg.toques || 0)) };
     }
@@ -1489,7 +1514,8 @@
         const known = c.dishIds.filter((id) => S.discovered[id]).length;
         let foot;
         if (isOpen) {
-          foot = `<div class="gprog cz-prog" title="${st.rating ? `Dishes served at restaurants rated ${'★'.repeat(st.rating)} or better` : 'Dishes cooked towards the stage target'}"><span class="gbar"><i style="width:${Math.min(100, Math.round((rated / st.target) * 100))}%"></i></span>${Math.min(rated, st.target)} / ${st.target} ${st.rating ? `served at ${'★'.repeat(st.rating)}` : 'cooked'}${(S.cuisineDone || {})[c.id] ? ' ✅' : ''}</div>
+          foot = `<div class="gprog cz-prog" title="${st.rating ? `Dishes served at restaurants rated ${'★'.repeat(st.rating)} or better` : 'Dishes cooked towards the stage target'}"><span class="gbar"><i style="width:${Game.cuisineTargetMet(c) ? 100 : Math.min(100, Math.round((rated / st.target) * 100))}%"></i></span>${Game.cuisineTargetMet(c) ? st.target : Math.min(rated, st.target)} / ${st.target} ${st.rating ? `served at ${'★'.repeat(st.rating)}` : 'cooked'}${(S.cuisineDone || {})[c.id] ? ' ✅' : ''}</div>
+            ${Game.sigOpen(st.id) && (!(S.cuisineDone || {})[c.id] || Game.sigCount(c)) ? sigList(st, false, c) : ''}
             <div class="small muted">${n} of ${c.dishIds.length} dishes cooked · ${known} discovered${(S.cuisineGold || {})[c.id] ? ' · 🏆 every dish cooked' : ''}</div>
             <button class="small" data-action="cz-dishes" data-arg="${esc(c.name)}">📖 Show its dishes</button>`;
         } else if (open) {
@@ -1504,7 +1530,7 @@
         <div class="packs">${cards}</div></section>`;
     }).join('') + (later ? `<p class="small muted cz-more">🗺️ ${later === 1 ? 'One more stage lies' : `${later} more stages lie`} beyond, still a secret. Finish the next one to see where the road leads.</p>` : '');
     return {
-      title: `🍽️ Cuisines ${qm(`Every dish belongs to one cuisine. Opening a cuisine unlocks every building and production step its dishes need and puts its dishes in your 📖 Cookbook. Cook the stage's target in each of its three cuisines to open the next stage. Each cuisine target earns 🎩 toques (they pay for 💡 hints${Game.featureKnown('academy') ? ', 🎓 Academy chefs' : ''}${Game.featureKnown('mastery') ? ', ⭐ dish mastery' : ''}${Game.featureKnown('restaurants') ? ' and 👨‍🍳 head chefs' : ''}), and cooking every dish of a cuisine earns extra toques.`)}`, cls: 'wide',
+      title: `🍽️ Cuisines ${qm(`Every dish belongs to one cuisine. Opening a cuisine unlocks every building and production step its dishes need and puts its dishes in your 📖 Cookbook. Cook the stage's target in each of its three cuisines${FS.STAGES.some((st) => Game.sigOpen(st.id)) ? ', then its ⭐ Signature Dishes,' : ''} to open the next stage. Each cuisine target earns 🎩 toques (they pay for 💡 hints${Game.featureKnown('academy') ? ', 🎓 Academy chefs' : ''}${Game.featureKnown('mastery') ? ', ⭐ dish mastery' : ''}${Game.featureKnown('restaurants') ? ' and 👨‍🍳 head chefs' : ''}), and cooking every dish of a cuisine earns extra toques.`)}`, cls: 'wide',
       html: `${ready ? ''
         : '<p class="warn">🔒 Farmhouse Kitchen is open from the start. Cook your first dish in the 🧪 Test Kitchen to open more cuisines.</p>'}
         ${stages}
@@ -2196,7 +2222,11 @@
       case 'dd-set': { const k = arg.slice(0, arg.indexOf('|')); SETTERS[k](arg.slice(arg.indexOf('|') + 1)); ui.dd = null; ui.refresh(); break; }
       case 'dd-pick': { const [k, c] = arg.split(':'); ui.filter[k] = c; ui.dd = null; ui.refresh(); const l = document.querySelector(k === 'cat' ? '[data-scroll="cxlist"]' : '[data-scroll="tkpick"]'); if (l) l.scrollTop = 0; break; }
       case 'cz': ui.filter.cuisine = ui.filter.cuisine === arg ? '' : arg; ui.refresh(); break;
-      case 'tk-try': ui.tkSlots = (S.revealed[arg] || []).slice(); ui.tkTarget = S.discovered[arg] ? null : arg; openModal('testkitchen'); break;
+      case 'tk-try':
+        // A known dish goes straight onto the counter; from a splash card, that card is done.
+        ui.tkSlots = S.discovered[arg] ? Object.keys(FS.dishRecipe[arg].inputs) : (S.revealed[arg] || []).slice(); ui.tkTarget = S.discovered[arg] ? null : arg;
+        if (ui.modal === 'splash') ui.splashQ.shift();
+        openModal('testkitchen'); break;
       case 'tk-untarget': ui.tkTarget = null; ui.refresh(); break;
       case 'tk-aim': { const l = ui.tkLog[+arg]; if (l && l.aim) { ui.tkTarget = l.aim.dish; ui.tkMiss = { target: l.aim.dish, cats: l.aim.cats }; } ui.refresh(); break; }
       case 'tk-cook': {

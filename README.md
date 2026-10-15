@@ -90,7 +90,7 @@ are not swapped: use `data-tip` for tooltips, and draw icons in the Town SVG wit
 - Keyboard: I or M inventory, K test kitchen, B cookbook, X codex, O orders, J journal, G goals, P cuisines, F flows, N sound on/off, Space pause.
 - **Debug cheat console:** press the key left of 1 (`` ` `` or §), or on a phone or tablet hold a finger on the logo and version at the top left, and type `help` (on touch screens, tapping a command in the list writes it into the line). `season winter` / `weather storm` force the
   season or weather (`off` or `clear` goes back to normal); visuals, sounds and growth follow. Overrides are not saved.
-  `money 10000` adds money. `target [cuisine]` shows the splash a cuisine gets when it reaches its stage's target (looks only). `recipes all` reveals every dish (no rewards); `recipes hide` or `clear` hides only the dishes
+  `money 10000` adds money. `target [cuisine]` shows the splash a cuisine gets when it is complete (looks only). `signature [reveal|make]` reveals the current stage's Signature Dishes or makes them all. `recipes all` reveals every dish (no rewards); `recipes hide` or `clear` hides only the dishes
   the console revealed (tracked in the save as `S.cheatRevealed`), so real discoveries stay.
 - Sound effects are synthesized in the browser (js/audio.js, no audio files): clicks, building plonks, sales, order cash register,
   discovery fanfare, goal chimes, unlock sparkles and more. Rain, storms (with distant thunder) and snow (wind) play quiet
@@ -130,18 +130,22 @@ instead of a toast. The Goals window opens the 🏆 Trophy cabinet (`modals.trop
 
 Every dish belongs to one of 15 cuisines in five stages (**🍽️ Cuisines**, key P):
 
-| Stage | Cuisines | Target per cuisine | Then unlocks |
-|---|---|---|---|
-| A Farm to Table | Farmhouse Kitchen, Swiss Alpine, Nordic & Dutch | 6 | 🚚 Wholesaler |
-| B European Classics | British & Irish, French & Belgian, German/Austrian/Hungarian | 10 | 🎓 Culinary Academy |
-| C Mediterranean & Beyond | Italian, Mediterranean & Middle Eastern, Around the World | 15 | 📐 Blueprints |
-| D Asia & the Americas | East Asian, South & Southeast Asian, The Americas | 25 | 🏙️ Restaurants in Town |
-| E Grand Cuisine | Haute Cuisine, Pâtisserie & Chocolaterie, Grand Banquets | 10 on menus rated ★★★★ | the end game |
+| Stage | Cuisines | Target per cuisine | Signature Dishes per cuisine | Then unlocks |
+|---|---|---|---|---|
+| A Farm to Table | Farmhouse Kitchen, Swiss Alpine, Nordic & Dutch | 5 | 1 | 🚚 Wholesaler |
+| B European Classics | British & Irish, French & Belgian, German/Austrian/Hungarian | 8 | 2 | 🎓 Culinary Academy |
+| C Mediterranean & Beyond | Italian, Mediterranean & Middle Eastern, Around the World | 12 | 3 | 📐 Blueprints |
+| D Asia & the Americas | East Asian, South & Southeast Asian, The Americas | 21 | 4 | 🏙️ Restaurants in Town |
+| E Grand Cuisine | Haute Cuisine, Pâtisserie & Chocolaterie, Grand Banquets | 3 on menus rated ★★★★ | 5 (served at ★★★★) | the end game |
 
 Farmhouse Kitchen is open from the start; its buildings come with the guided steps. From the first dish on, the other
 cuisines of the current stage can be opened for a little money (1,000 in stage A up to 8,000 in stage E). Opening a
 cuisine unlocks every building and production step its dishes need, from the field to the plate. When every cuisine
-of a stage has reached the target (dishes actually cooked), the next stage opens. The Cookbook only lists dishes of
+of a stage has reached the target (dishes actually cooked), its **⭐ Signature Dishes** are revealed: a surprise final
+test of famous, long-chain dishes per cuisine (`signature` lists in unlocks.js), shown by name with a Try now button
+(splash card, Cuisines window, stage goal). Each must be freshly made after the reveal, in the Test Kitchen or by a
+kitchen building; in Grand Cuisine, served at a restaurant rated ★★★★ or better (`S.sig`). A cuisine whose Signature
+Dishes are made is complete (toques, splash); when every cuisine of the stage is complete, the next stage opens. The Cookbook only lists dishes of
 open cuisines that you can make from what is unlocked; the Test Kitchen recognises a dish of an unopened cuisine but
 only says where it belongs. It can use any ingredient you have had at least once, so experiments don't need
 everything in stock at once; cooking still needs the real ingredients.
@@ -156,7 +160,7 @@ Saves from before v1.18.0 get the skills they already qualify for without splash
 
 **🎩 Toques** are the second currency, for knowledge rather than land and buildings. You start with 3. A special-request
 order pays 1, clue orders 1 to 3, events 2 and party menus 3, contracts 1 and supply contracts 2, regulars from
-level 3 tip one now and then, a cuisine reaching its stage target pays 2 to 6, and cooking every dish of a cuisine pays 4 to 12.
+level 3 tip one now and then, completing a cuisine (target and Signature Dishes) pays 2 to 6, and cooking every dish of a cuisine pays 4 to 12.
 💡 Hints for undiscovered dishes cost 1 toque per ingredient (2 for dishes with 12+ raw ingredients in the chain).
 
 **🚚 Wholesaler.** Selling surplus automatically is locked until stage A is done. Then the Wholesaler can be hired in

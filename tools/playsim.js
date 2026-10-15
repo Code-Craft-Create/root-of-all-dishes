@@ -265,9 +265,11 @@ class Bot {
 
   // ----- Targets: dishes to discover and cook, items the goals ask for -----
   cooked(id) { return (this.S.stats.produced[id] || 0) > 0; }
+  // Done with a dish: cooked, and not a revealed Signature Dish that still has to be made fresh.
+  done(id) { return this.cooked(id) && !(this.G.sigPending(id) && !this.G.stageById(this.FS.cuisineOf(id).stage).rating); }
   pickTargets() {
     const G = this.G, FS = this.FS, S = this.S, now = S.time;
-    this.targets = this.targets.filter((t) => (t.kind === 'dish' ? !this.cooked(t.id) : !this.cooked(t.id)) && !(this.skip[t.id] > now));
+    this.targets = this.targets.filter((t) => (t.kind === 'dish' ? !this.done(t.id) : !this.cooked(t.id)) && !(this.skip[t.id] > now));
     // Goal items first: a player follows the guided goals.
     if (!this.targets.some((t) => t.kind === 'item')) {
       for (const g of G.goals) {
@@ -297,12 +299,13 @@ class Bot {
       // After its stage target, a cuisine is only worth finishing for the 🏆 toques (and the Dispatcher goal).
       const weight = need ? (st === cur ? 0 : 3) : 10;
       for (const id of c.dishIds) {
-        if (this.cooked(id) || taken.has(id) || this.skip[id] > now || !G.dishVisible(id)) continue;
+        if (this.done(id) || taken.has(id) || this.skip[id] > now || !G.dishVisible(id)) continue;
         const pl = this.dishPlan(id, R);
         if (pl.blocked) continue;
         const missing = Object.keys(FS.dishRecipe[id].inputs).filter((i) => !S.discovered[id] && !(S.revealed[id] || []).includes(i)).length;
         const cost = pl.list.reduce((n, r) => n + FS.buildings[r.building].cost, 0);
-        const score = weight + cost / 600 + pl.list.length * 0.5 + missing * 0.2 + this.r() * 2.5;
+        // Revealed Signature Dishes come first: they are all that stands between the player and the next stage.
+        const score = (G.sigPending(id) ? -5 : weight) + cost / 600 + pl.list.length * 0.5 + missing * 0.2 + this.r() * 2.5;
         if (!best || score < best.score) best = { score, id };
       }
     }
@@ -617,8 +620,8 @@ class Bot {
       const d = G.districtOf(r);
       // Menu: first one dish of every district cuisine, then Grand Cuisine dishes not yet served at 4 stars, then the rest.
       const miss = G.missingCuisines(r).map((cz) => FS.cuisineById[cz].dishIds.find((id) => ok(id))).filter(Boolean);
-      const grand = FS.dishList.filter((x) => d.like(x.id) && FS.cuisineOf(x.id).stage === 'E' && ok(x.id) && !r.menu.includes(x.id));
-      const fresh = grand.filter((x) => !(rated[x.id] >= 4));
+      const grand = FS.dishList.filter((x) => (d.like(x.id) || G.sigPending(x.id)) && FS.cuisineOf(x.id).stage === 'E' && ok(x.id) && !r.menu.includes(x.id));
+      const fresh = grand.filter((x) => !(rated[x.id] >= 4) || G.sigPending(x.id)).sort((a, b) => (G.sigPending(b.id) ? 1 : 0) - (G.sigPending(a.id) ? 1 : 0));
       const other = FS.dishList.filter((x) => d.like(x.id) && ok(x.id) && !r.menu.includes(x.id)).sort((a, b) => FS.complexity(b.id).rawCount - FS.complexity(a.id).rawCount);
       const next = miss[0] || (fresh[0] && fresh[0].id) || (grand[0] && grand[0].id) || (other[0] && other[0].id);
       if (next && r.menu.length < G.TOWN.menuMax) add('menu', 4, () => { G.setMenu(r.id, next, true); return `${r.name} + ${next}`; });
