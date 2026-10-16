@@ -717,42 +717,34 @@
     </div>`;
     return { title: '📰 Farm journal', cls: 'wide jr-np', html, after: jrAfter };
   };
-  // Turning a page like a real one: a leaf hinged on the left edge lifts towards you and swings over to the left, showing
-  // its paper back half way. Newer day: the old page is the leaf and swings away, uncovering the new page. Older day:
-  // the new page swings in from the left and settles over the old one. Copies of the pages do the animation on top of
-  // the real, already updated window.
+  // Turning a page: the pages slide sideways like sheets pushed across a table, tilting down a little as they go.
+  // Older day: the current page slides out to the right and the older one comes in from the left; newer day the other
+  // way. A copy of the old page slides out on top of the real, already updated page, which slides in.
   function jrTurn(dir) {
     const issues = jrIssues(), k = issues.findIndex((x) => x.day === ui.jrDay);
     const to = issues[Math.max(0, Math.min(issues.length - 1, (k < 0 ? issues.length - 1 : k) + dir))];
     if (!to || to.day === ui.jrDay) return;
-    document.querySelectorAll('.np-flip').forEach((f) => f.remove());
-    const old = document.querySelector('#modal-body .np-sheet');
+    const body = $('#modal-body');
+    body.querySelectorAll('.np-out').forEach((f) => f.remove());
+    const old = body.querySelector('.np-sheet');
     const anim = old && !reduceMotion();
-    const r = anim && old.getBoundingClientRect(), oldTop = anim ? old.scrollTop : 0;
-    const oldCopy = anim && old.cloneNode(true);
+    const top = anim ? old.scrollTop : 0, box = anim && { l: old.offsetLeft, t: old.offsetTop, w: old.offsetWidth, h: old.offsetHeight };
+    const copy = anim && old.cloneNode(true);
     ui.jrDay = to.day;
     renderModal(true);
     SFX.play('page');
     if (!anim) return;
-    const neu = document.querySelector('#modal-body .np-sheet');
-    const face = (src, top) => { const c = src.cloneNode(true); c.classList.add('np-face'); c.removeAttribute('data-scroll'); requestAnimationFrame(() => { c.scrollTop = top; }); return c; };
-    const wrap = document.createElement('div');
-    wrap.className = 'np-flip ' + (dir > 0 ? 'fwd' : 'back');
-    Object.assign(wrap.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
-    // Older day: the old page stays put underneath until the new one has landed on it.
-    if (dir < 0) { const under = face(oldCopy, oldTop); under.classList.add('np-under'); wrap.appendChild(under); }
-    const leaf = document.createElement('div');
-    leaf.className = 'np-leaf';
-    leaf.appendChild(face(dir > 0 ? oldCopy : neu, dir > 0 ? oldTop : 0));
-    const back = document.createElement('div');
-    back.className = 'np-back';
-    leaf.appendChild(back);
-    const shade = document.createElement('div');
-    shade.className = 'np-shade';
-    wrap.append(shade, leaf);
-    document.body.appendChild(wrap);
-    leaf.addEventListener('animationend', (e) => { if (e.target === leaf) wrap.remove(); });
-    setTimeout(() => wrap.remove(), 3000); // in case the animation never runs (hidden tab)
+    const side = dir < 0 ? 'r' : 'l'; // where the old page leaves to
+    copy.removeAttribute('data-scroll');
+    copy.classList.add('np-out', 'to-' + side);
+    Object.assign(copy.style, { left: box.l + 'px', top: box.t + 'px', width: box.w + 'px', height: box.h + 'px' });
+    body.appendChild(copy);
+    copy.scrollTop = top;
+    const neu = body.querySelector('.np-sheet:not(.np-out)');
+    neu.classList.add('np-in', 'from-' + (side === 'r' ? 'l' : 'r'));
+    const done = () => { copy.remove(); neu.classList.remove('np-in', 'from-l', 'from-r'); };
+    copy.addEventListener('animationend', done, { once: true });
+    setTimeout(done, 2000); // in case the animation never runs (hidden tab)
   }
   ui.jrTurn = jrTurn;
   // Swipe left or right on a phone to turn the page.
