@@ -400,6 +400,7 @@
     if (name === 'warehouse') { name = 'market'; ui.marketTab = 'sell'; }
     if (ui.modal !== name) SFX.play('open');
     if (name === 'journal' && ui.modal !== name) ui.jrDay = null; // the journal always opens on today's issue
+    ui.jrAnim = null; ui.jrQueue = []; ui.jrStale = false;
     ui.modal = name;
     ui.mkOrder = null;
     $('#modal').hidden = false;
@@ -552,6 +553,8 @@
 
   function renderModal(fresh) {
     if (!ui.modal) return;
+    // News arriving while the Gazette's pages are turning waits until they stop (jrPlay), so the turn isn't cut short.
+    if (!fresh && ui.jrAnim && ui.modal === 'journal') { ui.jrStale = true; return; }
     const m = modals[ui.modal]();
     const body = $('#modal-body');
     const focus = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.search : null;
@@ -713,27 +716,46 @@
         </div>
         <footer class="np-foot">Page ${k + 1} of ${issues.length}</footer>
       </div>
-      <div class="np-nav">${nav(-1, 'Day')}<span class="np-pg">${issues.length > 1 ? `${k > 0 ? `<button class="small" data-action="jr-turn" data-arg="${-k}" title="The first issue">«</button>` : ''}Day ${iss.day}${last ? '' : `<button class="small" data-action="jr-turn" data-arg="${issues.length - 1 - k}" title="Today's issue">»</button>`}` : ''}</span>${nav(1, 'Day')}</div>
+      <div class="np-nav">${nav(-1, 'Day')}<span class="np-pg">${issues.length > 1 ? `${k > 0 ? `<button class="small" data-action="jr-go" data-arg="${issues[0].day}" title="The first issue">«</button>` : ''}Day ${iss.day}${last ? '' : `<button class="small" data-action="jr-go" data-arg="${today}" title="Today's issue">»</button>`}` : ''}</span>${nav(1, 'Day')}</div>
     </div>`;
     return { title: '📰 Farm journal', cls: 'wide jr-np', html, after: jrAfter };
   };
   // Turning a page: the pages slide sideways like sheets pushed across a table, tilting down a little as they go.
   // Older day: the current page slides out to the right and the older one comes in from the left; newer day the other
   // way. A copy of the old page slides out on top of the real, already updated page, which slides in.
-  function jrTurn(dir) {
-    const issues = jrIssues(), k = issues.findIndex((x) => x.day === ui.jrDay);
-    const to = issues[Math.max(0, Math.min(issues.length - 1, (k < 0 ? issues.length - 1 : k) + dir))];
-    if (!to || to.day === ui.jrDay) return;
+  // Quick clicks chain: a turn asked for while one is still moving waits its turn (ui.jrQueue holds the target days),
+  // and the moving pages and the waiting turns speed up so a run of clicks still shows every page going by.
+  const JR_MAX_RATE = 3;
+  const jrRate = (waiting) => Math.min(JR_MAX_RATE, 1.5 + 0.5 * waiting);
+  ui.jrQueue = [];
+  // dir: pages to turn (−1 older, +1 newer), relative to the last page already turned to or waiting; day: go to that day.
+  function jrTurn(dir, day) {
+    const issues = jrIssues(), base = ui.jrQueue.length ? ui.jrQueue[ui.jrQueue.length - 1] : ui.jrDay;
+    let k = issues.findIndex((x) => x.day === base);
+    if (k < 0) k = issues.length - 1;
+    const to = day != null ? issues.find((x) => x.day === day) : issues[Math.max(0, Math.min(issues.length - 1, k + dir))];
+    if (!to || to.day === base) return;
+    if (ui.jrAnim) {
+      ui.jrQueue.push(to.day);
+      const r = jrRate(ui.jrQueue.length);
+      for (const a of ui.jrAnim.anims) if (a.playbackRate < r) a.updatePlaybackRate ? a.updatePlaybackRate(r) : (a.playbackRate = r);
+      return;
+    }
+    jrPlay(to.day, issues, 1);
+  }
+  function jrPlay(day, issues, rate) {
+    const from = issues.findIndex((x) => x.day === ui.jrDay), k = issues.findIndex((x) => x.day === day);
+    const dir = from < 0 || k < from ? -1 : 1;
     const body = $('#modal-body');
     body.querySelectorAll('.np-out').forEach((f) => f.remove());
     const old = body.querySelector('.np-sheet');
     const anim = old && !reduceMotion();
     const top = anim ? old.scrollTop : 0, box = anim && { l: old.offsetLeft, t: old.offsetTop, w: old.offsetWidth, h: old.offsetHeight };
     const copy = anim && old.cloneNode(true);
-    ui.jrDay = to.day;
+    ui.jrDay = day;
     renderModal(true);
     SFX.play('page');
-    if (!anim) return;
+    if (!anim) { ui.jrQueue = []; return; }
     const side = dir < 0 ? 'r' : 'l'; // where the old page leaves to
     copy.removeAttribute('data-scroll');
     copy.classList.add('np-out', 'to-' + side);
@@ -742,9 +764,21 @@
     copy.scrollTop = top;
     const neu = body.querySelector('.np-sheet:not(.np-out)');
     neu.classList.add('np-in', 'from-' + (side === 'r' ? 'l' : 'r'));
-    const done = () => { copy.remove(); neu.classList.remove('np-in', 'from-l', 'from-r'); };
+    const run = { anims: [] };
+    ui.jrAnim = run;
+    if (copy.getAnimations) run.anims = [...copy.getAnimations(), ...neu.getAnimations()];
+    for (const a of run.anims) a.playbackRate = rate;
+    const done = () => {
+      if (ui.jrAnim !== run) return;
+      ui.jrAnim = null;
+      copy.remove();
+      neu.classList.remove('np-in', 'from-l', 'from-r');
+      if (ui.modal !== 'journal') { ui.jrQueue = []; return; }
+      if (ui.jrQueue.length) { const next = ui.jrQueue.shift(); jrPlay(next, jrIssues(), jrRate(ui.jrQueue.length)); return; }
+      if (ui.jrStale) { ui.jrStale = false; ui.refresh(); }
+    };
     copy.addEventListener('animationend', done, { once: true });
-    setTimeout(done, 2000); // in case the animation never runs (hidden tab)
+    setTimeout(done, 550 / rate + 400); // in case the animation never runs (hidden tab)
   }
   ui.jrTurn = jrTurn;
   // Swipe left or right on a phone to turn the page.
@@ -2274,6 +2308,7 @@
       case 'bank': ui.marketTab = 'bank'; openModal('market'); break;
       case 'close-modal': closeModal(); break;
       case 'jr-turn': jrTurn(+arg); break;
+      case 'jr-go': jrTurn(0, +arg); break;
       case 'deselect': selectBuilding(null); break;
       case 'set-recipe': Game.setRecipe(Render.selected, arg); break;
       case 'pause': Game.togglePause(+arg); break;
@@ -2601,7 +2636,7 @@
     document.addEventListener('contextmenu', (e) => { if (hold) e.preventDefault(); }, true);
   }
 
-  const OWN_SOUND = new Set(['jr-turn', 'sell', 'buy', 'buy-short', 'borrow', 'fulfil', 'open-cuisine', 'hire-wholesaler', 'hire-dispatcher', 'tk-cook', 'modal', 'close-modal', 'sound', 'sound-test', 'bank', 'demolish']);
+  const OWN_SOUND = new Set(['jr-turn', 'jr-go', 'sell', 'buy', 'buy-short', 'borrow', 'fulfil', 'open-cuisine', 'hire-wholesaler', 'hire-dispatcher', 'tk-cook', 'modal', 'close-modal', 'sound', 'sound-test', 'bank', 'demolish']);
   function bindInput() {
     document.addEventListener('click', (e) => {
       if (ui.dd && !e.target.closest('.dd')) { ui.dd = null; if (!e.target.closest('[data-action]')) ui.refresh(); }
