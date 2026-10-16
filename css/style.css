@@ -127,13 +127,14 @@ span.short { color: var(--bad); }
 .modal-card header h2 .muted { font-size: 14px; font-weight: 400; margin-left: 8px; }
 /* Clock and speed buttons in modal header: hidden by default (desktop uses the background top bar) */
 #modal-speed { margin-left: auto; display: none; align-items: center; gap: 2px; }
-#modal-speed:not(:empty) + .x { margin-left: 10px; }
 #modal-speed .m-clock { font-size: 13px; color: var(--muted, #6b6b6b); margin-right: 6px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 #modal-speed button { padding: 2px 7px; min-width: 30px; }
 #modal-speed button.active { background: var(--accent2); border-color: var(--accent2); color: #222; }
 /* Mobile Test Kitchen and Orders: full screen covers the top bar, so show speed in their modal header */
 @media (max-width: 760px) {
   .modal-card:has(.tk) #modal-speed, .modal-card:has(.otabs) #modal-speed { display: flex; }
+  /* Only when the speed buttons show do they take the free space; otherwise the ✕ keeps margin-left: auto and stays right. */
+  .modal-card:has(.tk) #modal-speed:not(:empty) + .x, .modal-card:has(.otabs) #modal-speed:not(:empty) + .x { margin-left: 10px; }
   #modal-speed .m-clock { display: none; }
   #modal-speed button { min-width: 26px; padding: 2px 4px; }
 }
@@ -1525,3 +1526,145 @@ body.touch-placing #toasts { bottom: 128px; }
   .mb-name { font-size: 22px; }
 }
 @media (prefers-reduced-motion: reduce) { .mb-book, .mb-book.nope { transition: none; animation: none; } }
+/* The Inventory is the inside of the barn: a barn-red header with white trim, a wall of weathered vertical planks
+   behind everything (washed out so it stays in the background), and the goods on a cream ledger sheet hung on the
+   wall. Each ingredient group is a small wooden sign. The planks scroll with the content (background-attachment: local). */
+.modal-card.inv header { border-radius: 14px 14px 0 0; border-bottom: 5px solid #f4ecdc; position: relative; z-index: 1;
+  background: repeating-linear-gradient(90deg, rgba(60, 10, 5, 0.32) 0 2px, rgba(255, 220, 200, 0.08) 2px 3px, transparent 3px 52px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.04) 0 1px, transparent 1px 7px),
+    linear-gradient(180deg, #a8402f 0%, #963426 70%, #86291f 100%);
+  box-shadow: 0 2px 0 #8a6a48, 0 3px 6px rgba(50, 25, 10, 0.3); }
+.modal-card.inv header h2 { color: #fff8ec; text-shadow: 0 1px 0 rgba(60, 10, 5, 0.55); }
+.modal-card.inv header h2 .ico { filter: drop-shadow(0 0 1.5px #fff8ec) drop-shadow(0 0 0.5px #fff8ec); }
+.modal-card.inv header .x { color: #fff8ec; }
+.modal-card.inv #modal-body { border-radius: 0 0 14px 14px; padding: 14px 18px 18px; background-color: #b9966c; background-attachment: local;
+  background-image: linear-gradient(rgba(248, 238, 218, 0.24), rgba(248, 238, 218, 0.24)),
+    radial-gradient(ellipse 4px 8px at 20px 60px, rgba(92, 58, 28, 0.32), transparent 100%),
+    radial-gradient(ellipse 3px 6px at 150px 210px, rgba(92, 58, 28, 0.26), transparent 100%),
+    repeating-linear-gradient(90deg, rgba(78, 50, 24, 0.42) 0 2px, rgba(255, 244, 222, 0.22) 2px 3px, transparent 3px 76px),
+    repeating-linear-gradient(90deg, rgba(255, 246, 228, 0.12) 0 76px, rgba(110, 72, 36, 0.07) 76px 152px, rgba(255, 246, 228, 0.04) 152px 228px),
+    repeating-linear-gradient(90deg, rgba(100, 66, 32, 0.07) 0 1px, transparent 1px 5px, rgba(255, 246, 228, 0.06) 5px 6px, transparent 6px 13px);
+  background-size: auto, 228px 340px, 228px 340px, auto, auto, auto;
+  box-shadow: inset 0 3px 8px rgba(60, 35, 15, 0.25); }
+/* Tabs and the bars above the table: cream cards resting on the wall. */
+.modal-card.inv .tabs button:not(.active) { background: #fffcf4; border-color: #b8976e; box-shadow: 0 2px 0 rgba(90, 58, 28, 0.35); }
+.modal-card.inv .tabs button.active { box-shadow: 0 2px 0 #1d5634; }
+.modal-card.inv .tabs input.search { border-color: #b8976e; background: #fffcf4; }
+.modal-card.inv .storagebar { background: #fbf4e4; box-shadow: 0 1px 0 rgba(90, 58, 28, 0.3), 0 2px 5px rgba(60, 35, 15, 0.18); }
+.modal-card.inv .sellabove, .modal-card.inv .sortbar, .modal-card.inv #modal-body > p { width: fit-content; max-width: 100%; box-sizing: border-box;
+  padding: 4px 10px; border-radius: 6px; background: #fffaf0; box-shadow: 0 1px 0 rgba(90, 58, 28, 0.3), 0 2px 5px rgba(60, 35, 15, 0.18); }
+@media (min-width: 761px) {
+  .modal-card.inv .sellabove { width: max-content; flex-wrap: nowrap; }
+  .modal-card.inv .sellabove input.slider { flex: 0 0 240px; }
+}
+.modal-card.inv .sortbar .muted, .modal-card.inv #modal-body > p.hint, .modal-card.inv #modal-body > p.muted { color: #6b6455; }
+/* The goods list: a ledger sheet with a little room around the rows. */
+.modal-card.inv .tbl { border-collapse: separate; border-spacing: 0; background: #fffaf0; border-radius: 8px; padding: 4px 10px 8px;
+  box-shadow: 0 1px 0 rgba(90, 58, 28, 0.3), 0 4px 10px rgba(60, 35, 15, 0.22); }
+.modal-card.inv .tbl th { border-bottom-color: #e2d6bd; }
+.modal-card.inv .tbl td { border-bottom-color: #efe6d2; }
+.modal-card.inv .tbl tr:not(.grp-row):hover td { background: rgba(232, 214, 178, 0.28); }
+/* An ingredient group: a small plank sign nailed above its rows. */
+.modal-card.inv .tbl.mk-sell tr.grp-row td { padding: 12px 0 4px; }
+.modal-card.inv .tbl.mk-sell tr:first-child + tr.grp-row td { padding-top: 6px; }
+.modal-card.inv #modal-body .tbl.mk-sell tr.grp-row h4.grp { display: inline-flex; align-items: center; gap: 5px; padding: 3px 12px 3px 6px;
+  border-radius: 4px; color: #fff6e2; font-size: 13px; text-shadow: 0 1px 0 rgba(50, 28, 10, 0.5);
+  background: repeating-linear-gradient(90deg, rgba(255, 240, 210, 0.07) 0 1px, transparent 1px 6px), linear-gradient(180deg, #8d6440, #765232);
+  box-shadow: 0 1px 0 rgba(50, 28, 10, 0.4), inset 0 1px 0 rgba(255, 235, 200, 0.2); }
+.modal-card.inv .ws-card { box-shadow: 0 1px 0 rgba(90, 58, 28, 0.3), 0 2px 6px rgba(60, 35, 15, 0.18); border-color: #e2d6bd; }
+.modal-card.inv .ws-head.off { background: #f6f0e2; }
+.modal-card.inv .stats div { border-color: #e2d6bd; box-shadow: 0 1px 0 rgba(90, 58, 28, 0.3), 0 2px 5px rgba(60, 35, 15, 0.16); }
+/* The Cookbook is an old cloth-bound recipe book: a dark green linen cover with a gold-tooled title and gold rules, and
+   inside, aged cream pages (faint ruling, darker towards the edges). Discovered dishes are white recipe cards with a red
+   rule under the name; undiscovered ones are plain kraft cards still waiting for their recipe. */
+.modal-card.cb header { border-radius: 14px 14px 0 0; position: relative; z-index: 1; border-bottom: 3px solid #5b3a1e;
+  background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.07) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #2f5a40 0%, #26503a 60%, #1f4430 100%);
+  box-shadow: inset 0 0 0 4px #26503a, inset 0 0 0 5px rgba(214, 178, 94, 0.75), 0 3px 6px rgba(40, 25, 10, 0.3); }
+.modal-card.cb header h2 { color: #e9cf86; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45), 0 -1px 0 rgba(255, 240, 190, 0.15); letter-spacing: 0.02em; font-family: Georgia, 'Times New Roman', serif; }
+.modal-card.cb header h2 .muted { color: #c9b98a; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.modal-card.cb header h2 .ico { filter: drop-shadow(0 0 1.5px #f2e2b0); }
+.modal-card.cb header .x { color: #e9cf86; }
+.modal-card.cb #modal-body { --panel: #f5ead0; border-radius: 0 0 14px 14px; padding: 14px 18px 18px; background-color: #f5ead0; background-attachment: local;
+  background-image: radial-gradient(ellipse at 50% 40%, transparent 55%, rgba(160, 110, 50, 0.16) 100%),
+    repeating-linear-gradient(180deg, transparent 0 27px, rgba(120, 140, 170, 0.10) 27px 28px),
+    radial-gradient(rgba(150, 110, 60, 0.07) 1px, transparent 1.6px), radial-gradient(rgba(255, 255, 255, 0.35) 1px, transparent 1.6px);
+  background-size: 100% 100%, auto, 9px 9px, 13px 13px; background-position: 0 0, 0 0, 0 0, 4px 6px;
+  box-shadow: inset 0 3px 8px rgba(90, 60, 25, 0.22), inset 6px 0 10px -6px rgba(90, 60, 25, 0.25); }
+.modal-card.cb #modal-body > .hint { color: #6b5f48; }
+.modal-card.cb .cz { background: #fffdf7; border-color: #dccba6; box-shadow: 0 1px 0 rgba(110, 75, 35, 0.22); }
+.modal-card.cb .cz.done { background: #fff4d0; border-color: #d9b354; }
+.modal-card.cb .cz.on { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(47, 107, 42, 0.25); }
+.modal-card.cb .cards { gap: 12px; }
+.modal-card.cb .card.known { background: #fffefa; border: 0; border-radius: 3px; padding: 9px 11px 10px;
+  box-shadow: 0 1px 0 rgba(110, 75, 35, 0.28), 0 3px 7px rgba(90, 60, 25, 0.16); }
+.modal-card.cb .card.known .card-head { padding-bottom: 6px; margin-bottom: 2px; border-bottom: 1.5px solid rgba(196, 72, 58, 0.55); }
+.modal-card.cb .card.unknown { background: #eadcbd; border: 1px dashed rgba(130, 95, 50, 0.45); border-radius: 3px;
+  background-image: radial-gradient(rgba(120, 85, 40, 0.08) 1px, transparent 1.5px); background-size: 6px 6px;
+  box-shadow: 0 1px 0 rgba(110, 75, 35, 0.18); }
+.modal-card.cb .card.unknown .about { color: #5a4e38; }
+.modal-card.cb .card .chip { background: #f6efdf; border-color: #e0d2b2; }
+/* The farm journal as a newspaper: one cream newsprint page per day on a dark desk, a blackletter-style masthead between
+   rules, a big serif headline, the news set in justified columns with rules between them, and page-turn buttons below.
+   Turning slides the pages sideways (see jrTurn, .np-out and .np-in). */
+.modal-card.jr-np > header { background: #3a3128; border-bottom: 0; border-radius: 14px 14px 0 0; }
+.modal-card.jr-np > header h2, .modal-card.jr-np > header .x { color: #f1e9d6; }
+.modal-card.jr-np #modal-body { display: flex; flex-direction: column; padding: 14px 18px 10px; overflow: hidden; border-radius: 0 0 14px 14px;
+  background: radial-gradient(ellipse at 50% 30%, #5a4a3b, #3a3128 75%); }
+.np { display: flex; flex-direction: column; min-height: 0; flex: 1; gap: 8px; }
+.np-sheet { flex: 1; min-height: 0; overflow-y: auto; background-color: #f3eddc; color: #24201a; padding: 16px 26px 12px; font-family: Georgia, 'Times New Roman', serif;
+  background-image: radial-gradient(ellipse at 50% 50%, transparent 60%, rgba(150, 120, 70, 0.14) 100%), radial-gradient(rgba(90, 70, 40, 0.06) 1px, transparent 1.4px);
+  background-size: 100% 100%, 5px 5px; background-attachment: local;
+  box-shadow: 0 1px 0 #d8ceb5, 0 2px 0 #ebe3cf, 0 3px 0 #d0c5aa, 0 4px 0 #e6ddc6, 0 8px 18px rgba(0, 0, 0, 0.45); border-radius: 2px; }
+.modal-card .np-mast { display: block; text-align: center; background: none; border-radius: 0; padding: 0; border-bottom: 3px double #2c251c; padding-bottom: 4px !important; margin-bottom: 10px; }
+.np-ears { display: flex; justify-content: space-between; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #5d5243; }
+.np-mast h1 { margin: 2px 0 4px; font-family: Georgia, 'Times New Roman', serif; font-size: clamp(28px, 5vw, 46px); font-weight: 700; font-variant: small-caps;
+  letter-spacing: 0.01em; line-height: 1.05; color: #1d1913; }
+.np-dateline { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid #2c251c; padding-top: 3px; font-size: 12px; font-style: italic; color: #3d3428; }
+.np-headline { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 4px 0 12px; font-size: clamp(20px, 2.8vw, 30px); line-height: 1.15; text-align: center;
+  font-weight: 700; padding-bottom: 10px; border-bottom: 1px solid #2c251c; }
+.np-hl-ico .ico { width: 54px; height: 54px; filter: sepia(0.25) drop-shadow(0 1px 1px rgba(60, 40, 10, 0.3)); }
+.np-cols { columns: 3 230px; column-gap: 26px; column-rule: 1px solid #b9ad93; font-size: 14px; line-height: 1.4; text-align: justify; hyphens: auto; }
+.np-art { break-inside: avoid; margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid #d3c8ae; }
+.np-art.unread { background: linear-gradient(90deg, rgba(232, 196, 92, 0.22), transparent); box-shadow: -6px 0 0 rgba(232, 196, 92, 0.22); }
+.np-art.bad { color: #8a2c1c; }
+.np-time { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #7a6d58; margin-bottom: 1px; font-family: system-ui, sans-serif; }
+.np-art .jr-dish { align-items: flex-start; text-align: left; }
+.np-art .jr-dish b { font-size: 16px; }
+.np-art .muted { color: #6d6150; }
+.np-report h3 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; text-align: center; border-bottom: 1px solid #2c251c; padding-bottom: 3px; }
+.np-report .gazette { background: none; border: 0; box-shadow: none; padding: 0; max-width: none; text-align: left; }
+.np-report .gz-head { display: none; }
+.np-report .gz-stats { grid-template-columns: 1fr; gap: 3px; }
+.np-report .gz-stats div { grid-template-columns: auto 1fr; gap: 8px; align-items: baseline; }
+.np-report .gz-ledger { min-width: 0; width: 100%; font-size: 12px; }
+.np-report .gz-split { background: #c9b98f; }
+.np-pending p { font-style: italic; color: #6d6150; text-align: center; margin: 6px 0 0; }
+.np-empty { font-style: italic; color: #6d6150; }
+.np-foot { text-align: center; font-size: 11px; color: #7a6d58; border-top: 3px double #2c251c; padding-top: 4px; margin-top: 4px; letter-spacing: 0.08em; text-transform: uppercase; }
+.np-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex: none; }
+.np-turn { display: inline-flex; align-items: center; gap: 6px; background: #f3eddc; border-color: #c9bc9d; color: #2c251c; font-family: Georgia, serif; font-size: 15px; padding: 4px 12px; min-width: 110px; justify-content: center; }
+.np-turn:disabled { visibility: hidden; }
+.np-pg { display: inline-flex; align-items: center; gap: 8px; color: #f1e9d6; font-family: Georgia, serif; font-size: 14px; }
+.np-pg button { background: transparent; color: #f1e9d6; border-color: rgba(241, 233, 214, 0.4); padding: 1px 8px; }
+/* Page turn (jrTurn): the old page (.np-out, a copy) slides off to one side, dropping and tilting down a little, while
+   the new page (.np-in) slides in from the other side and straightens up. */
+.modal-card.jr-np #modal-body { position: relative; }
+.np-out { position: absolute; z-index: 2; margin: 0; pointer-events: none; overflow: hidden; }
+.np-out.to-r { transform-origin: 0 0; animation: np-out-r 0.55s cubic-bezier(0.5, 0, 0.75, 0.4) forwards; }
+.np-out.to-l { transform-origin: 100% 0; animation: np-out-l 0.55s cubic-bezier(0.5, 0, 0.75, 0.4) forwards; }
+.np-in.from-l { transform-origin: 100% 0; animation: np-in-l 0.55s cubic-bezier(0.2, 0.6, 0.35, 1) both; }
+.np-in.from-r { transform-origin: 0 0; animation: np-in-r 0.55s cubic-bezier(0.2, 0.6, 0.35, 1) both; }
+@keyframes np-out-r { to { transform: translate(115%, 70px) rotate(7deg); } }
+@keyframes np-out-l { to { transform: translate(-115%, 70px) rotate(-7deg); } }
+@keyframes np-in-l { from { transform: translate(-115%, 70px) rotate(-7deg); } }
+@keyframes np-in-r { from { transform: translate(115%, 70px) rotate(7deg); } }
+@media (max-width: 640px) {
+  .modal-card.jr-np #modal-body { padding: 10px 8px 8px; }
+  .np-sheet { padding: 12px 14px 10px; }
+  .np-ears { font-size: 10px; }
+  .np-dateline span:last-child { display: none; }
+  .np-turn { min-width: 0; padding: 4px 10px; }
+  .np-hl-ico .ico { width: 40px; height: 40px; }
+}

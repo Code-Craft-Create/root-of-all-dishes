@@ -399,6 +399,7 @@
     // The old Warehouse window is now the Inventory's Stock tab.
     if (name === 'warehouse') { name = 'market'; ui.marketTab = 'sell'; }
     if (ui.modal !== name) SFX.play('open');
+    if (name === 'journal' && ui.modal !== name) ui.jrDay = null; // the journal always opens on today's issue
     ui.modal = name;
     ui.mkOrder = null;
     $('#modal').hidden = false;
@@ -658,18 +659,108 @@
     if (e.type === 'items') return `🆕 New ingredient${e.ids.length > 1 ? 's' : ''} made: ${e.ids.map((i) => chip(i)).join(' ')}`;
     return esc(e.text);
   }
+  // The farm journal is a newspaper, The Farm Gazette: one issue (page) per day, turned like pages. An issue holds that
+  // day's news and, once the day is over, its report (logged just after midnight, so it is filed under the day it covers).
+  // The newest issue opens first; ‹ › (or the arrow keys, or a swipe) turn to the day before or after.
+  const jrDayOf = (e) => (e.type === 'day' ? e.day : Game.dayOf(e.t) + 1);
+  function jrIssues() {
+    const by = new Map();
+    for (const e of Game.S.journal || []) { const d = jrDayOf(e); if (!by.has(d)) by.set(d, []); by.get(d).push(e); }
+    const today = Game.dayOf() + 1;
+    if (!by.has(today)) by.set(today, []);
+    return [...by.keys()].sort((a, b) => a - b).map((d) => ({ day: d, list: by.get(d) }));
+  }
+  // The headline: the day's biggest news (a new dish beats an unlock beats other good news), else a plain line.
+  function jrHeadline(iss, today) {
+    const L = iss.list, dish = L.filter((e) => e.type === 'dish');
+    if (dish.length > 1) return { icon: FSI.img(dish[dish.length - 1].id), text: `${dish.length} new dishes come out of the farm kitchen` };
+    if (dish.length) return { icon: FSI.img(dish[0].id), text: `New on the menu: ${esc(it(dish[0].id).name)}` };
+    const un = L.find((e) => e.type === 'unlock' && e.buildings.length);
+    if (un) return { icon: FSI.img('b_' + un.buildings[0]), text: `New building: the ${esc(FS.buildings[un.buildings[0]].name)}` };
+    const good = L.find((e) => e.type === 'msg' && e.kind === 'good');
+    if (good) { const t = good.text.replace(/[.!].*$/s, ''); return { text: esc(t), src: good.text.trim().replace(/[.!]$/, '') === t ? good : null }; }
+    const rep = L.find((e) => e.type === 'day');
+    if (rep) return { text: 'Another day of honest work on the farm' };
+    return { text: iss.day === today ? 'All quiet on the farm, so far' : 'A quiet day on the farm' };
+  }
   modals.journal = () => {
-    const S = Game.S, list = (S.journal || []).slice().reverse();
-    const read = S.journalRead || 0;
+    const S = Game.S, read = S.journalRead || 0;
     S.journalRead = S.journalN || 0;
-    let day = null, html = '';
-    list.forEach((e) => {
-      const dd = Game.dayOf(e.t) + 1;
-      if (dd !== day) { day = dd; html += `<h4 class="jr-day">Day ${dd}</h4>`; }
-      html += `<div class="jr ${e.type} ${e.kind || ''} ${e.n > read && !e.quiet ? 'unread' : ''}"><span class="jr-t">${clockOf(e.t)}</span><div class="jr-body">${journalEntry(e)}</div></div>`;
-    });
-    return { title: '📰 Farm journal', cls: 'wide', html: html || '<p class="hint">Nothing has happened yet. Daily reports, new dishes, unlocks and weather will be kept here.</p>' };
+    const issues = jrIssues(), today = Game.dayOf() + 1;
+    let k = issues.findIndex((x) => x.day === ui.jrDay);
+    if (k < 0) k = issues.length - 1;
+    ui.jrDay = issues[k].day;
+    const iss = issues[k], last = k === issues.length - 1;
+    const season = Game.SEASONS[Math.floor(((iss.day - 1) * Game.DAY) / (Game.DAY * 2)) % 4];
+    const hl = jrHeadline(iss, today);
+    const rep = iss.list.find((e) => e.type === 'day');
+    // A message used as the headline isn't printed a second time below it.
+    const news = iss.list.filter((e) => e.type !== 'day' && e !== hl.src).slice().reverse();
+    const art = (e) => `<article class="np-art ${e.type} ${e.kind || ''} ${e.n > read && !e.quiet ? 'unread' : ''}"><span class="np-time">${clockOf(e.t)}</span>${journalEntry(e)}</article>`;
+    const nav = (dir, label) => {
+      const to = issues[k + dir];
+      return `<button class="np-turn ${dir < 0 ? 'prev' : 'next'}" data-action="jr-turn" data-arg="${dir}" ${to ? '' : 'disabled'} title="${to ? `Day ${to.day}` : ''}">${dir < 0 ? '‹' : ''}<span>${to ? label + ' ' + to.day : ''}</span>${dir > 0 ? '›' : ''}</button>`;
+    };
+    const html = `<div class="np">
+      <div class="np-sheet" data-scroll="jr">
+        <header class="np-mast"><div class="np-ears"><span>No. ${iss.day}</span><span>${season.icon} ${season.name}</span></div>
+          <h1>The Farm Gazette</h1>
+          <div class="np-dateline"><span>Day ${iss.day}</span><span>${iss.day === today ? 'Today\'s edition · still being written' : 'Farm news, prices and weather'}</span><span>One coin</span></div></header>
+        <h2 class="np-headline">${hl.icon ? `<span class="np-hl-ico">${hl.icon}</span>` : ''}${hl.text}</h2>
+        <div class="np-cols">
+          ${rep ? `<section class="np-art np-report ${rep.n > read ? 'unread' : ''}"><h3>The day in numbers</h3>${journalEntry(rep)}</section>` : iss.day === today ? '<section class="np-art np-report np-pending"><h3>The day in numbers</h3><p>The day\'s report goes to press at midnight.</p></section>' : ''}
+          ${news.map(art).join('') || (rep || hl.src ? '' : '<p class="np-art np-empty">Nothing has happened yet. Daily reports, new dishes, unlocks and weather will be printed here.</p>')}
+        </div>
+        <footer class="np-foot">Page ${k + 1} of ${issues.length}</footer>
+      </div>
+      <div class="np-nav">${nav(-1, 'Day')}<span class="np-pg">${issues.length > 1 ? `${k > 0 ? `<button class="small" data-action="jr-turn" data-arg="${-k}" title="The first issue">«</button>` : ''}Day ${iss.day}${last ? '' : `<button class="small" data-action="jr-turn" data-arg="${issues.length - 1 - k}" title="Today's issue">»</button>`}` : ''}</span>${nav(1, 'Day')}</div>
+    </div>`;
+    return { title: '📰 Farm journal', cls: 'wide jr-np', html, after: jrAfter };
   };
+  // Turning a page: the pages slide sideways like sheets pushed across a table, tilting down a little as they go.
+  // Older day: the current page slides out to the right and the older one comes in from the left; newer day the other
+  // way. A copy of the old page slides out on top of the real, already updated page, which slides in.
+  function jrTurn(dir) {
+    const issues = jrIssues(), k = issues.findIndex((x) => x.day === ui.jrDay);
+    const to = issues[Math.max(0, Math.min(issues.length - 1, (k < 0 ? issues.length - 1 : k) + dir))];
+    if (!to || to.day === ui.jrDay) return;
+    const body = $('#modal-body');
+    body.querySelectorAll('.np-out').forEach((f) => f.remove());
+    const old = body.querySelector('.np-sheet');
+    const anim = old && !reduceMotion();
+    const top = anim ? old.scrollTop : 0, box = anim && { l: old.offsetLeft, t: old.offsetTop, w: old.offsetWidth, h: old.offsetHeight };
+    const copy = anim && old.cloneNode(true);
+    ui.jrDay = to.day;
+    renderModal(true);
+    SFX.play('page');
+    if (!anim) return;
+    const side = dir < 0 ? 'r' : 'l'; // where the old page leaves to
+    copy.removeAttribute('data-scroll');
+    copy.classList.add('np-out', 'to-' + side);
+    Object.assign(copy.style, { left: box.l + 'px', top: box.t + 'px', width: box.w + 'px', height: box.h + 'px' });
+    body.appendChild(copy);
+    copy.scrollTop = top;
+    const neu = body.querySelector('.np-sheet:not(.np-out)');
+    neu.classList.add('np-in', 'from-' + (side === 'r' ? 'l' : 'r'));
+    const done = () => { copy.remove(); neu.classList.remove('np-in', 'from-l', 'from-r'); };
+    copy.addEventListener('animationend', done, { once: true });
+    setTimeout(done, 2000); // in case the animation never runs (hidden tab)
+  }
+  ui.jrTurn = jrTurn;
+  // Swipe left or right on a phone to turn the page.
+  function jrAfter(body) {
+    const sh = body.querySelector('.np-sheet');
+    if (!sh || sh.dataset.sw) return;
+    sh.dataset.sw = 1;
+    let x0 = null, y0 = 0;
+    sh.addEventListener('touchstart', (e) => { const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; }, { passive: true });
+    sh.addEventListener('touchend', (e) => {
+      if (x0 === null) return;
+      const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
+      x0 = null;
+      if (Math.abs(dx) > 60 && Math.abs(dx) > 1.5 * Math.abs(dy)) jrTurn(dx < 0 ? 1 : -1);
+    }, { passive: true });
+  }
 
   // ----- Market -----
   // Storage capacity (the same for every item) and its next upgrade, paid in toques.
@@ -803,7 +894,7 @@
         <td class="btns"><button data-action="buy" data-arg="${id}" data-qty="1">1</button><button data-action="buy" data-arg="${id}" data-qty="10">10</button></td></tr>`).join('')}</table>`;
     }
     return {
-      title: '🛖 Inventory', cls: 'wide',
+      title: '🛖 Inventory', cls: 'wide inv',
       html: `<div class="tabs"><button class="${tab === 'sell' ? 'active' : ''}" data-action="mtab" data-arg="sell">📦 Stock</button>
         <button class="${tab === 'buy' ? 'active' : ''}" data-action="mtab" data-arg="buy">🚢 Import</button>
         ${Game.wholesalerLevel() ? `<button class="${tab === 'whole' ? 'active' : ''}" data-action="mtab" data-arg="whole">🚚 Wholesaler${Game.wholesalerLevel() && Game.S.wholesaler.off ? ' ⏸' : ''}</button>` : ''}
@@ -827,7 +918,7 @@
     const cuisines = Game.cuisinesNewestFirst().map((z) => z.name).filter((c) => menu.some((d) => d.cuisine === c));
     const hidden = FS.dishList.length - menu.length;
     return {
-      title: `📖 Cookbook <span class="muted">${disc} / ${FS.dishList.length} discovered</span>`, cls: 'wide',
+      title: `📖 Cookbook <span class="muted">${disc} / ${FS.dishList.length} discovered</span>`, cls: 'wide cb',
       html: `<div class="row gap wrap">
         <input type="search" class="search" data-search="cb" placeholder="Search dishes…" value="${esc(ui.search.cb || '')}">
         ${ddPicker('cb-cuisine', [{ v: '', label: 'All cuisines' }, ...cuisines.map((c) => ({ v: c, label: c, icon: 'cz_' + FS.slug(c), n: menu.filter((d) => d.cuisine === c).length }))], f.cuisine || '', 'Filter by cuisine', 'dd-wide')}
@@ -2162,6 +2253,7 @@
       case 'modal': openModal(arg); break;
       case 'bank': ui.marketTab = 'bank'; openModal('market'); break;
       case 'close-modal': closeModal(); break;
+      case 'jr-turn': jrTurn(+arg); break;
       case 'deselect': selectBuilding(null); break;
       case 'set-recipe': Game.setRecipe(Render.selected, arg); break;
       case 'pause': Game.togglePause(+arg); break;
@@ -2488,7 +2580,7 @@
     document.addEventListener('contextmenu', (e) => { if (hold) e.preventDefault(); }, true);
   }
 
-  const OWN_SOUND = new Set(['sell', 'buy', 'buy-short', 'borrow', 'fulfil', 'open-cuisine', 'hire-wholesaler', 'hire-dispatcher', 'tk-cook', 'modal', 'close-modal', 'sound', 'sound-test', 'bank', 'demolish']);
+  const OWN_SOUND = new Set(['jr-turn', 'sell', 'buy', 'buy-short', 'borrow', 'fulfil', 'open-cuisine', 'hire-wholesaler', 'hire-dispatcher', 'tk-cook', 'modal', 'close-modal', 'sound', 'sound-test', 'bank', 'demolish']);
   function bindInput() {
     document.addEventListener('click', (e) => {
       if (ui.dd && !e.target.closest('.dd')) { ui.dd = null; if (!e.target.closest('[data-action]')) ui.refresh(); }
@@ -2730,6 +2822,7 @@
       if (document.getElementById('finale')) { if (e.key === 'Escape') ui.closeFinale(); return; }
       if (document.getElementById('discovery')) { if (e.key === 'Escape') ui.closeDiscovery(); return; }
       if (e.key === 'Escape' && ui.dd) { ui.dd = null; ui.refresh(); return; }
+      if (ui.modal === 'journal' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { jrTurn(e.key === 'ArrowLeft' ? -1 : 1); e.preventDefault(); return; }
       if (ui.bp && (e.key === 'r' || e.key === 'R')) { act('bp-rotate'); return; }
       if (ui.bp && e.key === 'Enter') { act('bp-build'); return; }
       if (e.key === 'Escape') { if (ui.placing || ui.moving || ui.bp) cancelPlacing(); else if (ui.modal) closeModal(); else if (ui.townMode) ui.setTown(false); else selectBuilding(null); }
