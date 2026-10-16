@@ -780,6 +780,8 @@ input.slider:hover::-webkit-slider-thumb, input.slider:active::-webkit-slider-th
 #cheat-console .cc-log .cmd { color: #9fd08a; }
 #cheat-console .cc-log .err { color: #ff9a8a; }
 #cheat-console .cc-row { display: flex; align-items: center; gap: 6px; padding: 6px 12px 8px; border-top: 1px solid #3a463e; }
+#fps-meter { position: fixed; right: 8px; top: calc(var(--tb-h, 56px) + 8px); z-index: 61; pointer-events: none; white-space: pre; background: rgba(20, 26, 22, 0.82);
+  color: #c8f0b0; font: 11px/1.35 ui-monospace, Menlo, Consolas, monospace; padding: 4px 7px; border-radius: 6px; }
 #cheat-console input { flex: 1; background: transparent; border: 0; outline: 0; color: inherit; font: inherit; padding: 2px 0; }
 
 /* Building panel: Uses ➜ Makes columns, folded settings and quick hover tips */

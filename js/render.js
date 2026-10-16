@@ -69,7 +69,7 @@
     return c;
   }
   R.chunks = new Map(); // `${season}|${cx},${cy}` -> Map(scale -> { c, used, partial })
-  R.buildTerrain = function () { R.chunks.clear(); spriteCache.clear(); hazes.clear(); R.fade = null; R.terrainSeason = null; };
+  R.buildTerrain = function () { terrainCache.key = terrainCache.last = null; R.chunks.clear(); spriteCache.clear(); hazes.clear(); iconBmp.clear(); iconPx = 0; R.fade = null; R.terrainSeason = null; };
   const tile = (x, y) => (x < 0 || y < 0 || x >= Game.W || y >= Game.H ? -1 : Game.S.tiles[y * Game.W + x]);
   // Opaque colour of the shallow band along the shore (white or ice over the water).
   function shallow(P) {
@@ -229,16 +229,24 @@
     }
     return false;
   }
-  function drawTerrain(g, si, x0, y0, x1, y1, budget) {
+  // Returns true when every visible chunk was drawn at the current zoom step, fully built (no stand-ins).
+  // draw = false only keeps building chunks ahead (the view itself comes from the terrain cache, see R.draw).
+  function drawTerrain(g, si, x0, y0, x1, y1, budget, draw = true) {
     const s = scaleStep(), t0 = performance.now();
     const c0 = Math.floor(x0 / CH), c1 = Math.floor((x1 - 1) / CH), r0 = Math.floor(y0 / CH), r1 = Math.floor((y1 - 1) / CH);
-    for (let cy = r0; cy <= r1; cy++) for (let cx = c0; cx <= c1; cx++) {
+    let exact = true;
+    if (draw) for (let cy = r0; cy <= r1; cy++) for (let cx = c0; cx <= c1; cx++) {
       if (!chunkNeeded(cx, cy)) continue;
       const ch = chunkFor(si, cx, cy, s, t0, budget), p = PAD / ch.s;
+      if (ch.s !== s || ch.partial) exact = false;
       // Fading layers skip the overlap, which would otherwise show as lines where its alpha doubles.
       if (g.globalAlpha < 1) g.drawImage(ch.c, PAD, PAD, ch.c.width - 2 * PAD, ch.c.height - 2 * PAD, cx * CH * TS, cy * CH * TS, CH * TS, CH * TS);
       else g.drawImage(ch.c, cx * CH * TS - p, cy * CH * TS - p, CH * TS + 2 * p, CH * TS + 2 * p);
     }
+    terrainPrebuild(si, s, c0, c1, r0, r1, t0, budget);
+    return exact;
+  }
+  function terrainPrebuild(si, s, c0, c1, r0, r1, t0, budget) {
     const mx = Math.ceil(Game.W / CH) - 1, my = Math.ceil(Game.H / CH) - 1;
     for (let cy = Math.max(0, r0 - 1); cy <= Math.min(my, r1 + 1); cy++) for (let cx = Math.max(0, c0 - 1); cx <= Math.min(mx, c1 + 1); cx++) {
       if (performance.now() - t0 >= budget) return;
@@ -251,6 +259,14 @@
       if (!spriteCache.has(id + '@' + lv)) sprite(id, lv);
     }
   }
+  const terrainCache = { c: null, key: null, last: null, exact: false };
+  // Copies a screen-sized cache canvas 1:1 onto the map.
+  function blitCache(g, c, alpha = 1) {
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = alpha; g.drawImage(c, 0, 0); g.restore();
+  }
+  const blitTerrain = (g) => blitCache(g, terrainCache.c);
+  const FLOW_DIRECT = 300;
+  const flowCache = [0, 1].map(() => ({ c: null, view: null, links: null, at: 0, wait: 500, t0: 0, last: null }));
   // Drops the least recently drawn chunks once the cache holds more than MAX_PX pixels.
   function trimChunks() {
     let px = 0;
@@ -424,9 +440,31 @@
     }
     return im.complete && im.naturalWidth ? im : null;
   }
+  // Drawing an SVG image replays its vector shapes every time, and buildings that breathe or grow change size every
+  // frame, so each icon is rasterised once per size step (an eighth of an octave, in device pixels) and the bitmap is
+  // drawn instead: at most 9% smaller than it was rasterised, which looks the same. The cache is emptied once it holds
+  // more than ICON_PX pixels (zooming far in and out over a big farm), and refills with the sizes on screen.
+  const iconBmp = new Map(), ICON_PX = 24e6;
+  let iconPx = 0;
+  function iconBitmap(id, im, px) {
+    const step = Math.max(4, Math.pow(2, Math.ceil(Math.log2(px) * 8 - 1e-9) / 8)), key = id + '@' + step.toFixed(2);
+    let c = iconBmp.get(key);
+    if (!c) {
+      const n = Math.ceil(step);
+      if (iconPx + n * n > ICON_PX) { iconBmp.clear(); iconPx = 0; }
+      c = document.createElement('canvas');
+      c.width = c.height = n;
+      c.getContext('2d').drawImage(im, 0, 0, n, n);
+      iconBmp.set(key, c); iconPx += n * n;
+    }
+    return c;
+  }
   function drawIcon(g, id, cx, cy, size, fallback) {
     const im = iconImg(id);
-    if (im) return g.drawImage(im, cx - size / 2, cy - size / 2, size, size);
+    if (im) {
+      const m = g.getTransform(), px = size * Math.max(Math.hypot(m.a, m.b), Math.hypot(m.c, m.d));
+      return g.drawImage(px > 0 ? iconBitmap(id, im, px) : im, cx - size / 2, cy - size / 2, size, size);
+    }
     if (!fallback) return;
     g.fillStyle = '#000'; g.font = emojiFont(size * 0.85); g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText(fallback, cx, cy);
@@ -561,6 +599,8 @@
     }
   }
   R.weather = drawWeather;
+  // True when drawWeather would draw nothing at all (clear sky, no falling leaves or petals, no lightning).
+  R.weatherIdle = () => !TINT[(Game.S.weather || {}).kind] && (STILL || !weatherKind()) && flash <= 0;
 
   // How well the farm supplies a building: total production of each input across all buildings
   // against what all its users need (Game.rates, capacity per minute). The scarcest input counts;
@@ -771,10 +811,12 @@
     return on;
   }
   function drawFocus(g, on, now) {
-    const blink = 0.12 + 0.26 * (0.5 + 0.5 * Math.sin(now / 520));
+    const blink = 0.12 + 0.26 * (0.5 + 0.5 * Math.sin(now / 520)), z = R.cam.z, lit = `rgba(255,255,255,${blink.toFixed(3)})`;
+    const x0 = R.cam.x / TS, y0 = R.cam.y / TS, x1 = x0 + R.viewW() / z / TS, y1 = y0 + R.viewH() / z / TS;
     for (const b of Game.S.buildings) {
       const [w, h] = FS.buildings[b.type].size;
-      g.fillStyle = on.has(b) ? `rgba(255,255,255,${blink.toFixed(3)})` : 'rgba(12,16,22,0.6)';
+      if (b.x + w < x0 || b.x > x1 || b.y + h < y0 || b.y > y1) continue;
+      g.fillStyle = on.has(b) ? lit : 'rgba(12,16,22,0.6)';
       g.fillRect(b.x * TS + 1, b.y * TS + 1, w * TS - 2, h * TS - 2);
     }
   }
@@ -809,13 +851,19 @@
     for (const b of S.buildings) {
       const r = FS.recipeById[b.recipe];
       if (!r) continue;
-      for (const i in r.inputs) for (const p of makers[i] || []) {
-        const sel = R.selected === b.id || R.selected === p.id;
-        // Water goes almost everywhere, so only draw it for the selected building or when filtered for.
-        if (p === b) continue;
-        const inChain = chainL.has(p.id + '>' + b.id + '>' + i);
-        if (!sel && !inChain && (!R.flows || !passes(i, [p.type, b.type]) || (i === 'water' && !R.flowGoods.has('water')))) continue;
-        links.push({ p, b, i, inChain, bad: b.status === 'missing' && !b.running && (b.missing || []).includes(i), color: linkColor(b, i, now) });
+      for (const i in r.inputs) {
+        let ps = makers[i];
+        if (!ps) continue;
+        // Water goes almost everywhere, so only draw it for the selected building or when filtered for. Settled here,
+        // before the loop over every well, since on a big farm that loop alone is most of the work.
+        if (i === 'water' && !R.flowGoods.has('water') && R.selected !== b.id) { ps = ps.filter((p) => p.id === R.selected); if (!ps.length) continue; }
+        for (const p of ps) {
+          if (p === b) continue;
+          const sel = R.selected === b.id || R.selected === p.id;
+          const inChain = chainL.size > 0 && chainL.has(p.id + '>' + b.id + '>' + i);
+          if (!sel && !inChain && (!R.flows || !passes(i, [p.type, b.type]) || (i === 'water' && !R.flowGoods.has('water')))) continue;
+          links.push({ p, b, i, inChain, bad: b.status === 'missing' && !b.running && (b.missing || []).includes(i), color: linkColor(b, i, now) });
+        }
       }
     }
     // Missing ingredients that no building on the farm makes: a red dashed stub that leads nowhere.
@@ -831,12 +879,10 @@
       drawFocus(g, on, now);
     }
     if (!links.length && !orphans.length) return;
-    g.save();
-    g.lineCap = 'round';
-    for (const L of links) {
-      const [x1, y1] = centre(L.p), [x2, y2] = centre(L.b);
-      const mx = (x1 + x2) / 2 + (y2 - y1) * 0.15, my = (y1 + y2) / 2 - (x2 - x1) * 0.15;
-      g.globalAlpha = L.bad ? 0.5 + 0.45 * (0.5 + 0.5 * Math.sin(now / 320)) : 0.95; // pulses like a waiting bar
+    // Only what can reach the screen is drawn: a link's curve stays inside the box around its ends and its control point.
+    const M = 16 / Math.min(1, z), vx0 = R.cam.x - M, vy0 = R.cam.y - M, vx1 = R.cam.x + R.viewW() / z + M, vy1 = R.cam.y + R.viewH() / z + M;
+    const drawLink = (g, alpha, L, x1, y1, x2, y2, mx, my) => {
+      g.globalAlpha = alpha;
       g.setLineDash(L.bad ? [6, 5] : []);
       g.beginPath(); g.moveTo(x1, y1); g.quadraticCurveTo(mx, my, x2, y2);
       // A dark edge under the colour, so green links still stand out on grass.
@@ -854,13 +900,72 @@
         g.fillStyle = 'rgba(255,255,255,0.85)'; g.beginPath(); g.arc(ex, ey, 8, 0, Math.PI * 2); g.fill();
         drawIcon(g, L.i, ex, ey, 13, FS.items[L.i].emoji);
       }
+    };
+    // Many thousands of links on a big farm (more than FLOW_DIRECT on screen) are far too many to stroke every frame,
+    // so they are drawn into two screen-sized caches, like the terrain: the still links, and the pulsing "waiting" ones
+    // (drawn opaque, then laid on with the pulse as the cache's opacity). With the view held still, a cache is redrawn when its links change, but
+    // at most twice a second (their colours follow the farm's coverage, which is also measured twice a second), and
+    // less often when a redraw is slow.
+    // A moving view, a new filter or selection, or a building built or removed redraws them straight away.
+    const still = [], pulsing = [], shown = [], sig = [0, 0];
+    for (const L of links) {
+      const [x1, y1] = centre(L.p), [x2, y2] = centre(L.b);
+      const mx = (x1 + x2) / 2 + (y2 - y1) * 0.15, my = (y1 + y2) / 2 - (x2 - x1) * 0.15;
+      if (Math.max(x1, x2, mx) < vx0 || Math.min(x1, x2, mx) > vx1 || Math.max(y1, y2, my) < vy0 || Math.min(y1, y2, my) > vy1) continue;
+      const d = [L, x1, y1, x2, y2, mx, my];
+      (L.bad ? pulsing : still).push(d);
+      shown.push(d);
+      const k = L.bad ? 1 : 0;
+      let h = (Math.imul(sig[k], 31) + L.p.id * 7919 + L.b.id * 104729 + L.color.charCodeAt(2) * 31 + L.color.charCodeAt(4)) | 0;
+      for (let n = 0; n < L.i.length; n++) h = (Math.imul(h, 33) + L.i.charCodeAt(n)) | 0;
+      sig[k] = h;
+    }
+    const view = [R.cam.x, R.cam.y, z, R.dpr, R.canvas.width, R.canvas.height, R.flows, [...R.flowGoods].join(), [...R.flowTypes].join(), R.selected, S.buildings.length].join('|');
+    const pulse = 0.5 + 0.45 * (0.5 + 0.5 * Math.sin(now / 320)); // like a waiting bar
+    const layer = (fc, list, h, alpha, each) => {
+      const lkey = h + '|' + list.length, last = fc.last;
+      fc.last = view;
+      // Waits at least ten times as long as a redraw took before the next one, so even a huge tangle keeps the map
+      // smooth (its colours then trail the farm by a few seconds). The browser draws the strokes later, so a redraw
+      // is timed from its start to the next frame.
+      if (fc.t0) { fc.wait = Math.max(500, 10 * (performance.now() - fc.t0)); fc.t0 = 0; }
+      const draw = (g, a) => { g.save(); g.lineCap = 'round'; for (const d of list) drawLink(g, a, ...d); g.restore(); };
+      if (!list.length) return;
+      if (fc.view === view && (fc.links === lkey || now - fc.at < fc.wait)) return blitCache(g, fc.c, alpha);
+      if (list.length > 50 && last === view) {
+        const c = fc.c || (fc.c = document.createElement('canvas'));
+        if (c.width !== R.canvas.width || c.height !== R.canvas.height) { c.width = R.canvas.width; c.height = R.canvas.height; }
+        const cg = c.getContext('2d');
+        cg.setTransform(1, 0, 0, 1, 0, 0); cg.clearRect(0, 0, c.width, c.height);
+        cg.setTransform(g.getTransform());
+        fc.t0 = performance.now();
+        draw(cg, each / alpha);
+        Object.assign(fc, { view, links: lkey, at: now });
+        return blitCache(g, c, alpha);
+      }
+      fc.view = null;
+      draw(g, each);
+    };
+    g.save();
+    g.lineCap = 'round';
+    if (still.length + pulsing.length <= FLOW_DIRECT) {
+      // A farm of ordinary size: every link straight onto the map, in the farm's order.
+      for (const d of shown) drawLink(g, d[0].bad ? pulse : 0.95, ...d);
+      flowCache.forEach((fc) => { fc.view = null; fc.last = null; });
+    } else {
+      // The pulsing layer goes under the still one, so the tangle looks as it does drawn one by one, where later links
+      // cover most of the waiting ones.
+      layer(flowCache[1], pulsing, sig[1], pulse, pulse);
+      layer(flowCache[0], still, sig[0], 1, 0.95);
     }
     // Stubs fan out above the building, one per missing ingredient, each ending in the ingredient and a red "?".
-    const per = {};
+    const per = {}, count = {};
+    for (const O of orphans) count[O.b.id] = (count[O.b.id] || 0) + 1;
     for (const O of orphans) {
-      const k = per[O.b.id] = (per[O.b.id] || 0) + 1, n = orphans.filter((x) => x.b === O.b).length;
+      const k = per[O.b.id] = (per[O.b.id] || 0) + 1, n = count[O.b.id];
       const [x2, y2] = centre(O.b), len = 2.6 * TS, ang = -Math.PI / 2 + (k - (n + 1) / 2) * 0.55 - 0.35;
       const x1 = x2 + Math.cos(ang) * len, y1 = y2 + Math.sin(ang) * len;
+      if (Math.max(x1, x2) + 12 < vx0 || Math.min(x1, x2) - 12 > vx1 || Math.max(y1, y2) + 12 < vy0 || Math.min(y1, y2) - 12 > vy1) continue;
       g.strokeStyle = 'rgba(230,70,58,0.9)'; g.lineWidth = 2.5 / Math.max(0.7, z);
       g.setLineDash([6, 5]); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); g.setLineDash([]);
       g.fillStyle = 'rgba(255,255,255,0.92)'; g.beginPath(); g.arc(x1, y1, 11, 0, Math.PI * 2); g.fill();
@@ -898,6 +1003,16 @@
     const mix = (x, y) => x.map((v, k) => v + (y[k] - v) * f);
     return { mul: mix(a[1], b[1]).map(Math.round), wash: mix(a[2], b[2]) };
   };
+  // The warm glow of a working building at night, drawn once (a gradient per building every frame costs far more).
+  let glowC = null;
+  function glowImg() {
+    if (glowC) return glowC;
+    glowC = document.createElement('canvas'); glowC.width = glowC.height = 256;
+    const c = glowC.getContext('2d'), grad = c.createRadialGradient(128, 128, 0, 128, 128, 128);
+    grad.addColorStop(0, 'rgba(255,190,110,1)'); grad.addColorStop(1, 'rgba(255,190,110,0)');
+    c.fillStyle = grad; c.fillRect(0, 0, 256, 256);
+    return glowC;
+  }
   function drawDaylight(g) {
     const { mul: c, wash: w } = R.sky(), W = R.viewW(), H = R.viewH();
     if (c.every((v) => v >= 254) && w[3] < 0.01) return;
@@ -908,17 +1023,17 @@
     // After dark, working buildings glow warmly so the farm stays readable.
     const dark = 1 - (c[0] + c[1] + c[2]) / 765;
     if (dark < 0.3) return;
-    const z = R.cam.z, a = Math.min(1, (dark - 0.3) / 0.25) * 0.35;
+    const z = R.cam.z, a = Math.min(1, (dark - 0.3) / 0.25) * 0.35, glow = glowImg();
     g.globalCompositeOperation = 'lighter';
+    g.globalAlpha = a;
     for (const b of Game.S.buildings) {
       if (!b.running && b.type !== 'farmhouse') continue;
       const [w, h] = FS.buildings[b.type].size;
       const x = ((b.x + w / 2) * TS - R.cam.x) * z, y = ((b.y + h / 2) * TS - R.cam.y) * z, r = Math.max(w, h) * TS * z * 0.75;
       if (x < -r || y < -r || x > W + r || y > H + r) continue;
-      const grad = g.createRadialGradient(x, y, 0, x, y, r);
-      grad.addColorStop(0, `rgba(255,190,110,${a})`); grad.addColorStop(1, 'rgba(255,190,110,0)');
-      g.fillStyle = grad; g.fillRect(x - r, y - r, 2 * r, 2 * r);
+      g.drawImage(glow, x - r, y - r, 2 * r, 2 * r);
     }
+    g.globalAlpha = 1;
     g.globalCompositeOperation = 'source-over';
   }
   R.bars = [];
@@ -949,9 +1064,30 @@
     const x0 = Math.max(0, Math.floor(R.cam.x / TS)), y0 = Math.max(0, Math.floor(R.cam.y / TS));
     const x1 = Math.min(Game.W, Math.ceil((R.cam.x + R.viewW() / z) / TS) + 1), y1 = Math.min(Game.H, Math.ceil((R.cam.y + R.viewH() / z) / TS) + 1);
     g.imageSmoothingEnabled = true;
-    drawTerrain(g, si, x0, y0, x1, y1, 6);
-    if (R.fade) { g.globalAlpha = R.fade.a; drawTerrain(g, R.fade.from, x0, y0, x1, y1, 0); g.globalAlpha = 1; }
-    trimChunks();
+    // A still view copies its terrain from a screen-sized cache: one image instead of a few hundred chunks (well over a
+    // thousand zoomed out). The cache is drawn once the camera has held still for a frame with every chunk sharp, and
+    // is dropped when the camera, zoom, season or land changes. Not while the seasons cross-fade.
+    const tkey = [si, R.cam.x, R.cam.y, z, R.dpr, R.canvas.width, R.canvas.height, Game.landVer].join('|'), tc = terrainCache;
+    if (!R.fade && tc.key === tkey) {
+      drawTerrain(g, si, x0, y0, x1, y1, 6, false);
+      blitTerrain(g);
+    } else if (!R.fade && tc.last === tkey && tc.exact) {
+      const c = tc.c || (tc.c = document.createElement('canvas'));
+      if (c.width !== R.canvas.width || c.height !== R.canvas.height) { c.width = R.canvas.width; c.height = R.canvas.height; }
+      const cg = c.getContext('2d');
+      cg.setTransform(1, 0, 0, 1, 0, 0); cg.clearRect(0, 0, c.width, c.height);
+      cg.setTransform(R.dpr * z, 0, 0, R.dpr * z, -R.cam.x * z * R.dpr, -R.cam.y * z * R.dpr);
+      cg.imageSmoothingEnabled = true;
+      tc.exact = drawTerrain(cg, si, x0, y0, x1, y1, 6);
+      tc.key = tc.exact ? tkey : null;
+      blitTerrain(g);
+    } else {
+      tc.key = null;
+      tc.exact = drawTerrain(g, si, x0, y0, x1, y1, 6);
+      if (R.fade) { g.globalAlpha = R.fade.a; drawTerrain(g, R.fade.from, x0, y0, x1, y1, 0); g.globalAlpha = 1; }
+      trimChunks();
+    }
+    tc.last = tkey;
     // water shimmer
     g.fillStyle = 'rgba(255,255,255,0.18)';
     for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {

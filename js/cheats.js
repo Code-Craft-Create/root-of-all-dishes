@@ -27,6 +27,7 @@
     finale: { usage: 'finale', about: 'Show the end screen of the Legacy (looks only, nothing is won)', run: () => UI.finale() },
     win: { usage: 'win', about: 'Win the game: finish every stage, take gold from all three critics, buy out Crestwell; the Legacy completes and the finale plays (saved)', run: win },
     clear: { usage: 'clear', about: 'Remove all overrides and hide the dishes the console revealed', run: clear },
+    fps: { usage: 'fps [on|off]', about: 'Show frames per second and where each frame\'s time goes, in the top right corner (remembered in this browser)', run: fps },
     status: { usage: 'status', about: 'Show the current season, weather and overrides', run: status },
     cls: { usage: 'cls', about: 'Empty this console', run: () => { log.textContent = ''; } },
   };
@@ -204,6 +205,49 @@
     Game.cheat.hour = null;
     print(`Overrides cleared. ${Game.season().name}, ${Game.weather().name}.`);
   }
+  // Frame meter: counts the browser's frames and times the game's three per-frame steps (simulation, map drawing, windows
+  // and Town). The text updates twice a second: frames per second, average and slowest frame, then ms per frame per step.
+  const FPS_KEY = 'rootdishes-fps';
+  let meter = null;
+  function fpsOn() {
+    if (meter) return;
+    const el = document.createElement('div');
+    el.id = 'fps-meter';
+    el.textContent = '-- fps';
+    document.body.appendChild(el);
+    const m = meter = { el, n: 0, sum: 0, worst: 0, t: { tick: 0, draw: 0, ui: 0 }, wraps: [], last: 0, shown: performance.now() };
+    for (const [o, k, n] of [[Game, 'tick', 'tick'], [Render, 'draw', 'draw'], [UI, 'frame', 'ui']]) {
+      const f = o[k];
+      o[k] = function () { const t0 = performance.now(); try { return f.apply(this, arguments); } finally { m.t[n] += performance.now() - t0; } };
+      m.wraps.push([o, k, f]);
+    }
+    const loop = (now) => {
+      if (meter !== m) return;
+      if (m.last) { const d = now - m.last; m.n++; m.sum += d; if (d > m.worst) m.worst = d; }
+      m.last = now;
+      if (now - m.shown >= 500 && m.n) {
+        const n = m.n, ms = (v) => (v / n).toFixed(1);
+        m.el.textContent = `${Math.round((1000 * n) / (now - m.shown))} fps\n${ms(m.sum)} ms avg, ${m.worst.toFixed(0)} max\ngame ${ms(m.t.tick)}  map ${ms(m.t.draw)}  ui ${ms(m.t.ui)}`;
+        m.n = m.sum = m.worst = 0; m.t.tick = m.t.draw = m.t.ui = 0; m.shown = now;
+      }
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+  }
+  function fpsOff() {
+    if (!meter) return;
+    for (const [o, k, f] of meter.wraps.reverse()) o[k] = f;
+    meter.el.remove();
+    meter = null;
+  }
+  function fps(arg) {
+    const on = arg === 'on' ? true : arg === 'off' ? false : arg ? null : !meter;
+    if (on === null) return print(`Try ${COMMANDS.fps.usage}.`, 'err');
+    if (on) fpsOn(); else fpsOff();
+    try { if (on) localStorage.setItem(FPS_KEY, '1'); else localStorage.removeItem(FPS_KEY); } catch (e) { }
+    print(on ? 'Frame meter on (top right): fps, average and slowest frame, then ms per frame for game, map and ui. Type fps again to hide it.' : 'Frame meter off.');
+  }
+  try { if (localStorage.getItem(FPS_KEY)) fpsOn(); } catch (e) { }
   function status() {
     const c = Game.cheat;
     print(`Season: ${Game.season().name}${c.season !== null ? ' (forced)' : ''}. Weather: ${Game.weather().name}${c.weather ? ' (forced)' : `, ${(Game.weatherLeft() / Game.HOUR).toFixed(1)} h left`}.${c.hour != null ? ` Daylight forced to hour ${c.hour}.` : ''}`);

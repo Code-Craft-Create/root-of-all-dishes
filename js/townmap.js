@@ -905,8 +905,13 @@
     { kind: 'row', col: '#c8a27a', v: 0.18, route: [[19, 23.1, 3], [23, 23.1, 5]] },
   ];
   for (const bt of TM.boats) { bt.k = bt.k || 0; [bt.i, bt.j] = bt.route[bt.k]; bt.wait = (bt.route[bt.k][2] || 0) * Math.random(); bt.flip = 1; bt.el = null; }
+  // Every frame touches only what changed: a moved element, or the boats' order. Each DOM change makes the browser
+  // restyle and repaint part of the town's big SVG.
+  const setTf = (o, el, tf) => { if (o.tf !== tf || o.tfEl !== el) { el.setAttribute('transform', tf); o.tf = tf; o.tfEl = el; } };
+  const show = (el, on) => { const d = on ? '' : 'none'; if (el.style.display !== d) el.style.display = d; };
   function tickBoats(dt) {
-    const layer = TM.svg.querySelector('#tm-boats');
+    let layer = TM.boatLayer;
+    if (!layer || !TM.svg.contains(layer)) layer = TM.boatLayer = TM.svg.querySelector('#tm-boats');
     if (!layer) return;
     // Nearer boats (larger i + j) drawn last, so a boat in front covers the one behind it.
     const order = TM.boats.slice().sort((x, y) => x.i + x.j - (y.i + y.j));
@@ -928,10 +933,10 @@
         }
       }
       const [x, y] = P(bt.i, bt.j);
-      bt.el.setAttribute('transform', `translate(${x.toFixed(1)},${y.toFixed(1)}) scale(${1.3 * bt.flip},1.3)`);
+      setTf(bt, bt.el, `translate(${x.toFixed(1)},${y.toFixed(1)}) scale(${1.3 * bt.flip},1.3)`);
       bt.el.classList.toggle('moving', moving);
-      if (layer.lastChild !== bt.el) layer.appendChild(bt.el);
     }
+    if (order.some((bt, k) => layer.children[k] !== bt.el)) for (const bt of order) layer.appendChild(bt.el);
   }
   // ----- The train: now and then it comes in from the east, waits at the platform, and leaves again -----
   // A modern three-car multiple unit with a rounded nose at both ends, so it looks right whichever way it runs.
@@ -1014,8 +1019,8 @@
     // Each car sits in the depth band of its far end, so the masts and houses around it overlap correctly.
     TRAIN_CARS.forEach((c, k) => {
       const e = tr.els[k], ci = tr.i + c.off;
-      e.style.display = tr.phase === 'away' ? 'none' : '';
-      e.firstChild.setAttribute('transform', `translate(${(ci * TW / 2).toFixed(1)},${(ci * TH / 2).toFixed(1)})`);
+      show(e, tr.phase !== 'away');
+      setTf(c, e.firstChild, `translate(${(ci * TW / 2).toFixed(1)},${(ci * TH / 2).toFixed(1)})`);
       const band = TM.bandEls[bandOf(ci + CAR + 9.55)];
       if (e.parentNode !== band) band.appendChild(e);
     });
@@ -1041,10 +1046,10 @@
         w.alongI = !w.alongI; w.line = cross + (Math.random() < 0.5 ? -0.32 : 0.32); w.pos = Math.min(w.alongI ? N - 0.5 : WATER - 0.4, p); w.dir = Math.random() < 0.5 ? 1 : -1;
       }
       const [x, y] = w.alongI ? P(w.pos, w.line) : P(w.line, w.pos);
-      w.el.setAttribute('transform', `translate(${x.toFixed(1)},${y.toFixed(1)})`);
+      setTf(w, w.el, `translate(${x.toFixed(1)},${y.toFixed(1)})`);
       const band = TM.bandEls[bandOf(w.alongI ? w.pos + w.line : w.line + w.pos)];
       if (w.el.parentNode !== band) band.appendChild(w.el);
-      w.el.style.display = night && w.night ? 'none' : '';
+      show(w.el, !(night && w.night));
     }
   };
   // A little note rising over a lot: money from a guest, an angry face for a guest who found the dish sold out.
