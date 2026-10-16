@@ -196,7 +196,7 @@
     el.hidden = false;
     const bt = FS.buildings[b.type];
     if (b.type === 'farmhouse') {
-      el.innerHTML = `<div class="insp-head"><span class="big">${FSI.img('b_' + bt.id)}</span><div><h3>${bt.name}</h3><small>Headquarters</small></div><button class="x" data-action="deselect">✕</button></div>
+      el.innerHTML = `<div class="insp-head"><span class="big">${FSI.img('b_' + bt.id)}</span><div><h3>${bt.name}</h3><small>Headquarters</small></div><button class="x" data-action="deselect" aria-label="Close">✕</button></div>
         <p class="desc">${esc(bt.desc)}</p>
         <div class="stack">
           <button data-action="modal" data-arg="market">🛖 Inventory</button>
@@ -208,7 +208,7 @@
     }
     if (b.type === 'academy') {
       const chefs = Game.chefs();
-      el.innerHTML = `<div class="insp-head"><span class="big">${FSI.img('b_' + bt.id)}</span><div data-tip="${esc(bt.desc)}"><h3>${esc(bt.name)}</h3><small>${bt.group} · upkeep ${upkeepText(b)}/min</small></div><button class="x" data-action="deselect">✕</button></div>
+      el.innerHTML = `<div class="insp-head"><span class="big">${FSI.img('b_' + bt.id)}</span><div data-tip="${esc(bt.desc)}"><h3>${esc(bt.name)}</h3><small>${bt.group} · upkeep ${upkeepText(b)}/min</small></div><button class="x" data-action="deselect" aria-label="Close">✕</button></div>
         <p class="desc">${esc(bt.desc)}</p>
         <div class="row gap actions">
           <button data-action="pause" data-arg="${b.id}">${b.paused ? '▶ Resume' : '⏸ Pause'}</button>
@@ -230,7 +230,7 @@
     if (grouped) recipes.sort((x, y) => groupRank(x.primary) - groupRank(y.primary) || (x.label || it(x.primary).name).localeCompare(y.label || it(y.primary).name));
     const groupHead = (r, n) => (!grouped || (n && it(recipes[n - 1].primary).cat === it(r.primary).cat) ? '' : `<div class="tile-group">${catIcon(it(r.primary).cat)} ${esc(catName(it(r.primary).cat))}</div>`);
     el.innerHTML = `
-      <div class="insp-head"><span class="big">${FSI.img('b_' + bt.id)}</span><div data-tip="${esc(bt.desc)}"><h3>${esc(bt.name)}</h3><small>${bt.group} · upkeep <span id="insp-upkeep">${upkeepText(b)}</span>/min</small></div><button class="x" data-action="deselect">✕</button></div>
+      <div class="insp-head"><span class="big">${FSI.img('b_' + bt.id)}</span><div data-tip="${esc(bt.desc)}"><h3>${esc(bt.name)}</h3><small>${bt.group} · upkeep <span id="insp-upkeep">${upkeepText(b)}</span>/min</small></div><button class="x" data-action="deselect" aria-label="Close">✕</button></div>
       <div id="insp-live"><div class="live-io"></div><div class="live-prog"></div></div>
       <div class="row gap actions">
         <button data-action="pause" data-arg="${b.id}">${b.paused ? '▶ Resume' : '⏸ Pause'}</button>

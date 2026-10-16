@@ -82,7 +82,17 @@ body.placing #map { cursor: crosshair; }
 .insp-head { display: flex; gap: 10px; align-items: center; }
 .insp-head h3 { margin: 0; font-size: 17px; }
 .insp-head .big { font-size: 32px; }
-.insp-head .x, .modal-card .x { margin-left: auto; border: none; background: none; font-size: 18px; }
+/* One close button for every window and the inspector: a muted red square at the top right. The ✕ is drawn with two
+   CSS bars (the glyph is hidden) so it looks the same on every system and on every themed header. */
+.insp-head .x, .modal-card .x { margin-left: auto; flex: none; align-self: flex-start; position: relative; width: 30px; height: 30px; min-width: 0; padding: 0;
+  border: 1px solid #93473d; border-radius: 8px; background: #b9655a; color: transparent; font-size: 0; line-height: 0; cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 235, 225, 0.35), 0 1px 2px rgba(40, 10, 5, 0.3); transition: background 0.12s, transform 0.08s; }
+.insp-head .x::before, .insp-head .x::after, .modal-card .x::before, .modal-card .x::after { content: ''; position: absolute; left: 50%; top: 50%;
+  width: 14px; height: 2.5px; margin: -1.25px 0 0 -7px; border-radius: 2px; background: #fff7f2; transform: rotate(45deg); }
+.insp-head .x::after, .modal-card .x::after { transform: rotate(-45deg); }
+.insp-head .x:hover, .modal-card .x:hover { background: #a9554b; border-color: #83392f; }
+.insp-head .x:active, .modal-card .x:active { background: #96483f; transform: translateY(1px); }
+.insp-head .x:focus-visible, .modal-card .x:focus-visible { outline: 2px solid #f2c9a0; outline-offset: 2px; }
 .desc { font-size: 13px; color: var(--muted); }
 .current { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 8px; margin-bottom: 8px; }
 .cur-title { font-weight: 700; margin-bottom: 4px; }
@@ -1575,7 +1585,6 @@ body.touch-placing #toasts { bottom: 128px; }
   box-shadow: 0 2px 0 #8a6a48, 0 3px 6px rgba(50, 25, 10, 0.3); }
 .modal-card.inv header h2 { color: #fff8ec; text-shadow: 0 1px 0 rgba(60, 10, 5, 0.55); }
 .modal-card.inv header h2 .ico { filter: drop-shadow(0 0 1.5px #fff8ec) drop-shadow(0 0 0.5px #fff8ec); }
-.modal-card.inv header .x { color: #fff8ec; }
 .modal-card.inv #modal-body { border-radius: 0 0 14px 14px; padding: 14px 18px 18px; background-color: #b9966c; background-attachment: local;
   background-image: linear-gradient(rgba(248, 238, 218, 0.24), rgba(248, 238, 218, 0.24)),
     radial-gradient(ellipse 4px 8px at 20px 60px, rgba(92, 58, 28, 0.32), transparent 100%),
@@ -1624,7 +1633,6 @@ body.touch-placing #toasts { bottom: 128px; }
 .modal-card.cb header h2 { color: #e9cf86; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45), 0 -1px 0 rgba(255, 240, 190, 0.15); letter-spacing: 0.02em; font-family: Georgia, 'Times New Roman', serif; }
 .modal-card.cb header h2 .muted { color: #c9b98a; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 .modal-card.cb header h2 .ico { filter: drop-shadow(0 0 1.5px #f2e2b0); }
-.modal-card.cb header .x { color: #e9cf86; }
 .modal-card.cb #modal-body { --panel: #f5ead0; border-radius: 0 0 14px 14px; padding: 14px 18px 18px; background-color: #f5ead0; background-attachment: local;
   background-image: radial-gradient(ellipse at 50% 40%, transparent 55%, rgba(160, 110, 50, 0.16) 100%),
     repeating-linear-gradient(180deg, transparent 0 27px, rgba(120, 140, 170, 0.10) 27px 28px),
@@ -1648,7 +1656,7 @@ body.touch-placing #toasts { bottom: 128px; }
    rules, a big serif headline, the news set in justified columns with rules between them, and page-turn buttons below.
    Turning slides the pages sideways (see jrTurn, .np-out and .np-in). */
 .modal-card.jr-np > header { background: #3a3128; border-bottom: 0; border-radius: 14px 14px 0 0; }
-.modal-card.jr-np > header h2, .modal-card.jr-np > header .x { color: #f1e9d6; }
+.modal-card.jr-np > header h2 { color: #f1e9d6; }
 .modal-card.jr-np #modal-body { display: flex; flex-direction: column; padding: 14px 18px 10px; overflow: hidden; border-radius: 0 0 14px 14px;
   background: radial-gradient(ellipse at 50% 30%, #5a4a3b, #3a3128 75%); }
 .np { display: flex; flex-direction: column; min-height: 0; flex: 1; gap: 8px; }
