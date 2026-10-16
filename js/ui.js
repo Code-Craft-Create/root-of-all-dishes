@@ -803,7 +803,7 @@
         <td class="btns"><button data-action="buy" data-arg="${id}" data-qty="1">1</button><button data-action="buy" data-arg="${id}" data-qty="10">10</button></td></tr>`).join('')}</table>`;
     }
     return {
-      title: '🛖 Inventory', cls: 'wide',
+      title: '🛖 Inventory', cls: 'wide inv',
       html: `<div class="tabs"><button class="${tab === 'sell' ? 'active' : ''}" data-action="mtab" data-arg="sell">📦 Stock</button>
         <button class="${tab === 'buy' ? 'active' : ''}" data-action="mtab" data-arg="buy">🚢 Import</button>
         ${Game.wholesalerLevel() ? `<button class="${tab === 'whole' ? 'active' : ''}" data-action="mtab" data-arg="whole">🚚 Wholesaler${Game.wholesalerLevel() && Game.S.wholesaler.off ? ' ⏸' : ''}</button>` : ''}
