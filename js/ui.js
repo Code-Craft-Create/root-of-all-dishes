@@ -1079,6 +1079,7 @@
 
   const revealTip = () => `Reveals one ingredient for toques (2 for a dish with a long supply chain). You have ${Game.S.toques || 0}; special requests, clue orders, events and cuisine targets earn more.`;
   // The dish picked with "Try it" stays the target until it is discovered, cleared, or another one is picked.
+  // Its origin text stays hidden here until it is discovered (David 2026-10-16: no spoilers in the lab).
   function targetBox() {
     const S = Game.S, id = ui.tkTarget;
     if (!id || S.discovered[id] || !FS.dishRecipe[id]) { ui.tkTarget = null; return ''; }
@@ -1088,7 +1089,7 @@
     // Phones get a short form: the revealed ingredients, then one "5 × ❓" chip for the rest.
     const short = ins.filter((i) => rev.includes(i)).map((i) => chip(i)).join(' ') + (hidden ? ` <span class="chip unknown">${hidden} × ❓</span>` : '');
     return `<div class="tk-target"><span class="c-emoji sil">${FSI.img(id)}</span><div class="tk-t-main"><div><span class="tk-t-lead">🎯 Looking for </span><b>${esc(d.name)}</b> <span class="muted small">${esc(d.cuisine)}</span></div>
-      ${d.about ? `<div class="small about">${esc(d.about)}</div>` : ''}<div class="io io-full">${slots}</div><div class="io io-short">${short}</div><div class="muted small">Hints only talk about this dish.</div></div>
+      <div class="io io-full">${slots}</div><div class="io io-short">${short}</div><div class="muted small">Hints only talk about this dish.</div></div>
       <div class="tk-t-btns"><button class="small" data-action="reveal" data-arg="${id}" title="${revealTip()}">💡 <span class="tk-bl">Reveal </span>(🎩${Game.revealCost(id)})</button><button class="small" data-action="tk-untarget" title="Stop aiming for this dish">✕<span class="tk-bl"> Clear target</span></button></div></div>`;
   }
 
