@@ -750,9 +750,34 @@
         if (!ps.length && !orphan) continue;
         goods.add(i); types.add(b.type); for (const p of ps) types.add(p.type);
       }
+      // What it makes counts too, even when nothing on the farm uses it (a kitchen's dish), so every maker can be found.
+      for (const o in r.outputs) if (o !== 'water') goods.add(o);
+      types.add(b.type);
     }
     return { goods: [...goods], types: [...types] };
   };
+  // With a filter picked, the buildings it singles out: the ends of every link shown, plus each building that makes or
+  // uses a picked good and is of a picked type. Everything else is darkened, these get a slow white blink.
+  function filterFocus(links, orphans) {
+    const S = Game.S, G = R.flowGoods, T = R.flowTypes, on = new Set();
+    for (const L of links) { on.add(L.p); on.add(L.b); }
+    for (const O of orphans) on.add(O.b);
+    for (const b of S.buildings) {
+      const r = FS.recipeById[b.recipe];
+      if (T.size && !T.has(b.type)) continue;
+      if (G.size && !(r && (Object.keys(r.outputs).some((i) => G.has(i)) || Object.keys(r.inputs).some((i) => G.has(i))))) continue;
+      on.add(b);
+    }
+    return on;
+  }
+  function drawFocus(g, on, now) {
+    const blink = 0.12 + 0.26 * (0.5 + 0.5 * Math.sin(now / 520));
+    for (const b of Game.S.buildings) {
+      const [w, h] = FS.buildings[b.type].size;
+      g.fillStyle = on.has(b) ? `rgba(255,255,255,${blink.toFixed(3)})` : 'rgba(12,16,22,0.6)';
+      g.fillRect(b.x * TS + 1, b.y * TS + 1, w * TS - 2, h * TS - 2);
+    }
+  }
   function drawFlows(g, z) {
     const S = Game.S, now = performance.now();
     if (!R.flows && !R.selected) return;
@@ -780,6 +805,8 @@
       if (b.status !== 'missing' || b.running || (!R.flows && R.selected !== b.id)) continue;
       for (const i of b.missing || []) if (!(makers[i] || []).length && (R.selected === b.id || passes(i, [b.type]))) orphans.push({ b, i });
     }
+    const focus = R.flows && (R.flowGoods.size || R.flowTypes.size);
+    if (focus) drawFocus(g, filterFocus(links.filter((L) => passes(L.i, [L.p.type, L.b.type]) && (L.i !== 'water' || R.flowGoods.has('water'))), orphans.filter((O) => passes(O.i, [O.b.type]))), now);
     if (!links.length && !orphans.length) return;
     g.save();
     g.lineCap = 'round';

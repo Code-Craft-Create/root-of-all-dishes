@@ -1249,7 +1249,7 @@
     const nSteps = steps.filter((r) => Object.keys(r.inputs).length).length, nKinds = new Set(steps.map((r) => r.building)).size, cx = FS.complexity(id);
     const routeNote = nSteps !== cx.steps || nKinds !== cx.buildings ? ' ' + qm(`Your farm can't use every step of the usual route yet, so this plan takes another one. The 🔍 Codex counts the usual route: ${cx.steps} processing steps, ${cx.buildings} kinds of buildings.`) : '';
     return {
-      title: `🗺️ Production plan: ${FSI.img(i.id)} ${esc(i.name)} ${qm(`Everything it takes to make ${i.name} from scratch. Build a missing step and it is set to the right recipe straight away. Turn on Flows (F) to see goods move between your buildings.`)}`, cls: 'wide hazard',
+      title: `🗺️ Production plan: ${FSI.img(i.id)} ${esc(i.name)} ${qm(`Everything it takes to make ${i.name} from scratch. Build a missing step and it is set to the right recipe straight away. Turn on Chains (F) to see goods move between your buildings.`)}`, cls: 'wide hazard',
       html: `        <div class="stats"><div><b>${nSteps}</b><span>processing steps${routeNote}</span></div><div><b>${nKinds}</b><span>kinds of buildings${routeNote}</span></div>
         <div><b>${toBuild + locked}</b><span>steps still missing${locked ? ' ' + qm(`${toBuild} can be built now, ${locked} ${locked > 1 ? 'are' : 'is'} not unlocked yet.`) : ''}</span></div><div><b>💰${money(cost)}</b><span>to build ${locked ? 'the open ones' : 'them'}</span></div></div>
         ${blueprintOffer(id)}
@@ -2134,20 +2134,27 @@
   document.addEventListener('click', (e) => {
     if (performance.now() - (ui.popAt || 0) < 500 && e.target.closest && e.target.closest('#buildbar')) { e.preventDefault(); e.stopPropagation(); }
   }, true);
-  // Flow filter: icon toggles for the goods passed between buildings and the building types involved, A–Z.
-  // Nothing picked shows every link; picking anything also turns Flows on.
+  // Chains filter: icon toggles for every good your buildings make or pass on, grouped like the Inventory (GROUP_ORDER),
+  // and the building types, grouped like the build menu; A–Z inside each group.
+  // Nothing picked shows every link; picking anything also turns Chains on and singles out the buildings involved.
   function flowFilter() {
     const el = $('#flowf');
     if (el.hidden) return;
     const o = Render.flowOptions(), G = Render.flowGoods, T = Render.flowTypes;
-    const goods = [...new Set([...o.goods, ...G])].sort((a, b) => it(a).name.localeCompare(it(b).name));
-    const types = [...new Set([...o.types, ...T])].sort((a, b) => FS.buildings[a].name.localeCompare(FS.buildings[b].name));
+    const goods = [...new Set([...o.goods, ...G])].sort((a, b) => groupRank(a) - groupRank(b) || it(a).name.localeCompare(it(b).name));
+    const types = [...new Set([...o.types, ...T])].sort((a, b) => BGROUPS.indexOf(FS.buildings[a].group) - BGROUPS.indexOf(FS.buildings[b].group) || FS.buildings[a].name.localeCompare(FS.buildings[b].name));
     const chip = (act, id, name, on, icon, emoji) => `<button class="${on ? 'on' : ''}" data-action="${act}" data-arg="${id}" data-tip="${esc(name)}">${FSI.img(icon) || esc(emoji || '?')}</button>`;
     const clear = (k, set) => (set.size ? `<button class="ff-clear" data-action="ff-clear" data-arg="${k}">✕ ${set.size}</button>` : '');
+    // Each group is its name (with the group icon for goods) over its chips, two groups side by side; a big group takes the full width.
+    const rows = (list, key, head, chipOf) => {
+      const out = [];
+      for (const id of list) { const k = key(id); if (!out.length || out[out.length - 1].k !== k) out.push({ k, ids: [] }); out[out.length - 1].ids.push(id); }
+      return `<div class="ff-groups">${out.map((r) => `<div class="ff-group${r.ids.length > 4 ? ' wide' : ''}"><div class="ff-gname">${head(r.k)}</div><div class="ff-grid">${r.ids.map(chipOf).join('')}</div></div>`).join('')}</div>`;
+    };
     el.innerHTML = goods.length || types.length
-      ? `<h4>Goods ${clear('goods', G)}</h4><div class="ff-grid">${goods.map((i) => chip('ff-good', i, it(i).name, G.has(i), i, it(i).emoji)).join('')}</div>
-        <h4>Buildings ${clear('types', T)}</h4><div class="ff-grid">${types.map((t) => chip('ff-type', t, FS.buildings[t].name, T.has(t), 'b_' + t, FS.buildings[t].icon)).join('')}</div>`
-      : '<div class="ff-none">No goods move between your buildings yet.</div>';
+      ? `<h4>Goods ${clear('goods', G)}</h4>${rows(goods, (i) => it(i).cat, (c) => `${catIcon(c)}${esc(catName(c))}`, (i) => chip('ff-good', i, it(i).name, G.has(i), i, it(i).emoji))}
+        <h4>Buildings ${clear('types', T)}</h4>${rows(types, (t) => FS.buildings[t].group, (g) => esc(g), (t) => chip('ff-type', t, FS.buildings[t].name, T.has(t), 'b_' + t, FS.buildings[t].icon))}`
+      : '<div class="ff-none">Nothing is made on your farm yet.</div>';
   }
   function saveFlowFilter() {
     try { localStorage.setItem('rootdishes-flow-filter', JSON.stringify({ goods: [...Render.flowGoods], types: [...Render.flowTypes] })); } catch (e) { /* not remembered */ }
