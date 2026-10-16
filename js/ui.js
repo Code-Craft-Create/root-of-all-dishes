@@ -94,7 +94,7 @@
     const key = Math.floor(Game.S.money) + '|' + (ui.placing || '');
     if (key === bbKey) return;
     bbKey = key;
-    document.querySelectorAll('#buildbar .bbtn').forEach((el) => {
+    $('#buildbar').querySelectorAll('.bbtn').forEach((el) => {
       el.classList.toggle('poor', +el.dataset.cost > Game.S.money);
       el.classList.toggle('active', el.dataset.arg === ui.placing);
     });
@@ -136,7 +136,9 @@
       : S.loan ? `Loan owed: ${money(S.loan)} (a quarter of your income pays it back)` : 'Money';
     $('#toques').textContent = '🎩 ' + (S.toques || 0);
     $('#clock').textContent = clock;
-    document.querySelectorAll('.m-clock').forEach((c) => (c.textContent = clock));
+    // Searched only where they live: the whole document also holds the Town map's many thousand SVG elements.
+    const live = [$('#topbar'), $('#modal-speed')];
+    live.forEach((el) => el.querySelectorAll('.m-clock').forEach((c) => (c.textContent = clock)));
     $('#season').innerHTML = `${se.icon} <span class="lbl">${esc(se.name)} · </span>${we.icon} <span class="lbl">${esc(we.name)}</span>`;
     $('#season').title = `${se.msg}\nNow: ${we.name}${Game.cheat.weather ? '' : `, for about ${Math.max(1, Math.round(Game.weatherLeft() / Game.HOUR))} more hours`}. ${we.effect}\n` + (Game.cheat.season !== null || Game.cheat.weather ? 'Forced from the cheat console (` key). Type "clear" there to go back to normal.' : `Next season in ${dur(Game.seasonLeft() / 1)} of game time.`);
     $('#season').classList.toggle('forced', Game.cheat.season !== null || !!Game.cheat.weather);
@@ -144,7 +146,7 @@
     $('#flowf-btn').classList.toggle('active', !!Render.flows);
     $('#flowf-n').textContent = (Render.flowGoods.size + Render.flowTypes.size) || '';
     $('#dishcount').textContent = `📖 ${disc}/${FS.dishList.length}`;
-    document.querySelectorAll('[data-action="speed"]').forEach((b) => b.classList.toggle('active', +b.dataset.arg === S.speed));
+    live.forEach((el) => el.querySelectorAll('[data-action="speed"]').forEach((b) => b.classList.toggle('active', +b.dataset.arg === S.speed)));
     // Orders badge: how many you can deliver right now; faded with the order count when none can be filled yet.
     const ob = $('#orders-badge');
     ob.textContent = canFill || S.orders.length || '';
@@ -591,7 +593,7 @@
   }
   // The Cookbook's cuisine strip: arrows only show where there is more to scroll to (with a fade at that edge).
   function czArrows() {
-    const st = document.querySelector('.cz-strip');
+    const st = $('#modal-body').querySelector('.cz-strip');
     if (!st) return;
     const w = st.parentElement, max = st.scrollWidth - st.clientWidth;
     w.classList.toggle('more-l', st.scrollLeft > 2);
@@ -838,7 +840,7 @@
   modals.market = () => {
     const q = (ui.search.mk || '').toLowerCase();
     const tab = ui.marketTab;
-    let rows;
+    let rows, mk = null;
     if (tab === 'sell') {
       const { by, dir } = ui.mkSort, sig = q + '|' + by + dir;
       const grouped = by === 'group';
@@ -863,19 +865,26 @@
         return `<span class="${mk + 1e-6 < us ? 'short' : 'okc'}">${[mk ? `+${rate(mk)}` : '', us ? `−${rate(us)}` : ''].filter(Boolean).join(' ')}</span>`;
       };
       let lastCat = null;
-      rows = ids.map((id) => {
-        const d = Game.S.demand[id] || 1, c = it(id).cat;
+      // Each row as its cells' HTML, so a refresh can swap only the cells that changed (see patch below).
+      const cells = ids.map((id) => {
+        const d = Game.S.demand[id] || 1;
+        return [`<td>${chip(id)}</td>`, `<td class="num ${have(id) >= cap ? 'full' : ''}" title="In stock / storage capacity">${have(id)}<small class="muted">/${cap}</small></td>`,
+          `<td class="num">💰${price(Game.sellPrice(id))} ${Game.seasonPrice(id) !== 1 ? `<span class="small ${Game.seasonPrice(id) > 1 ? 'okc' : 'short'}" data-tip="${esc(`${Game.season().name} price: ${Math.round(Game.seasonPrice(id) * 100)}% of normal. Fresh produce is cheap at harvest time and dear in winter.`)}">${Game.season().icon}×${Game.seasonPrice(id)}</span>` : ''} ${d < 0.99 ? `<span class="short small" data-tip="${esc(`You sold a lot recently, so the price is at ${Math.round(d * 100)}% of normal. It recovers over time.`)}">${Math.round(d * 100)}%</span>` : ''}</td>`,
+          `<td class="num small">${flow(id)}</td>`,
+          ...(ws ? [`<td>${autosellCtl(id)}</td>`] : []),
+          `<td class="btns">${(() => { const r = sellAboveRow(id); return `<button class="sa-row" data-action="sell" data-arg="${id}" data-qty="${r.k}" data-sarow="${id}" data-tip="${esc(r.tip)}" ${r.k ? '' : 'disabled'}>${r.text}</button>`; })()}</td>`];
+      });
+      rows = ids.map((id, k) => {
+        const c = it(id).cat;
         const head = grouped && c !== lastCat ? `<tr class="grp-row"><td colspan="${ws ? 6 : 5}"><h4 class="grp">${catIcon(c)} ${catName(c)}</h4></td></tr>` : '';
         lastCat = c;
-        return `${head}<tr><td>${chip(id)}</td><td class="num ${have(id) >= cap ? 'full' : ''}" title="In stock / storage capacity">${have(id)}<small class="muted">/${cap}</small></td>
-          <td class="num">💰${price(Game.sellPrice(id))} ${Game.seasonPrice(id) !== 1 ? `<span class="small ${Game.seasonPrice(id) > 1 ? 'okc' : 'short'}" data-tip="${esc(`${Game.season().name} price: ${Math.round(Game.seasonPrice(id) * 100)}% of normal. Fresh produce is cheap at harvest time and dear in winter.`)}">${Game.season().icon}×${Game.seasonPrice(id)}</span>` : ''} ${d < 0.99 ? `<span class="short small" data-tip="${esc(`You sold a lot recently, so the price is at ${Math.round(d * 100)}% of normal. It recovers over time.`)}">${Math.round(d * 100)}%</span>` : ''}</td>
-          <td class="num small">${flow(id)}</td>
-          ${ws ? `<td>${autosellCtl(id)}</td>` : ''}
-          <td class="btns">${(() => { const r = sellAboveRow(id); return `<button class="sa-row" data-action="sell" data-arg="${id}" data-qty="${r.k}" data-sarow="${id}" data-tip="${esc(r.tip)}" ${r.k ? '' : 'disabled'}>${r.text}</button>`; })()}</td></tr>`;
+        return `${head}<tr data-mkrow="${k}">${cells[k].join('')}</tr>`;
       }).join('');
       const sortBtn = (k, label, tip) => `<button class="${by === k ? 'active' : ''}" data-action="mk-sort" data-arg="${k}" title="${tip}">${label}${by === k ? (dir < 0 ? ' ▼' : ' ▲') : ''}</button>`;
       const stocked = ids.filter((id) => have(id) > 0).length;
-      rows = storageBar(stocked ? `${stocked} kinds of goods · worth ≈ 💰${money(worth)}` : '') + (rows ? `${sellAboveBar(ids, q)}<div class="sortbar small"><span class="muted">Sort by</span><div class="seg">${sortBtn('group', 'Group', 'Ingredient groups, then by name')}${sortBtn('value', 'Value', 'Stock × price: what each line is worth')}${sortBtn('stock', 'Stock', 'How many you have')}${sortBtn('price', 'Price', 'Price per piece today')}${sortBtn('name', 'Name', 'Alphabetical')}</div><span class="muted">click again to flip</span></div>
+      const sb = storageBar(stocked ? `${stocked} kinds of goods · worth ≈ 💰${money(worth)}` : ''), sa = rows ? sellAboveBar(ids, q) : '';
+      mk = { key: [ids.join(), grouped, ws, cap, !!rows].join('|'), sb, sa, cells };
+      rows = sb + (rows ? `${sa}<div class="sortbar small"><span class="muted">Sort by</span><div class="seg">${sortBtn('group', 'Group', 'Ingredient groups, then by name')}${sortBtn('value', 'Value', 'Stock × price: what each line is worth')}${sortBtn('stock', 'Stock', 'How many you have')}${sortBtn('price', 'Price', 'Price per piece today')}${sortBtn('name', 'Name', 'Alphabetical')}</div><span class="muted">click again to flip</span></div>
         <table class="tbl mk-sell"><tr><th>Item</th><th class="num">Stock</th><th class="num">Price</th><th class="num" data-tip="Made / used per minute by your buildings">Per min</th>${ws ? `<th data-tip="The 🚚 Wholesaler buys everything above the amount kept, at ${Math.round(Game.WHOLESALER.share * 100)}% of the price">🚚 Auto-sell</th>` : ''}<th class="sell-h">Sell</th></tr>${rows}</table>` : '<p class="hint">Your storage is empty.</p>');
     } else if (tab === 'bank') {
       const L = Game.LOAN, loan = Game.S.loan || 0;
@@ -927,7 +936,23 @@
         <td class="num">💰${price(Game.buyPrice(id))}</td>
         <td class="btns"><button data-action="buy" data-arg="${id}" data-qty="1">1</button><button data-action="buy" data-arg="${id}" data-qty="10">10</button></td></tr>`).join('')}</table>`;
     }
+    // The Stock tab of a big farm has hundreds of rows, so the once-a-second refresh only swaps the cells (and the
+    // storage and "Sell above" bars) whose HTML changed, when the rows are still the same goods in the same order.
+    const tabs = `${tab}|${Game.wholesalerLevel()}|${Game.wholesalerLevel() && Game.S.wholesaler.off}|${Game.S.loan ? money(Game.S.loan) : ''}`;
+    const remember = () => { ui.mkShown = mk && { ...mk, tabs }; };
+    const patch = (body) => {
+      const was = ui.mkShown;
+      if (!mk || !was || was.key !== mk.key || was.tabs !== tabs) return false;
+      const swap = (sel, old, html) => { if (old === html) return true; const el = body.querySelector(sel); if (!el) return false; el.outerHTML = html; return true; };
+      if (!swap('.storagebar', was.sb, mk.sb) || !swap('.sellabove', was.sa, mk.sa)) return false;
+      const trs = body.querySelectorAll('tr[data-mkrow]');
+      if (trs.length !== mk.cells.length) return false;
+      mk.cells.forEach((row, k) => row.forEach((html, j) => { if (html !== was.cells[k][j]) trs[k].children[j].outerHTML = html; }));
+      remember();
+      return true;
+    };
     return {
+      patch, after: remember,
       title: '🛖 Inventory', cls: 'wide inv',
       html: `<div class="tabs"><button class="${tab === 'sell' ? 'active' : ''}" data-action="mtab" data-arg="sell">📦 Stock</button>
         <button class="${tab === 'buy' ? 'active' : ''}" data-action="mtab" data-arg="buy">🚢 Import</button>
@@ -1598,29 +1623,45 @@
     return { title: `📰 Restaurants of the Year ${year + 1}`, cls: 'roty',
       html: `${blocks}<p class="small muted">${qm(`Places need a score of at least ${Game.CRITIC.min.slice(0, 2).join(' (🥇) and ')} (🥈); a place nobody reaches stays empty.`)}</p>` };
   };
-  // Every frame in town: walkers; twice a second: redraw what changed, the critic banner and the light of day.
+  // Every frame in town: walkers, boats, the train and the weather; twice a second the rest (townSlow).
   function townFrame(dt, now) {
     const S = Game.S, { mul: c, wash: w } = Render.sky(), dark = 1 - (c[0] + c[1] + c[2]) / 765;
+    // Sizes are read and the panel redrawn before the walkers and boats move: moving them makes the town's big SVG
+    // need a new layout, which reading a size (or a scroll position) would then force right away.
+    const wc = $('#town-weather'), W = wc.clientWidth, H = wc.clientHeight, dpr = window.devicePixelRatio || 1;
+    if (now - (ui.townT || 0) >= 500) { ui.townT = now; townSlow(c, w, dark); }
     TownMap.tick(S.speed ? dt * Math.min(3, S.speed) : 0, dark > 0.35);
     // The same weather as on the farm (rain, snow, storm and lightning, falling leaves), under the night tint.
-    const wc = $('#town-weather'), W = wc.clientWidth, H = wc.clientHeight, dpr = window.devicePixelRatio || 1;
     if (wc.width !== Math.round(W * dpr) || wc.height !== Math.round(H * dpr)) { wc.width = Math.round(W * dpr); wc.height = Math.round(H * dpr); }
-    const wg = wc.getContext('2d');
-    wg.setTransform(dpr, 0, 0, dpr, 0, 0); wg.clearRect(0, 0, W, H);
-    if (W && H) Render.weather(wg, dt, W, H);
-    if (now - (ui.townT || 0) < 500) return;
-    ui.townT = now;
+    // A clear sky leaves the canvas empty instead of clearing it every frame, which would make the browser recomposite it.
+    const idle = Render.weatherIdle(), sized = wc.dataset.size === W + 'x' + H + 'x' + dpr;
+    if (!(idle && sized && wc.dataset.clear)) {
+      const wg = wc.getContext('2d');
+      wg.setTransform(dpr, 0, 0, dpr, 0, 0); wg.clearRect(0, 0, W, H);
+      if (W && H) Render.weather(wg, dt, W, H);
+      wc.dataset.size = W + 'x' + H + 'x' + dpr;
+      if (idle) wc.dataset.clear = '1'; else delete wc.dataset.clear;
+    }
+  }
+  // Twice a second in town: redraw what changed, the critic banner and the light of day. Styles are only written when
+  // they change, so the full-screen tint layers aren't repainted for nothing.
+  const setStyle = (el, k, v) => { if (el.style[k] !== v) el.style[k] = v; };
+  function townSlow(c, w, dark) {
+    const S = Game.S;
     drawTown();
     if (TownMap.svg) TownMap.svg.classList.toggle('night', dark > 0.3);
     const n = $('#town-night');
-    n.style.background = `rgb(${c.map((v) => Math.round(v + (255 - v) * 0.3)).join(',')})`; // a little lighter than the farm, so lit windows still glow
-    n.firstChild.style.background = `rgba(${w.slice(0, 3).map(Math.round).join(',')},${w[3].toFixed(3)})`;
+    if (n.dataset.sky !== c.join() + '|' + w.join()) {
+      n.dataset.sky = c.join() + '|' + w.join();
+      n.style.background = `rgb(${c.map((v) => Math.round(v + (255 - v) * 0.3)).join(',')})`; // a little lighter than the farm, so lit windows still glow
+      n.firstChild.style.background = `rgba(${w.slice(0, 3).map(Math.round).join(',')},${w[3].toFixed(3)})`;
+    }
     // After dark, lit windows, street lamps and restaurants glow warmly over the tint, as working buildings do on the farm.
     const gl = $('#town-glow'), ga = Math.min(1, Math.max(0, (dark - 0.22) / 0.18));
-    gl.style.display = ga > 0 ? 'block' : 'none';
-    gl.style.opacity = ga.toFixed(2);
+    setStyle(gl, 'display', ga > 0 ? 'block' : 'none');
+    setStyle(gl, 'opacity', ga.toFixed(2));
     const b = $('#town-banner'), bh = townBanner();
-    if (b && b.innerHTML !== bh) b.innerHTML = bh;
+    if (b && b.dataset.src !== bh) { b.dataset.src = bh; b.innerHTML = bh; } // its emoji become icons, so innerHTML never matches bh
     const r = Game.restaurantAt(ui.townSel), ae = document.activeElement;
     const sig = [townMapSig(), ui.townTab, r ? [r.served, r.missed, r.reviews.length, r.menu.map(have).join()].join(':') : '', Math.floor(S.money / 500), Game.criticDone(), S.critic && S.critic.rumour, S.critic && S.critic.history && S.critic.history.length].join('|');
     if (sig !== ui.townSig && !ui.mouseDown && !(ae && ae.tagName === 'SELECT')) { ui.townSig = sig; renderTownPanel(); }
