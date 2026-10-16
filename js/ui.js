@@ -1568,7 +1568,7 @@
         <div class="mb-cname">${FSI.img('cz_' + c.id)} ${esc(c.name)}</div><p class="mb-cdesc">${esc(c.desc)}</p>${foot}</div>`;
     }).join('<div class="mb-orn small"><i></i></div>');
     return `<div class="mb-stage"><div class="mbook is-${state}" data-stage="${st.id}">
-      <div class="mb-pages"><div class="mb-page mb-left" data-scroll="mbl">${left}</div><div class="mb-page mb-right" data-scroll="mbr">${courses}</div></div>
+      <div class="mb-pages"><div class="mb-scroll" data-scroll="mbp"><div class="mb-page mb-left"><div class="mb-in" data-scroll="mbl">${left}</div></div><div class="mb-page mb-right"><div class="mb-in" data-scroll="mbr">${courses}</div></div></div></div>
       <div class="mb-cover"><div class="mb-front">${menuCover(st)}</div><div class="mb-back"></div></div></div>
       <button class="mb-close" data-action="czbook-close">Put the menu back</button></div>`;
   }
@@ -1586,7 +1586,7 @@
     if (!book) return;
     const from = anim && !reduceMotion() && bookFrom(body, book);
     if (!from) { book.classList.add('is-open', 'still'); return; }
-    book.querySelectorAll('.mb-page').forEach((p) => { p.scrollTop = 0; });
+    book.querySelectorAll('[data-scroll]').forEach((p) => { p.scrollTop = 0; });
     book.style.transformOrigin = from.origin;
     book.style.transform = from.transform;
     book.classList.add('still');
