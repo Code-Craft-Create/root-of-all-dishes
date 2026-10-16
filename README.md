@@ -279,6 +279,7 @@ js/data/buildings.js  building types (cost, size, placement rule, upkeep)
 js/data/raw.js      crops, orchards, greenhouse, foraging, animals, fishing, minerals
 js/data/processing.js processing recipes per building
 js/data/dishes.js   dishes (Kitchen recipes) grouped by cuisine
+js/data/about.js    a short text for every dish: where it comes from and what makes it special
 js/data/unlocks.js  guided steps (by goal), the 5 stages x 3 cuisines, and the unlock calculation
 js/model.js         derived data: indexes, automatic pricing, supply-chain analysis
 js/game.js          state, map generation, simulation tick, market, orders, test kitchen, goals
