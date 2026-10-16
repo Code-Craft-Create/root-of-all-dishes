@@ -260,7 +260,8 @@ older) no longer load.
   and pulsing: the building is waiting for that ingredient. Selecting a building shows just its links. The ▾ next to
   the button finds chosen goods or building types, grouped like the Inventory and the build menu (remembered in
   this browser). It lists everything your buildings make, dishes included; the buildings it picks out blink white
-  and the rest of the farm darkens.
+  and the rest of the farm darkens. A picked good also shows its whole chain: every building that feeds its
+  makers, back to the fields.
 - **🗺️ Plan production** (Codex and Cookbook) lists every step needed to make an item from scratch, what is
   already running, and builds a missing step with the right recipe preset (or, after stage C, the whole chain as a 📐 blueprint).
 - **Where the price goes** in the Codex splits each item's value into farm, processing and kitchen shares.
