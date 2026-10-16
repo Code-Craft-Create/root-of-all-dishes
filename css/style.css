@@ -1066,6 +1066,11 @@ button.ghost { border: none; background: none; padding: 0 4px; }
 .ry-row.mine { background: #f2f8ef; }
 .ry-place { font-size: 22px; text-align: center; font-weight: 700; }
 .ry-quote { font-style: italic; margin-top: 2px; }
+.ry-sheet { margin-top: 6px; border-top: 1px dashed var(--panel2); padding-top: 4px; }
+.ry-sheet > div { display: flex; justify-content: space-between; gap: 10px; padding: 1px 0; }
+.ry-sheet > div b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ry-sheet .plus b { color: var(--good); } .ry-sheet .minus b { color: #b2621a; }
+.ry-sheet .tot { border-top: 1px solid var(--panel2); margin-top: 2px; padding-top: 3px; font-weight: 700; }
 @media (max-width: 1100px) { #town-panel { width: 340px; } }
 /* Town on desktop: the long back label, no sheet controls. */
 .tw-back .tw-short, .tw-tabs .tw-sheetbtn, .tw-tabs .tw-grip { display: none; }

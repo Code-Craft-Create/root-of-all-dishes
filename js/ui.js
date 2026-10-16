@@ -1449,7 +1449,7 @@
     return `<div class="tw-head"><span class="pack-icon">${FSI.img('ui_restaurant')}</span><div><h3>${esc(r.name)} <button class="small ghost" data-action="town-rename" data-arg="${r.id}" title="Rename this restaurant">✏️</button></h3>
         <div class="small muted">${esc(l.name)}, ${esc(d.name)}${r.bought ? ' · bought from its old owner' : ''}${Game.awardBoost(r.spot) > 1 ? ` · 🏆 ${esc(d.name)}'s Restaurant of the Year` : ''}</div>
         <div>${starBar(v)} <b>${v === null ? 'new' : v.toFixed(1)}</b>${cap < 5 ? ` <span class="small muted" data-tip="This restaurant can't be rated higher yet.">max ${cap.toFixed(1)}</span>` : ''}
-          ${qm(v === null ? `Rated after ${T.minGuests} guests.` : `Average of the last ${r.scores.length} guests.`)}</div>
+          ${qm(v === null ? `Rated after ${T.minGuests} guests.` : `The average of the ${r.reviews.length} guest reviews below.`)}</div>
         <div class="small muted"><span data-tip="Plates served">🍽️ ${r.served}</span> · <span data-tip="Guests turned away because their dish was sold out">😠 ${r.missed}</span> · <span data-tip="Earned so far (upkeep ${T.upkeep}/min)">💰${money(r.earned)}</span></div></div></div>
       ${fitBox(r, d)}
       ${Game.headChefsUnlocked() || r.chef ? `<h4>Head chef ${qm(`Promote a chef from the 🎓 Culinary Academy for 🎩${Game.HEAD.promote}. Guests rate dishes of their speciality higher, and the rating can go higher too. Train chefs at the Academy first: their level comes with them.`)}</h4>${headChefBox(r)}` : ''}
@@ -1505,10 +1505,10 @@
     const S = Game.S, c = S.critic, C = Game.CRITIC;
     if (!c || c.v !== 2 || !c.visits) return '<p class="hint">No visits announced yet.</p>';
     const inTown = S.time >= c.year * Game.YEAR + 6 * Game.DAY, done = Game.criticDone();
-    const tip = `Each district's food critic names its Restaurant of the Year every winter, on a day nobody knows.\nGold 🎩${C.toques[0]} + 💰${money(C.prize[0])} and 30% more guests for a year · silver 🎩${C.toques[1]} + 💰${money(C.prize[1])}\nScores are out of 5: gold needs ${C.min[0]}, silver ${C.min[1]}. A place nobody reaches stays empty.`;
+    const tip = `Each district's food critic names its Restaurant of the Year every winter, on a day nobody knows.\nThey weigh everything: your guests' rating, one dish they eat, the supply chains behind your menu, whether it fits the district, every guest turned away, and more. Their review lists each plus and minus.\nGold 🎩${C.toques[0]} + 💰${money(C.prize[0])} and 30% more guests for a year · silver 🎩${C.toques[1]} + 💰${money(C.prize[1])}\nScores are out of 5: gold needs ${C.min[0]}, silver ${C.min[1]}. A place nobody reaches stays empty.`;
     const rows = Game.DISTRICT_ORDER.map(Game.criticOf).map((cr) => {
-      const v = c.visits[cr.district], d = Game.district(cr.district), th = Game.theme(v.theme), won = (c.gold || {})[cr.district] === c.year;
-      const st = v.done ? (won ? '🥇' : '—') : `<b data-tip="${esc(th.desc)}">“${esc(th.name)}”</b>`;
+      const v = c.visits[cr.district], d = Game.district(cr.district), won = (c.gold || {})[cr.district] === c.year;
+      const st = v.done ? (won ? '🥇' : '—') : `<span class="muted">${esc(cr.name)}</span>`;
       return `<div style="--dc:${d.color}"><span class="tw-cname" data-tip="${esc(`${cr.name}, ${cr.paper}`)}">${esc(d.name)}</span><span>${st}</span></div>`;
     }).join('');
     const when = done ? `Next visits: winter, year ${c.year + 2}` : inTown ? '🕵️ <b>In town now!</b>' : `Winter, year ${c.year + 1}`;
@@ -1607,18 +1607,28 @@
       <p class="hint">Rent a restaurant, pick its menu and keep it supplied from your farm.</p>` }
       : { title: '🔒 Not yet', html: `<p class="hint">Keep cooking through the 🍽️ cuisines.</p>` };
   };
+  // A critic's score sheet for one of your restaurants: where the score starts (guests' rating and the dish), then every
+  // plus and minus. Visits from before v1.30 have no sheet.
+  const signed = (v) => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v).toFixed(2);
+  function scoreSheet(x) {
+    if (!x.lines) return '';
+    const dish = FS.items[x.dish] ? FS.items[x.dish].name : 'dish';
+    return `<div class="ry-sheet small"><div><span>Start: guests' rating ★${x.rating.toFixed(1)} (60%) and the ${esc(dish)} I ate ★${x.dishScore.toFixed(1)} (40%)</span><b>${x.start.toFixed(2)}</b></div>
+      ${x.lines.map((l) => `<div class="${l.pts > 0 ? 'plus' : l.pts < 0 ? 'minus' : ''}"><span>${esc(l.text)}</span><b>${signed(l.pts)}</b></div>`).join('')}
+      <div class="tot"><span>Score</span><b>${x.score.toFixed(2)}</b></div></div>`;
+  }
   // The critics' verdicts of the last year they visited.
   modals.gazette = () => {
     const c = Game.S.critic, hs = c && c.v === 2 ? c.history : [];
     if (!hs.length) return { title: '📰 Food critics', html: '<p class="hint">The critics have not visited yet.</p>' };
     const year = hs[hs.length - 1].year, medal = ['🥇', '🥈', '🥉'];
     const blocks = hs.filter((h) => h.year === year).map((h) => {
-      const cr = Game.criticOf(h.district), d = Game.district(h.district), th = Game.theme(h.theme), gold = h.list.find((x) => x.place === 1);
+      const cr = Game.criticOf(h.district), d = Game.district(h.district), gold = h.list.find((x) => x.place === 1);
       const rows = h.list.map((x) => `<div class="ry-row ${x.rival ? '' : 'mine'}"><span class="ry-place">${medal[x.place - 1] || '·'}</span>
         <div><b>${esc(x.name)}</b>${x.rival ? ' <span class="small muted">rival</span>' : ' <span class="small okc">yours</span>'}
-        ${x.rival ? '' : `<div class="small ry-quote">“${esc(Game.criticLine(x))}”</div>`}</div><span class="small muted">${x.score.toFixed(2)}</span></div>`).join('');
+        ${x.rival ? '' : `<div class="small ry-quote">“${esc(Game.criticLine(x))}”</div>${scoreSheet(x)}`}</div><span class="small muted">${x.score.toFixed(2)}</span></div>`).join('');
       return `<div class="ry-block"><div class="ry-head" style="color:${d.color}">${gold && !gold.rival ? '🏆' : '🍽️'} ${esc(d.name)}: <b>${gold ? esc(gold.name) : 'nobody'}</b>${gold ? '' : ' was good enough for gold'}</div>
-        <p class="small muted">${esc(cr.name)}, ${esc(cr.paper)} · <b>“${esc(th.name)}”</b> <span data-tip="${esc(th.desc)}" class="qm">?</span></p>${rows}</div>`;
+        <p class="small muted">${esc(cr.name)}, ${esc(cr.paper)}</p>${rows}</div>`;
     }).join('');
     return { title: `📰 Restaurants of the Year ${year + 1}`, cls: 'roty',
       html: `${blocks}<p class="small muted">${qm(`Places need a score of at least ${Game.CRITIC.min.slice(0, 2).join(' (🥇) and ')} (🥈); a place nobody reaches stays empty.`)}</p>` };

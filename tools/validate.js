@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const root = path.join(__dirname, '..');
-const files = ['js/data/core.js', 'js/data/buildings.js', 'js/data/raw.js', 'js/data/processing.js', 'js/data/dishes.js', 'js/data/about.js', 'js/data/unlocks.js', 'js/model.js'];
+const files = ['js/data/core.js', 'js/data/buildings.js', 'js/data/raw.js', 'js/data/processing.js', 'js/data/dishes.js', 'js/data/about.js', 'js/data/reviews.js', 'js/data/unlocks.js', 'js/model.js'];
 const ctx = { console };
 ctx.globalThis = ctx;
 vm.createContext(ctx);
@@ -46,6 +46,13 @@ FS.STAGES.forEach((st, k) => { for (const c of st.cuisines) if (c.sigIds.length 
 for (const st of FS.STAGES) for (const c of st.cuisines) if (c.dishIds.length < st.target + c.sigIds.length) errors.push(`Cuisine ${c.name} has fewer dishes than its target ${st.target}`);
 for (const n in FS.ABOUT) if (!FS.items[FS.slug(n)]) errors.push(`FS.ABOUT: unknown dish ${n}`);
 for (const d of FS.dishList) if (!d.about) errors.push(`${d.cuisine}: ${d.name} has no FS.ABOUT text (js/data/about.js)`);
+// Review lines: a restaurant's feed holds 20 reviews and never the same line twice, so every star level needs more
+// lines than that, and no line may appear in two pools.
+const RV = FS.REVIEWS, seenLine = {};
+for (const [b, l] of Object.entries(RV.band)) if (l.length <= 20) errors.push(`FS.REVIEWS.band[${b}] has only ${l.length} lines, needs more than 20`);
+const allLines = [RV.missing, RV.cplx.good, RV.cplx.bad, RV.price.good, RV.price.high, RV.price.low, RV.chef, RV.master, RV.special, ...Object.values(RV.band),
+  ...Object.values(RV.district).flatMap((d) => [d.good, d.bad, d.price])].flat();
+for (const x of allLines) { if (seenLine[x]) errors.push(`FS.REVIEWS: line used twice: ${x}`); seenLine[x] = 1; }
 const stepsU = FS.computeUnlocks(FS.STEPS.map((s) => s.id), []);
 for (const c of FS.CUISINES.filter((x) => x.steps)) for (const id of c.dishIds) for (const i of Object.keys(FS.dishRecipe[id].inputs))
   if (!stepsU.items.has(i)) errors.push(`${c.name}: ${FS.items[id].name} needs ${i}, which no guided step unlocks`);
