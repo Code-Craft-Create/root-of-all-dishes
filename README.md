@@ -94,7 +94,9 @@ are not swapped: use `data-tip` for tooltips, and draw icons in the Town SVG wit
 - **Debug cheat console:** press the key left of 1 (`` ` `` or §), or on a phone or tablet hold a finger on the logo and version at the top left, and type `help` (on touch screens, tapping a command in the list writes it into the line). `season winter` / `weather storm` force the
   season or weather (`off` or `clear` goes back to normal); visuals, sounds and growth follow. Overrides are not saved.
   `money 10000` adds money. `target [cuisine]` shows the splash a cuisine gets when it is complete (looks only). `signature [reveal|make]` reveals the current stage's Chef's Challenge or makes them all. `recipes all` reveals every dish (no rewards); `recipes hide` or `clear` hides only the dishes
-  the console revealed (tracked in the save as `S.cheatRevealed`), so real discoveries stay.
+  the console revealed (tracked in the save as `S.cheatRevealed`), so real discoveries stay. `fps` toggles a frame meter
+  in the top right corner (frames per second, average and slowest frame, ms per frame in `Game.tick`, `Render.draw` and
+  `UI.frame`); it stays on after a reload until turned off (localStorage `rootdishes-fps`).
 - Sound effects are synthesized in the browser (js/audio.js, no audio files): clicks, building plonks, sales, order cash register,
   discovery fanfare, goal chimes, unlock sparkles and more. Rain, storms (with distant thunder) and snow (wind) play quiet
   ambient weather that crossfades with the day's weather, with its own volume slider. On calm days
