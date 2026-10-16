@@ -81,6 +81,7 @@ are not swapped: use `data-tip` for tooltips, and draw icons in the Town SVG wit
 - Orders include ⭐ special requests for a dish you haven't discovered yet and 📦 bulk orders with more time and a better rate; later stages add regulars, clue orders, contracts, events and supply contracts (see Customer orders below).
 - Each new day's report (what the farm made and sold, and how much of the sale price was the raw ingredients' share) goes to the
   **📰 Farm journal** (`J`), as a little newspaper. The journal keeps every event: new dishes, unlocks, weather, orders, goals.
+- The **🔎 Codex** (`X`) looks like a laptop the farmer looks things up on, and the **🎯 Goals** (`G`) are a chalkboard to-do list on the farmhouse wall.
   A day before winter you get a warning with how long your animals' feed will last.
 - **Phones and tablets** (touch screens only; mouse play is unchanged): pinch to zoom the map. The build menu is hidden;
   tap empty ground of your own land and it pops up, and the building you pick starts on that spot. Placing or moving a building

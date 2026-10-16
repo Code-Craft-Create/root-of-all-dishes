@@ -1105,7 +1105,7 @@
     // Searching opens a match straight away when the item on show isn't among the results: an exact name first, else the first one.
     if (q && list.length && !list.some((i) => i.id === ui.codexItem)) ui.codexItem = (list.find((i) => i.name.toLowerCase() === q) || list[0]).id;
     return {
-      title: '🔎 Codex: where does food come from?', cls: 'wide',
+      title: '🔎 Codex: where does food come from?', cls: 'wide laptop',
       html: `<div class="codex">
         <div class="cx-list"><input type="search" class="search" data-search="cx" placeholder="Search ${known.length} known ingredients and dishes…" value="${esc(ui.search.cx || '')}">
           ${catPicker('cat', counts, 'All groups')}
@@ -1932,11 +1932,11 @@
     const next = Game.goals.find((g) => !S.goalsDone[g.id] && Game.goalVisible(g));
     const hidden = Game.goals.filter((g) => !Game.goalVisible(g)).length;
     return {
-      title: '🎯 Goals',
+      title: '🎯 Goals', cls: 'chalk',
       html: `<button class="tc-open" data-action="modal" data-arg="trophies">🏆 Trophy cabinet <span class="muted">${trophyList().flatMap((sh) => sh.items).filter((t) => t.won).length} won</span></button><div class="goals">${Game.goals.filter(Game.goalVisible).map((g) => `<div class="goal ${S.goalsDone[g.id] ? 'done' : g === next ? 'next' : ''}">
-        <span>${S.goalsDone[g.id] ? '✅' : g === next ? '👉' : '⬜'}</span><span>${esc(g.text)}${goalProg(g)}${stepOf(g.id) ? ` <span class="unlocktag" data-tip="${S.goalsDone[g.id] ? 'Unlocked' : 'Unlocks'} ${esc(stepOf(g.id).name)}">${S.goalsDone[g.id] ? '✅' : '🔓'} ${esc(stepOf(g.id).name)}</span>` : ''}</span><span class="reward">+${money(g.reward)}${g.toques ? ` · 🎩${g.toques}` : ''}</span></div>`).join('')}</div>
+        <span>${g === next && !S.goalsDone[g.id] ? '👉' : `<i class="gbox" aria-label="${S.goalsDone[g.id] ? 'Done' : 'Not done yet'}">${S.goalsDone[g.id] ? '✓' : ''}</i>`}</span><span>${esc(g.text)}${goalProg(g)}${stepOf(g.id) ? ` <span class="unlocktag" data-tip="${S.goalsDone[g.id] ? 'Unlocked' : 'Unlocks'} ${esc(stepOf(g.id).name)}">${S.goalsDone[g.id] ? '✅' : '🔓'} ${esc(stepOf(g.id).name)}</span>` : ''}</span><span class="reward">+${money(g.reward)}${g.toques ? ` · 🎩${g.toques}` : ''}</span></div>`).join('')}</div>
         ${hidden ? '<p class="small muted">More goals appear as your farm grows.</p>' : ''}
-        <h4>Your farm in numbers</h4><div class="small">Earned 💰${money(S.stats.earned)} · spent 💰${money(S.stats.spent)} · ${S.buildings.length} building${S.buildings.length === 1 ? '' : 's'} · ${Object.keys(S.seen).length} different goods produced · ${S.stats.experiments} experiment${S.stats.experiments === 1 ? '' : 's'}</div>`,
+        <h4>Your farm in numbers</h4><div class="small farm-nums">Earned 💰${money(S.stats.earned)} · spent 💰${money(S.stats.spent)} · ${S.buildings.length} building${S.buildings.length === 1 ? '' : 's'} · ${Object.keys(S.seen).length} different goods produced · ${S.stats.experiments} experiment${S.stats.experiments === 1 ? '' : 's'}</div>`,
     };
   };
 
