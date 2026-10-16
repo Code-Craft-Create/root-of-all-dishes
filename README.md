@@ -145,7 +145,12 @@ of a stage has reached the target (dishes actually cooked), its **⭐ Chef's Cha
 test of well-known, long-chain dishes picked per cuisine (`signature` lists in unlocks.js), shown by name with a Try now button
 (splash card, Cuisines window, stage goal). Each must be freshly made after the reveal, in the Test Kitchen or by a
 kitchen building; in Grand Cuisine, served at a restaurant rated ★★★★ or better (`S.sig`). A cuisine whose challenge
-dishes are made is complete (toques, splash); when every cuisine of the stage is complete, the next stage opens. The Cookbook only lists dishes of
+dishes are made is complete (toques, splash); when every cuisine of the stage is complete, the next stage opens.
+The Cuisines window is a shelf of red menu books, one per stage (`modals.cuisines`, `menuBook` in ui.js): reached stages
+show their name and cuisine medallions in gold, the next one silhouettes, later ones a plain book with a question mark.
+Clicking a book takes it off the shelf: it grows into place and its cover swings open (`openBookAnim`, a FLIP from the
+shelf) on a menu card with the stage on the left page and its three cuisines as Starter, Main course and Dessert on the
+right; "Put the menu back" closes it and returns it to the shelf. Phones show one page, and the cover swings away. The Cookbook only lists dishes of
 open cuisines that you can make from what is unlocked; the Test Kitchen recognises a dish of an unopened cuisine but
 only says where it belongs. It can use any ingredient you have had at least once, so experiments don't need
 everything in stock at once; cooking still needs the real ingredients.

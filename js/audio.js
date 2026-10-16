@@ -270,6 +270,8 @@
     error: () => { tone({ f: 150, type: 'square', dur: 0.12, vol: 0.06 }); tone({ f: 140, type: 'square', at: 0.13, dur: 0.12, vol: 0.06 }); },
     // Opening and closing windows: a faint paper swoosh.
     open: () => { noise({ dur: 0.12, vol: 0.05, filter: 'bandpass', freq: 1200, to: 3200, q: 1.5 }); },
+    // A menu book's page turning: a soft, rising swish of paper.
+    page: () => { noise({ dur: 0.32, vol: 0.05, filter: 'bandpass', freq: 700, to: 2600, q: 0.8 }); noise({ at: 0.18, dur: 0.16, vol: 0.03, filter: 'highpass', freq: 2500, to: 4000, q: 0.7 }); },
     close: () => { noise({ dur: 0.1, vol: 0.04, filter: 'bandpass', freq: 3000, to: 1100, q: 1.5 }); },
     // New season: a soft bell.
     season: () => { tone({ f: note(81), type: 'sine', dur: 1.4, vol: 0.12 }); tone({ f: note(81) * 2.76, type: 'sine', dur: 0.7, vol: 0.03 }); tone({ f: note(76), type: 'sine', at: 0.25, dur: 1.4, vol: 0.1 }); },
