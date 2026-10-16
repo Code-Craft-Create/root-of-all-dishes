@@ -827,7 +827,7 @@
     const cuisines = Game.cuisinesNewestFirst().map((z) => z.name).filter((c) => menu.some((d) => d.cuisine === c));
     const hidden = FS.dishList.length - menu.length;
     return {
-      title: `📖 Cookbook <span class="muted">${disc} / ${FS.dishList.length} discovered</span>`, cls: 'wide',
+      title: `📖 Cookbook <span class="muted">${disc} / ${FS.dishList.length} discovered</span>`, cls: 'wide cb',
       html: `<div class="row gap wrap">
         <input type="search" class="search" data-search="cb" placeholder="Search dishes…" value="${esc(ui.search.cb || '')}">
         ${ddPicker('cb-cuisine', [{ v: '', label: 'All cuisines' }, ...cuisines.map((c) => ({ v: c, label: c, icon: 'cz_' + FS.slug(c), n: menu.filter((d) => d.cuisine === c).length }))], f.cuisine || '', 'Filter by cuisine', 'dd-wide')}
