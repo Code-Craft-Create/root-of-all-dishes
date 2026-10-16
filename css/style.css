@@ -701,6 +701,30 @@ p.o-strip.disp-line { margin: 0 0 10px; }
 .gm-head .switch { margin-left: auto; align-self: center; }
 .gm-card details.settings { margin-top: 10px; }
 .gm-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: space-between; padding-top: 2px; }
+/* The Settings window is the farm workshop: a brushed steel frame with a rivet in each corner, two meshed cog wheels
+   sticking out on the right (their hubs hidden behind the card) (turning slowly, still for reduced motion) and a wrench poking out of the left side, head tilted up (under the bottom on phones).
+   The cogs and wrench sit behind the card (z-index -1), so they never cover a control. */
+.modal-card.workshop { position: relative; border: 14px solid transparent; border-radius: 16px;
+  background: linear-gradient(var(--panel), var(--panel)) padding-box,
+    radial-gradient(circle at 7px 7px, #f4f5f6 0 2px, #6f767e 3px 4.5px, transparent 5px) 0 0 / 14px 14px no-repeat border-box,
+    radial-gradient(circle at 7px 7px, #f4f5f6 0 2px, #6f767e 3px 4.5px, transparent 5px) 100% 0 / 14px 14px no-repeat border-box,
+    radial-gradient(circle at 7px 7px, #f4f5f6 0 2px, #6f767e 3px 4.5px, transparent 5px) 0 100% / 14px 14px no-repeat border-box,
+    radial-gradient(circle at 7px 7px, #f4f5f6 0 2px, #6f767e 3px 4.5px, transparent 5px) 100% 100% / 14px 14px no-repeat border-box,
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.09) 0 1px, transparent 1px 3px) border-box,
+    linear-gradient(160deg, #c9ced3 0%, #9aa1a8 45%, #b7bcc2 70%, #868d94 100%) border-box;
+  box-shadow: inset 0 0 0 1px #6f767e, 0 0 0 1px #5d646b, 0 20px 60px rgba(0, 0, 0, 0.45); }
+.modal-card.workshop > header { border-radius: 4px 4px 0 0; }
+.modal-card.workshop::before, .modal-card.workshop::after { content: ''; position: absolute; z-index: -1; pointer-events: none; background: no-repeat center / contain;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.4)); }
+.modal-card.workshop::before { top: 26px; left: calc(100% - 106px); width: 190px; height: 258px; background-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 140 190%22%3E%3Cg transform=%22rotate(0 56.0 64.0)%22%3E%3CanimateTransform attributeName=%22transform%22 type=%22rotate%22 from=%220 56.0 64.0%22 to=%22360 56.0 64.0%22 dur=%2224s%22 repeatCount=%22indefinite%22/%3E%3Cpath d=%22M100.5 64.0 L100.4 66.8 L111.1 71.0 L109.6 78.4 L98.2 78.2 L94.5 86.2 L94.5 86.2 L93.1 88.6 L100.2 97.6 L95.2 103.2 L85.4 97.4 L78.2 102.5 L78.2 102.5 L75.8 103.9 L77.5 115.2 L70.4 117.6 L64.8 107.6 L56.0 108.5 L56.0 108.5 L53.2 108.4 L49.0 119.1 L41.6 117.6 L41.8 106.2 L33.8 102.5 L33.8 102.5 L31.4 101.1 L22.4 108.2 L16.8 103.2 L22.6 93.4 L17.5 86.3 L17.5 86.2 L16.1 83.8 L4.8 85.5 L2.4 78.4 L12.4 72.8 L11.5 64.0 L11.5 64.0 L11.6 61.2 L0.9 57.0 L2.4 49.6 L13.8 49.8 L17.5 41.8 L17.5 41.8 L18.9 39.4 L11.8 30.4 L16.8 24.8 L26.6 30.6 L33.7 25.5 L33.7 25.5 L36.2 24.1 L34.5 12.8 L41.6 10.4 L47.2 20.4 L56.0 19.5 L56.0 19.5 L58.8 19.6 L63.0 8.9 L70.4 10.4 L70.2 21.8 L78.2 25.5 L78.2 25.5 L80.6 26.9 L89.6 19.8 L95.2 24.8 L89.4 34.6 L94.5 41.8 L94.5 41.7 L95.9 44.2 L107.2 42.5 L109.6 49.6 L99.6 55.2 L100.5 64.0Z%22 fill=%22%23a7adb4%22 stroke=%22%234c5258%22 stroke-width=%222%22 stroke-linejoin=%22round%22/%3E%3Ccircle cx=%2256.0%22 cy=%2264.0%22 r=%2239.0%22 fill=%22none%22 stroke=%22%238a9198%22 stroke-width=%222%22/%3E%3Ccircle cx=%2283.5%22 cy=%2264.0%22 r=%228.5%22 fill=%22%237d848c%22/%3E%3Ccircle cx=%2264.5%22 cy=%2290.2%22 r=%228.5%22 fill=%22%237d848c%22/%3E%3Ccircle cx=%2233.8%22 cy=%2280.2%22 r=%228.5%22 fill=%22%237d848c%22/%3E%3Ccircle cx=%2233.8%22 cy=%2247.8%22 r=%228.5%22 fill=%22%237d848c%22/%3E%3Ccircle cx=%2264.5%22 cy=%2237.8%22 r=%228.5%22 fill=%22%237d848c%22/%3E%3Ccircle cx=%2256.0%22 cy=%2264.0%22 r=%2214.0%22 fill=%22%236d747c%22 stroke=%22%234c5258%22 stroke-width=%222%22/%3E%3Ccircle cx=%2256.0%22 cy=%2264.0%22 r=%225.5%22 fill=%22%232f3438%22/%3E%3C/g%3E%3Cg transform=%22rotate(25.714285714285715 56.0 143.0)%22%3E%3CanimateTransform attributeName=%22transform%22 type=%22rotate%22 from=%2225.714285714285715 56.0 143.0%22 to=%22-334.2857142857143 56.0 143.0%22 dur=%2214s%22 repeatCount=%22indefinite%22/%3E%3Cpath d=%22M79.5 143.0 L79.4 145.5 L89.7 150.4 L87.1 158.0 L76.0 155.4 L70.7 161.4 L70.7 161.4 L68.6 162.8 L71.2 173.9 L63.7 176.6 L58.7 166.3 L50.8 165.9 L50.8 165.9 L48.3 165.2 L41.3 174.2 L34.5 170.0 L39.5 159.7 L34.8 153.2 L34.8 153.2 L33.9 150.9 L22.4 151.0 L21.5 143.0 L32.6 140.5 L34.8 132.8 L34.8 132.8 L36.0 130.6 L28.8 121.7 L34.5 116.0 L43.4 123.2 L50.8 120.1 L50.8 120.1 L53.3 119.7 L55.7 108.5 L63.7 109.4 L63.7 120.8 L70.7 124.6 L70.7 124.6 L72.5 126.3 L82.8 121.2 L87.1 128.0 L78.1 135.1 L79.5 143.0Z%22 fill=%22%23b9bec4%22 stroke=%22%234c5258%22 stroke-width=%222%22 stroke-linejoin=%22round%22/%3E%3Ccircle cx=%2256.0%22 cy=%22143.0%22 r=%2222.6%22 fill=%22none%22 stroke=%22%238a9198%22 stroke-width=%222%22/%3E%3Ccircle cx=%2256.0%22 cy=%22143.0%22 r=%228.1%22 fill=%22%236d747c%22 stroke=%22%234c5258%22 stroke-width=%222%22/%3E%3Ccircle cx=%2256.0%22 cy=%22143.0%22 r=%223.2%22 fill=%22%232f3438%22/%3E%3C/g%3E%3C/svg%3E"); }
+.modal-card.workshop::after { top: 58%; left: -128px; width: 240px; height: 67px; transform: rotate(24deg); background-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 56%22%3E%3Cdefs%3E%3Cmask id=%22m%22%3E%3Crect width=%22200%22 height=%2256%22 fill=%22%23fff%22/%3E%3Cpath d=%22M-2 19 L22 22 L22 34 L-2 37Z%22 fill=%22%23000%22/%3E%3Ccircle cx=%22178%22 cy=%2228%22 r=%228%22 fill=%22%23000%22/%3E%3C/mask%3E%3C/defs%3E%3Cg mask=%22url(%23m)%22 stroke=%22%234c5258%22 stroke-width=%222.5%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M30 21 L165 22 L165 34 L30 35Z%22 fill=%22%23a7adb4%22/%3E%3Ccircle cx=%2226%22 cy=%2228%22 r=%2223%22 fill=%22%23b9bec4%22/%3E%3Ccircle cx=%22178%22 cy=%2228%22 r=%2217%22 fill=%22%23b9bec4%22/%3E%3C/g%3E%3Cpath d=%22M48 27 L150 27.5%22 stroke=%22%23d6dadf%22 stroke-width=%223%22 stroke-linecap=%22round%22/%3E%3C/svg%3E"); }
+#modal:has(.modal-card.workshop) { overflow: hidden; }
+@media (prefers-reduced-motion: reduce) { .modal-card.workshop::before { background-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 140 190%22%3E%3Cg transform=%22rotate(0 56.0 64.0)%22%3E%3Cpath d=%22M100.5 64.0 L100.4 66.8 L111.1 71.0 L109.6 78.4 L98.2 78.2 L94.5 86.2 L94.5 86.2 L93.1 88.6 L100.2 97.6 L95.2 103.2 L85.4 97.4 L78.2 102.5 L78.2 102.5 L75.8 103.9 L77.5 115.2 L70.4 117.6 L64.8 107.6 L56.0 108.5 L56.0 108.5 L53.2 108.4 L49.0 119.1 L41.6 117.6 L41.8 106.2 L33.8 102.5 L33.8 102.5 L31.4 101.1 L22.4 108.2 L16.8 103.2 L22.6 93.4 L17.5 86.3 L17.5 86.2 L16.1 83.8 L4.8 85.5 L2.4 78.4 L12.4 72.8 L11.5 64.0 L11.5 64.0 L11.6 61.2 L0.9 57.0 L2.4 49.6 L13.8 49.8 L17.5 41.8 L17.5 41.8 L18.9 39.4 L11.8 30.4 L16.8 24.8 L26.6 30.6 L33.7 25.5 L33.7 25.5 L36.2 24.1 L34.5 12.8 L41.6 10.4 L47.2 20.4 L56.0 19.5 L56.0 19.5 L58.8 19.6 L63.0 8.9 L70.4 10.4 L70.2 21.8 L78.2 25.5 L78.2 25.5 L80.6 26.9 L89.6 19.8 L95.2 24.8 L89.4 34.6 L94.5 41.8 L94.5 41.7 L95.9 44.2 L107.2 42.5 L109.6 49.6 L99.6 55.2 L100.5 64.0Z%22 fill=%22%23a7adb4%22 stroke=%22%234c5258%22 stroke-width=%222%22 stroke-linejoin=%22round%22/%3E%3Ccircle cx=%2256.0%22 cy=%2264.0%22 r=%2239.0%22 fill=%22none%22 stroke=%22%238a9198%22 stroke-width=%222%22/%3E%3Ccircle cx=%2283.5%22 cy=%2264.0%22 r=%228.5%22 fill=%22%237d848c%22/%3E%3Ccircle cx=%2264.5%22 cy=%2290.2%22 r=%228.5%22 fill=%22%237d848c%22/%3E%3Ccircle cx=%2233.8%22 cy=%2280.2%22 r=%228.5%22 fill=%22%237d848c%22/%3E%3Ccircle cx=%2233.8%22 cy=%2247.8%22 r=%228.5%22 fill=%22%237d848c%22/%3E%3Ccircle cx=%2264.5%22 cy=%2237.8%22 r=%228.5%22 fill=%22%237d848c%22/%3E%3Ccircle cx=%2256.0%22 cy=%2264.0%22 r=%2214.0%22 fill=%22%236d747c%22 stroke=%22%234c5258%22 stroke-width=%222%22/%3E%3Ccircle cx=%2256.0%22 cy=%2264.0%22 r=%225.5%22 fill=%22%232f3438%22/%3E%3C/g%3E%3Cg transform=%22rotate(25.714285714285715 56.0 143.0)%22%3E%3Cpath d=%22M79.5 143.0 L79.4 145.5 L89.7 150.4 L87.1 158.0 L76.0 155.4 L70.7 161.4 L70.7 161.4 L68.6 162.8 L71.2 173.9 L63.7 176.6 L58.7 166.3 L50.8 165.9 L50.8 165.9 L48.3 165.2 L41.3 174.2 L34.5 170.0 L39.5 159.7 L34.8 153.2 L34.8 153.2 L33.9 150.9 L22.4 151.0 L21.5 143.0 L32.6 140.5 L34.8 132.8 L34.8 132.8 L36.0 130.6 L28.8 121.7 L34.5 116.0 L43.4 123.2 L50.8 120.1 L50.8 120.1 L53.3 119.7 L55.7 108.5 L63.7 109.4 L63.7 120.8 L70.7 124.6 L70.7 124.6 L72.5 126.3 L82.8 121.2 L87.1 128.0 L78.1 135.1 L79.5 143.0Z%22 fill=%22%23b9bec4%22 stroke=%22%234c5258%22 stroke-width=%222%22 stroke-linejoin=%22round%22/%3E%3Ccircle cx=%2256.0%22 cy=%22143.0%22 r=%2222.6%22 fill=%22none%22 stroke=%22%238a9198%22 stroke-width=%222%22/%3E%3Ccircle cx=%2256.0%22 cy=%22143.0%22 r=%228.1%22 fill=%22%236d747c%22 stroke=%22%234c5258%22 stroke-width=%222%22/%3E%3Ccircle cx=%2256.0%22 cy=%22143.0%22 r=%223.2%22 fill=%22%232f3438%22/%3E%3C/g%3E%3C/svg%3E"); } }
+@media (max-width: 600px) {
+  .modal-card.workshop { border-width: 10px; }
+  .modal-card.workshop::before { top: auto; bottom: -64px; left: calc(100% - 145px); width: 118px; height: 160px; transform: rotate(-90deg); }
+  .modal-card.workshop::after { top: auto; bottom: -30px; left: 40px; width: 140px; height: 39px; transform: scaleX(-1) rotate(-14deg); }
+}
 
 /* On/off switch */
 .switch { display: inline-flex; align-items: center; gap: 7px; padding: 3px 10px 3px 3px; border-radius: 999px; background: var(--panel2); border-color: var(--line); font-size: 13px; font-weight: 600; color: var(--muted); }
@@ -1156,13 +1180,44 @@ button.ghost { border: none; background: none; padding: 0 4px; }
 .splash .sp-rewards .ico { width: 18px; height: 18px; vertical-align: -3px; }
 .splash .sp-icon.gold { background: radial-gradient(circle, #fff6c8 52%, #f2c14e); box-shadow: 0 0 0 5px #e3a823, 0 6px 22px rgba(220, 150, 20, 0.6); }
 .splash .dc-chain { text-align: center; }
-/* Trophy cabinet: a wooden cupboard with glass shelves; places not won yet show a dashed outline */
+/* Trophy cabinet: the card is a tall walnut display cabinet with a carved cornice on top and two feet below. Inside, deep
+   red velvet, a little spotlight over every glass shelf, a brass name plate on each shelf and a faint glare across the
+   glass doors. Places not won yet show a dashed outline. */
 .tc-open { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font-weight: 700; }
-.modal-card.cabinet-card { width: min(760px, 96vw); }
-.cabinet { padding: 14px 14px 4px; border-radius: 12px; background: linear-gradient(90deg, #5a331b, #7a4a2a 8%, #6b3f22 92%, #4e2c17); box-shadow: inset 0 0 0 4px #3e2312, inset 0 0 0 7px #8a5a33, 0 6px 16px rgba(0, 0, 0, 0.25); }
-.tc-shelf { margin-bottom: 12px; border-radius: 6px 6px 0 0; background: linear-gradient(160deg, rgba(220, 240, 250, 0.22), rgba(140, 175, 195, 0.1) 45%, rgba(220, 240, 250, 0.16)), #3a2416; box-shadow: inset 0 6px 12px rgba(0, 0, 0, 0.35); }
+.modal-card.cabinet-card { --wood: #4a2a16; position: relative; width: min(760px, 96vw); max-height: calc(88vh - 40px); margin-top: 22px; padding: 0 12px 12px; border-radius: 4px 4px 8px 8px;
+  background: repeating-linear-gradient(92deg, rgba(255, 220, 170, 0.04) 0 2px, transparent 2px 11px, rgba(0, 0, 0, 0.06) 11px 13px, transparent 13px 29px),
+    linear-gradient(90deg, #3c2010, #5e3a20 12%, #6a4325 50%, #5e3a20 88%, #3c2010);
+  box-shadow: inset 0 0 0 2px #2a1508, inset 0 0 0 5px #7d5230, inset 0 0 0 6px #2a1508, 0 22px 60px rgba(0, 0, 0, 0.5); }
+.modal-card.cabinet-card::before { content: ''; position: absolute; left: -14px; right: -14px; top: -22px; height: 24px; border-radius: 6px 6px 1px 1px; pointer-events: none;
+  background: linear-gradient(90deg, transparent calc(50% - 26px), #e2b85a calc(50% - 26px) calc(50% + 26px), transparent calc(50% + 26px)) 0 8px / 100% 5px no-repeat,
+    linear-gradient(180deg, #7d5230 0 4px, #4a2a16 4px 7px, #6a4325 7px 15px, #3c2010 15px 18px, #5e3a20 18px 100%);
+  box-shadow: 0 3px 4px rgba(0, 0, 0, 0.4); }
+.modal-card.cabinet-card::after { content: ''; position: absolute; left: 22px; right: 22px; bottom: -13px; height: 14px; pointer-events: none;
+  background: linear-gradient(180deg, #4a2a16, #24120a) left / 52px 100% no-repeat, linear-gradient(180deg, #4a2a16, #24120a) right / 52px 100% no-repeat;
+  filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.45)); }
+.modal-card.cabinet-card > header { border-bottom: 0; padding: 12px 6px 10px; }
+.modal-card.cabinet-card > header h2 { color: #fbe7c4; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6); }
+.modal-card.cabinet-card > header h2 .muted { color: #d9b98c; }
+.modal-card.cabinet-card #modal-body { padding: 0; border-radius: 3px; }
+.cabinet { position: relative; padding: 14px 14px 6px; border-radius: 3px; background: radial-gradient(ellipse 80% 50% at 50% 0, rgba(255, 150, 140, 0.18), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.07) 0 2px, transparent 2px 5px), linear-gradient(180deg, #6b1622, #4a0d17 60%, #3a0912);
+  box-shadow: inset 0 0 0 3px #2a1508, inset 0 6px 18px rgba(0, 0, 0, 0.6); }
+.cabinet::after { content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: linear-gradient(115deg, transparent 18%, rgba(255, 255, 255, 0.07) 22%, transparent 30%, transparent 56%, rgba(255, 255, 255, 0.05) 60%, rgba(255, 255, 255, 0.05) 63%, transparent 66%); }
+.tc-shelf { margin-bottom: 14px; background: radial-gradient(ellipse 34% 95% at 50% -12%, rgba(255, 236, 190, 0.3), transparent 72%),
+  radial-gradient(ellipse 18% 70% at 16% -10%, rgba(255, 236, 190, 0.14), transparent 70%), radial-gradient(ellipse 18% 70% at 84% -10%, rgba(255, 236, 190, 0.14), transparent 70%); }
 .tc-row { display: flex; flex-wrap: wrap; justify-content: space-around; align-items: flex-end; gap: 6px 2px; padding: 12px 8px 2px; }
-.tc-ledge { height: 20px; line-height: 20px; border-radius: 0 0 4px 4px; background: linear-gradient(#a8743f, #7d5028); color: #fbe7c4; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; text-align: center; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4); box-shadow: 0 3px 4px rgba(0, 0, 0, 0.35); }
+.tc-ledge { position: relative; height: 7px; margin: 0 -6px; border-radius: 2px; text-align: center;
+  background: linear-gradient(180deg, rgba(230, 250, 255, 0.75), rgba(160, 205, 220, 0.45) 60%, rgba(60, 100, 115, 0.6)); box-shadow: 0 5px 6px rgba(0, 0, 0, 0.45); }
+.tc-ledge span { position: relative; top: -5px; display: inline-block; padding: 1px 14px; border-radius: 2px; background: linear-gradient(180deg, #f3d488, #c9963a 60%, #a8771f);
+  color: #4a2a0a; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; line-height: 14px; text-transform: uppercase; text-shadow: 0 1px 0 rgba(255, 240, 200, 0.6);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(110, 70, 15, 0.6); }
+.tc-ledge span::before, .tc-ledge span::after { content: ''; position: absolute; top: 5px; width: 4px; height: 4px; border-radius: 50%; background: #8a6018; box-shadow: inset 0 1px 0 rgba(255, 240, 200, 0.6); }
+.tc-ledge span::before { left: 4px; }
+.tc-ledge span::after { right: 4px; }
+.tc-shelf { margin-bottom: 20px; }
+.tc-shelf:last-child { margin-bottom: 14px; }
+@media (max-width: 600px) { .modal-card.cabinet-card::before { left: -5px; right: -5px; } .modal-card.mc-card::before { left: -4px; right: -4px; } }
 .tc-slot { position: relative; display: flex; flex-direction: column; align-items: center; width: 74px; padding: 0; border: 0; background: none; }
 .tc-slot .tc-svg { width: 60px; height: 75px; }
 .tc-slot.won { cursor: pointer; transition: transform 0.15s; }
@@ -1421,28 +1476,63 @@ body.touch-placing #toasts { bottom: 128px; }
 .tk-cz .ico { width: 20px; height: 20px; flex: none; }
 .tk-cz span { overflow: hidden; text-overflow: ellipsis; }
 .tk-cz.on { border-color: var(--accent); background: #fff6df; box-shadow: 0 0 0 1px var(--accent); }
-.modal-card.mc-card { width: min(620px, 96vw); }
-.mc { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; background: linear-gradient(90deg, #5a331b, #7a4a2a 8%, #6b3f22 92%, #4e2c17); box-shadow: inset 0 0 0 4px #3e2312, inset 0 0 0 7px #8a5a33, 0 6px 16px rgba(0, 0, 0, 0.25); }
-.mc-drawer { position: relative; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 14px; border-radius: 6px; color: #fbe7c4;
-  background: linear-gradient(#9a6a3e, #7d5028); box-shadow: inset 0 1px 0 rgba(255, 230, 190, 0.35), inset 0 -3px 0 rgba(0, 0, 0, 0.25), 0 2px 3px rgba(0, 0, 0, 0.35); }
-.mc-drawer::after { content: ''; position: absolute; right: 14px; top: 50%; width: 26px; height: 6px; margin-top: -3px; border-radius: 3px; background: linear-gradient(#e9c46a, #a87a22); box-shadow: 0 1px 1px rgba(0, 0, 0, 0.4); }
-.mc-drawer.open { margin-left: -6px; margin-right: 6px; color: #3b2b22; background: linear-gradient(#fbf3e2, #efe0c2); box-shadow: inset 0 0 0 2px #c99a5a, 0 4px 8px rgba(0, 0, 0, 0.4); }
-.mc-drawer.open::after { display: none; }
+/* Mystery Cupboard: the card is an old dark cupboard with a carved top, its two doors swung open at the sides. Each skill
+   is a drawer: a locked one has a brass keyhole and a brass bar filling up; an open one is pulled out and holds a note. */
+.modal-card.mc-card { position: relative; width: min(620px, 96vw); max-height: calc(88vh - 30px); margin-top: 16px; padding: 0 12px 12px; border-radius: 4px 4px 8px 8px;
+  background: repeating-linear-gradient(90deg, rgba(255, 220, 200, 0.03) 0 2px, transparent 2px 13px, rgba(0, 0, 0, 0.08) 13px 15px, transparent 15px 31px),
+    linear-gradient(90deg, #2a1416, #45232a 15%, #4e2a30 50%, #45232a 85%, #2a1416);
+  box-shadow: inset 0 0 0 2px #1a0b0d, inset 0 0 0 5px #6b3e3f, inset 0 0 0 6px #1a0b0d, 0 22px 60px rgba(0, 0, 0, 0.55); }
+.modal-card.mc-card::before { content: ''; position: absolute; left: -10px; right: -10px; top: -16px; height: 18px; border-radius: 40% 40% 2px 2px / 100% 100% 2px 2px; pointer-events: none;
+  background: linear-gradient(180deg, #6b3e3f 0 3px, #2a1416 3px 6px, #4e2a30 6px 12px, #2a1416 12px 14px, #45232a 14px); box-shadow: 0 3px 4px rgba(0, 0, 0, 0.4); }
+.modal-card.mc-card::after { content: ''; position: absolute; left: 26px; right: 26px; bottom: -11px; height: 12px; pointer-events: none;
+  background: radial-gradient(ellipse 50% 100% at 50% 0, #45232a 60%, transparent 62%) left / 40px 100% no-repeat, radial-gradient(ellipse 50% 100% at 50% 0, #45232a 60%, transparent 62%) right / 40px 100% no-repeat;
+  filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.45)); }
+.modal-card.mc-card > header { border-bottom: 0; padding: 12px 6px 10px; }
+.modal-card.mc-card > header h2 { color: #f6e3c8; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6); }
+.modal-card.mc-card > header h2 .muted { color: #c9a98f; }
+.modal-card.mc-card > header h2 .ico { filter: drop-shadow(0 0 2px rgba(255, 230, 190, 0.7)); }
+.modal-card.mc-card #modal-body { padding: 0 0 2px; }
+.mcup { display: flex; align-items: stretch; }
+.mcup-door { flex: none; width: 26px; margin: 4px 0; pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, #e9c46a 0 2.5px, #8a6018 3.5px, transparent 4.5px) center / 100% 100% no-repeat,
+    linear-gradient(90deg, rgba(0, 0, 0, 0.35), transparent 40%, rgba(255, 220, 200, 0.06)) , linear-gradient(180deg, #3a1d21, #52303a 50%, #3a1d21);
+  box-shadow: inset 0 0 0 3px #2a1416, inset 0 0 0 5px #6b3e3f; }
+.mcup-door.l { margin-right: 8px; transform: perspective(300px) rotateY(28deg); transform-origin: right center; }
+.mcup-door.r { margin-left: 8px; transform: perspective(300px) rotateY(-28deg); transform-origin: left center; }
+.mcup-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 9px; padding: 12px 10px; border-radius: 2px;
+  background: radial-gradient(ellipse 70% 40% at 50% 0, rgba(255, 220, 160, 0.12), transparent 70%), linear-gradient(180deg, #1f0f12, #2c161a);
+  box-shadow: inset 0 0 0 2px #120607, inset 0 8px 20px rgba(0, 0, 0, 0.7); }
+.mc-drawer { position: relative; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 14px; border-radius: 3px; color: #f6e3c8;
+  background: repeating-linear-gradient(90deg, rgba(255, 220, 200, 0.04) 0 2px, transparent 2px 17px), linear-gradient(180deg, #6e3f43, #55303a 70%, #482730);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.5), inset 0 0 0 4px rgba(255, 210, 190, 0.08), inset 0 1px 0 rgba(255, 220, 200, 0.25), 0 2px 3px rgba(0, 0, 0, 0.5); }
+.mc-drawer.open { margin: 0 -6px 4px; padding-bottom: 14px; color: #3b2b22; background: linear-gradient(180deg, #fbf3e2, #efe0c2);
+  box-shadow: inset 0 0 0 1px #c99a5a, 0 0 0 4px #55303a, 0 6px 10px rgba(0, 0, 0, 0.55); border-radius: 2px; }
+.mc-drawer.open::after { content: ''; position: absolute; left: -4px; right: -4px; bottom: -10px; height: 12px; border-radius: 0 0 3px 3px;
+  background: radial-gradient(ellipse 22px 4px at 50% 50%, #e9c46a 0 70%, transparent 75%), linear-gradient(180deg, #6e3f43, #482730); box-shadow: 0 3px 4px rgba(0, 0, 0, 0.5); }
 .mc-icon { flex: none; display: grid; place-items: center; width: 48px; height: 48px; }
 .mc-icon .ico { width: 44px; height: 44px; }
-.mc-drawer:not(.open) .mc-icon .ico { width: 30px; height: 30px; opacity: 0.85; }
+.mc-keyhole { width: 34px; height: 46px; border-radius: 16px 16px 6px 6px; background: radial-gradient(circle at 50% 38%, #1a0b0d 0 5px, transparent 5.5px),
+    linear-gradient(#1a0b0d, #1a0b0d) 50% 66% / 5px 14px no-repeat, radial-gradient(circle at 40% 30%, #fbe39a, #d1a043 55%, #8a6018);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(110, 70, 15, 0.7); }
 .mc-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; padding-right: 40px; font-size: 13px; }
 .mc-text b { font-size: 15px; }
+.mc-drawer:not(.open) .mc-text b { align-self: flex-start; padding: 0 10px; border-radius: 2px; color: #4a2a0a; background: linear-gradient(180deg, #f3d488, #c9963a);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(110, 70, 15, 0.6); font-size: 14px; }
 .mc-drawer.open .mc-text { padding-right: 0; }
-.mc-bar { display: block; height: 6px; max-width: 220px; margin-top: 3px; border-radius: 3px; background: rgba(0, 0, 0, 0.3); overflow: hidden; }
-.mc-bar i { display: block; height: 100%; max-width: 100%; background: #e9c46a; }
-.mc-count { position: absolute; right: 12px; bottom: 6px; font-size: 11px; font-weight: 700; opacity: 0.85; }
+.mc-bar { display: block; height: 6px; max-width: 220px; margin-top: 4px; border-radius: 3px; background: rgba(0, 0, 0, 0.45); box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.5); overflow: hidden; }
+.mc-bar i { display: block; height: 100%; max-width: 100%; background: linear-gradient(180deg, #fbe39a, #c9963a); }
+.mc-count { position: absolute; right: 14px; top: 50%; margin-top: -9px; font-size: 13px; font-weight: 700; color: #e9c46a; }
 .mc-foot { justify-content: flex-end; margin-top: 12px; }
 @media (max-width: 600px) {
   .tk-sk-head { display: none; }
   .tk-sk-row { display: inline-flex; margin-left: auto; }
   .mc-drawer { gap: 8px; padding: 8px 10px; }
   .mc-text { font-size: 12px; }
+  .mcup-door { width: 14px; }
+  .mcup-door.l { margin-right: 4px; }
+  .mcup-door.r { margin-left: 4px; }
+  .mcup-body { padding: 10px 6px; }
+  .mc-keyhole { width: 28px; height: 38px; }
 }
 /* Cuisines window: every stage is a red leather menu book standing on a shelf, cover in gold with its three cuisines as
    medallions. Clicking one takes it off the shelf: it grows into place and the cover swings open (ui.js openBookAnim) on
