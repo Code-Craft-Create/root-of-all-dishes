@@ -90,7 +90,7 @@ are not swapped: use `data-tip` for tooltips, and draw icons in the Town SVG wit
   fills the screen: only the latest try shows ("Show earlier tries" opens the rest) and the ingredient list keeps the space below. Windows taller than a sideways phone scroll.
   In the Town on an upright phone the map fills the screen and the restaurant panel is a bottom sheet: only its tabs show
   until you tap a lot, a tab or the critics banner; close it with its arrow or a swipe down. Pinch to zoom the town too.
-- Keyboard: I or M inventory, K test kitchen, B cookbook, X codex, O orders, J journal, G goals, P cuisines, F flows, N sound on/off, Space pause.
+- Keyboard: I or M inventory, K test kitchen, B cookbook, X codex, O orders, J journal, G goals, P cuisines, F chains, N sound on/off, Space pause.
 - **Debug cheat console:** press the key left of 1 (`` ` `` or §), or on a phone or tablet hold a finger on the logo and version at the top left, and type `help` (on touch screens, tapping a command in the list writes it into the line). `season winter` / `weather storm` force the
   season or weather (`off` or `clear` goes back to normal); visuals, sounds and growth follow. Overrides are not saved.
   `money 10000` adds money. `target [cuisine]` shows the splash a cuisine gets when it is complete (looks only). `signature [reveal|make]` reveals the current stage's Chef's Challenge or makes them all. `recipes all` reveals every dish (no rewards); `recipes hide` or `clear` hides only the dishes
@@ -254,11 +254,13 @@ older) no longer load.
 
 ## Seeing the supply chain
 
-- **🔗 Flows** (button on the map, or `F`) draws arrows from each building to the buildings that use what it
+- **🔗 Chains** (button on the map, or `F`) draws arrows from each building to the buildings that use what it
   makes, coloured like the production bars: green when the farm makes enough of that ingredient for everyone
   who uses it, yellow at 50–99%, red below, brown when the user's storage is full, icy when it is too cold. Dashed
   and pulsing: the building is waiting for that ingredient. Selecting a building shows just its links. The ▾ next to
-  the button filters the links to chosen goods or building types (remembered in this browser).
+  the button finds chosen goods or building types, grouped like the Inventory and the build menu (remembered in
+  this browser). It lists everything your buildings make, dishes included; the buildings it picks out blink white
+  and the rest of the farm darkens.
 - **🗺️ Plan production** (Codex and Cookbook) lists every step needed to make an item from scratch, what is
   already running, and builds a missing step with the right recipe preset (or, after stage C, the whole chain as a 📐 blueprint).
 - **Where the price goes** in the Codex splits each item's value into farm, processing and kitchen shares.
