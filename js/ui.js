@@ -3271,7 +3271,7 @@
     Game.on('reset', () => { TownMap.sig = ''; if (ui.townMode && !Game.restaurantsUnlocked()) ui.setTown(false); else if (ui.townMode) drawTown(true); });
   };
   // Farmyard sounds: now and then an animal on a farm you can see calls out, louder the closer you zoom in,
-  // from its side of the screen. More animal farms on screen make calls a little more frequent, never a din.
+  // from its side of the screen. A second farm of the same animal makes its calls a little more frequent, more add nothing.
   // Apiaries (bees while they work) and the shore (docks and fish pens: lapping water, gulls) join in the same way.
   let animalWait = 3;
   function visiblePlaces() {
@@ -3292,7 +3292,10 @@
   function farmyard(dt) {
     if (!Game.S.speed || ui.modal) return; // quiet while paused or reading a window
     if ((animalWait -= dt) > 0) return;
-    const vis = Render.visibleAnimals().concat(visiblePlaces());
+    // Each kind of animal (or place sound) counts at most twice: one cow farm calls less than two, but ten call no more than two.
+    const all = Render.visibleAnimals().concat(visiblePlaces()), seen = {}, vis = [];
+    for (let i = all.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [all[i], all[j]] = [all[j], all[i]]; }
+    for (const a of all) { const k = a.place || a.animal; if ((seen[k] = (seen[k] || 0) + 1) <= 2) vis.push(a); }
     animalWait = vis.length ? (2.5 + Math.random() * 5) / Math.min(3, Math.sqrt(vis.length)) : 2;
     if (!vis.length) return;
     const a = vis[Math.floor(Math.random() * vis.length)];
