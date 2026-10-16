@@ -987,6 +987,45 @@ button.ghost { border: none; background: none; padding: 0 4px; }
 .ry-place { font-size: 22px; text-align: center; font-weight: 700; }
 .ry-quote { font-style: italic; margin-top: 2px; }
 @media (max-width: 1100px) { #town-panel { width: 340px; } }
+/* Town on desktop: the long back label, no sheet controls. */
+.tw-back .tw-short, .tw-tabs .tw-sheetbtn, .tw-tabs .tw-grip { display: none; }
+/* Town on phones held sideways: the side panel stays, with the short back label and the critics banner beside it. */
+@media (hover: none) and (pointer: coarse) and (max-height: 560px) and (min-width: 601px) {
+  #town-panel { width: min(340px, 42vw); }
+  .tw-back { top: 8px; left: 8px; padding: 6px 10px; }
+  .tw-back .tw-long { display: none; }
+  .tw-back .tw-short { display: inline; }
+  #town-banner { top: 8px; left: auto; right: 8px; transform: none; max-width: calc(100% - 112px); }
+  .tw-banner { font-size: 13px; padding: 5px 11px; white-space: normal; text-align: center; }
+  body.town-mode:not(.modal-open) #toasts { right: calc(min(340px, 42vw) + 14px); }
+}
+/* Town on upright phones: the map fills the screen and the panel is a bottom sheet (ui.js townSheet). Closed, only
+   its tab row peeks out at the bottom; open (body.tw-sheet), it covers the lower part of the map and scrolls. */
+@media (hover: none) and (pointer: coarse) and (max-width: 600px) {
+  #town-panel { position: fixed; left: 0; right: 0; bottom: 0; width: auto; z-index: 12; border-left: 0; border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 18px rgba(0,0,0,.25); padding-bottom: env(safe-area-inset-bottom); }
+  body.town-mode.tw-sheet #town-panel { height: min(64dvh, calc(100dvh - var(--tb-h, 80px) - 110px)); }
+  body.town-mode:not(.tw-sheet) #town-panel .tw-body { display: none; }
+  #town-panel .tw-tabs { position: relative; padding: 16px 8px 0; align-items: flex-end; touch-action: none; }
+  body.town-mode:not(.tw-sheet) #town-panel .tw-tabs { border-bottom: 0; padding-bottom: 8px; }
+  body.town-mode:not(.tw-sheet) #town-panel .tw-tabs button { border-radius: 8px; border-bottom: 1px solid var(--line); }
+  .tw-tabs .tw-grip { display: block; position: absolute; top: 6px; left: 50%; width: 40px; height: 4px; margin-left: -20px; border-radius: 2px; background: var(--line); }
+  .tw-tabs .tw-lottab { flex: 1 1 auto; }
+  .tw-tabs .tw-sheetbtn { display: block; margin-left: auto; flex: none; width: 40px; padding: 0; align-self: stretch; min-height: 34px; background: transparent; border: 0; }
+  .tw-tabs .tw-sheetbtn i { display: block; width: 10px; height: 10px; margin: 0 auto; border: solid var(--ink, #3b2b22); border-width: 2.5px 2.5px 0 0; transform: translateY(3px) rotate(-45deg); }
+  body.tw-sheet .tw-tabs .tw-sheetbtn i { transform: translateY(-3px) rotate(135deg); }
+  #town-panel .tw-body { padding-bottom: 24px; }
+  #town-panel input[type=search] { font-size: 16px; } /* 16 px keeps phones from zooming the page in on focus */
+  .tw-back { top: 8px; left: 8px; padding: 6px 10px; }
+  .tw-back .tw-long { display: none; }
+  .tw-back .tw-short { display: inline; }
+  #town-banner { top: 8px; left: auto; right: 8px; transform: none; max-width: calc(100% - 112px); }
+  .tw-banner { font-size: 13px; padding: 5px 11px; white-space: normal; text-align: center; }
+  .tw-legend { left: 8px; bottom: 66px; }
+  .tw-zoom { right: 8px; bottom: 66px; }
+  body.town-mode:not(.modal-open) #toasts { right: 8px; bottom: 66px; }
+  body.town-mode.tw-sheet:not(.modal-open) #toasts { bottom: auto; top: calc(var(--tb-h, 80px) + 74px); }
+}
 
 /* Head chef box in a restaurant's Town panel */
 .tw-chefs { display: flex; flex-direction: column; gap: 6px; }

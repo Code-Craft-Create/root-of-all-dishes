@@ -1472,9 +1472,10 @@
     const r = l && Game.restaurantAt(l.id);
     const lotName = l ? (r ? r.name : l.rival ? Game.rival(l.rival).name : l.name) : '';
     const body = tab === 'guide' ? guidePanel() : r ? restaurantPanel(r) : l.rival ? rivalPanel(l) : freeLotPanel(l);
-    return `<div class="tw-tabs">${l ? `<button class="tw-lottab ${tab === 'lot' ? 'on' : ''}" data-action="town-tab" data-arg="lot" data-tip="${esc(lotName)}">🍴 ${esc(lotName)}</button>`
-      : '<span class="tw-lottab hintab">Click a TO LET sign</span>'}
-      <button class="${tab === 'guide' ? 'on' : ''}" data-action="town-tab" data-arg="guide" data-tip="Town Guide">📰 Guide</button></div><div class="tw-body" data-scroll="twbody">${body}</div>`;
+    return `<div class="tw-tabs"><span class="tw-grip"></span>${l ? `<button class="tw-lottab ${tab === 'lot' ? 'on' : ''}" data-action="town-tab" data-arg="lot" data-tip="${esc(lotName)}">🍴 ${esc(lotName)}</button>`
+      : `<span class="tw-lottab hintab">${ui.touch ? 'Tap' : 'Click'} a TO LET sign</span>`}
+      <button class="${tab === 'guide' ? 'on' : ''}" data-action="town-tab" data-arg="guide" data-tip="Town Guide">📰 Guide</button>
+      <button class="tw-sheetbtn" data-action="town-sheet" title="${ui.townSheet ? 'Close' : 'Open'}"><i></i></button></div><div class="tw-body" data-scroll="twbody">${body}</div>`;
   }
   // Redraw an element's HTML, keeping the focused search box, its caret, and scroll positions.
   function renderKeep(el, html) {
@@ -1486,6 +1487,15 @@
     if (focus) { const f = el.querySelector(`[data-search="${focus}"]`); if (f) { f.focus(); try { f.setSelectionRange(sel, sel); } catch (e) {} } }
   }
   function renderTownPanel() { if (ui.townMode) renderKeep($('#town-panel'), townPanelHtml()); }
+  // Upright phones: the Town panel is a bottom sheet over the map. Closed, only its tab row shows; it opens on a tapped
+  // lot, a tab or the critics banner, and closes with its button or a swipe down. Wider screens keep the side panel.
+  const phoneTown = () => matchMedia('(hover: none) and (pointer: coarse) and (max-width: 600px)').matches;
+  function townSheet(on) {
+    ui.townSheet = !!on;
+    document.body.classList.toggle('tw-sheet', ui.townSheet);
+    renderTownPanel();
+    if (ui.townSheet && ui.townTab === 'lot' && ui.townSel) TownMap.reveal(ui.townSel, $('#town-panel').offsetHeight);
+  }
   function townBanner() {
     const c = Game.S.critic;
     if (!c || c.v !== 2 || Game.criticDone()) return '';
@@ -1527,8 +1537,8 @@
     SFX.play('open');
   };
   function townOverHtml() {
-    return `<button class="tw-back" data-action="town" title="Back to your farm (T)">🌾 Back to the farm</button><div id="town-banner">${townBanner()}</div>
-      <div class="tw-legend">${qm('Drag to move, wheel to zoom. Click a restaurant or a TO LET sign.')}</div>
+    return `<button class="tw-back" data-action="town" title="Back to your farm (T)">🌾 <span class="tw-long">Back to the farm</span><span class="tw-short">Farm</span></button><div id="town-banner">${townBanner()}</div>
+      <div class="tw-legend">${qm(ui.touch ? 'Drag to move, pinch to zoom. Tap a restaurant or a TO LET sign.' : 'Drag to move, wheel to zoom. Click a restaurant or a TO LET sign.')}</div>
       <div class="tw-zoom"><button data-action="town-zoom" data-arg="1">+</button><button data-action="town-zoom" data-arg="-1">−</button></div>`;
   }
   // Locked town (before enough dishes are discovered): a teaser instead of the town.
@@ -2358,12 +2368,13 @@
       case 'ac-pick': ui.acPick = ui.acPick === +arg ? null : +arg; ui.refresh(); break;
       case 'ac-assign': { const [cid, what] = String(arg).split('|'); Game.assignChef(+cid, what); if (what) ui.acPick = null; ui.refresh(); break; }
       case 'ac-send': Game.sendChef(arg); ui.refresh(); break;
-      case 'town-sel': ui.townSel = arg; ui.townTab = 'lot'; ui.search.town = ''; drawTown(); ui.refresh(); break;
+      case 'town-sel': ui.townSel = arg; ui.townTab = 'lot'; ui.search.town = ''; drawTown(); ui.refresh(); if (phoneTown()) townSheet(true); break;
       case 'town': ui.setTown(!ui.townMode); break;
       case 'finale': ui.finale(); break;
       // See an earned card again from the trophy shelf (nothing is paid twice: cards only show).
       case 'replay': if (!ui.splashQ.includes(arg)) ui.splashQ.unshift(arg); ui.afterSplash = ui.modal; closeModal(); break;
-      case 'town-tab': ui.townTab = arg; ui.refresh(); break;
+      case 'town-tab': ui.townTab = arg; ui.refresh(); if (phoneTown() && !ui.townSheet) townSheet(true); break;
+      case 'town-sheet': townSheet(!ui.townSheet); break;
       case 'town-zoom': { const el = $('#town-map'); TownMap.zoomAt(el.clientWidth / 2, el.clientHeight / 2, +arg > 0 ? 1.25 : 0.8); break; }
       case 'town-offer':
         if (confirm(`Buy out ${Game.CORP.name} for ${money(Game.CORP.offer)} coins? Its three restaurants become yours.`)) spend(() => Game.acceptOffer());
@@ -3201,6 +3212,17 @@
     bindInput();
     bindTips();
     TownMap.bind($('#town-map'));
+    // Phone bottom sheet: swipe its tab row down to close it, up to open it.
+    { let sw = null;
+      $('#town-panel').addEventListener('pointerdown', (e) => { sw = e.pointerType === 'touch' && phoneTown() && e.target.closest('.tw-tabs') ? { y: e.clientY, x: e.clientX } : null; });
+      window.addEventListener('pointerup', (e) => {
+        if (!sw) return;
+        const dy = e.clientY - sw.y, dx = e.clientX - sw.x;
+        sw = null;
+        if (Math.abs(dy) < 40 || Math.abs(dy) < Math.abs(dx)) return;
+        if ((dy > 0) === ui.townSheet) { ui.swiped = performance.now(); townSheet(dy < 0); }
+      });
+      $('#town-panel').addEventListener('click', (e) => { if (performance.now() - (ui.swiped || 0) < 300) { e.stopPropagation(); e.preventDefault(); } }, true); }
     Game.on('reset', () => { TownMap.sig = ''; if (ui.townMode && !Game.restaurantsUnlocked()) ui.setTown(false); else if (ui.townMode) drawTown(true); });
   };
   // Farmyard sounds: now and then an animal on a farm you can see calls out, louder the closer you zoom in,

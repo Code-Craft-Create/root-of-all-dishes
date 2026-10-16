@@ -1,6 +1,6 @@
 // The Town screen's map: an isometric (45°) town drawn as SVG. Three districts of houses, landmarks and restaurant lots
 // between streets, a harbour in front. Restaurant lots are clickable (data-action town-sel). Pan by dragging, zoom with
-// the wheel. Guests walk the streets; a served guest shows a coin float over the restaurant.
+// the wheel (or two fingers on a touch screen). Guests walk the streets; a served guest shows a coin float over the restaurant.
 (function () {
   'use strict';
   const TW = 64, TH = 32, N = 26, STEP = 5, BLOCK = 4, WATER = 20.6;
@@ -823,20 +823,56 @@
     c.z *= f; TM.clamp();
     c.x = wx - (px - W / 2) / c.z; c.y = wy - (py - H / 2) / c.z; TM.clamp(); TM.applyView();
   };
+  // Glide the view so a lot sits in the middle of the part of the map not covered from below (the phone bottom sheet).
+  TM.reveal = function (lotId, cover) {
+    const at = LOT_AT[lotId];
+    if (!at || !TM.el) return;
+    const [wx, wy] = P(at[0] + 1, at[1] + 1), c = TM.cam, H = TM.el.clientHeight, W = TM.el.clientWidth;
+    const sy = (wy - c.y) * c.z + H / 2, sx = (wx - c.x) * c.z + W / 2;
+    if (sy > 40 && sy < H - cover - 40 && sx > 30 && sx < W - 30) return; // already in sight
+    const to = { x: wx, y: wy + cover / 2 / c.z }, from = { x: c.x, y: c.y }, t0 = performance.now();
+    const step = (now) => {
+      if (TM.tween !== step) return;
+      const k = Math.min(1, (now - t0) / 350), e = 1 - Math.pow(1 - k, 3);
+      c.x = from.x + (to.x - from.x) * e; c.y = from.y + (to.y - from.y) * e; TM.clamp(); TM.applyView();
+      if (k < 1) requestAnimationFrame(step); else TM.tween = null;
+    };
+    TM.tween = step; requestAnimationFrame(step);
+  };
   // Fit the whole town on first open.
   TM.fit = function () { const W = TM.el.clientWidth || 800, H = TM.el.clientHeight || 600; TM.cam = { x: 20, y: 400, z: Math.max(0.5, Math.min(1.4, Math.min(W / 1500, H / 900))) }; TM.clamp(); TM.applyView(); };
   TM.bind = function (el) {
     TM.el = el;
-    let down = null;
-    el.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY, cx: TM.cam.x, cy: TM.cam.y, drag: false }; });
+    let down = null, pinch = null;
+    // Touch only: two fingers pinch to zoom around their midpoint (a mouse never has two pointers down).
+    const pts = new Map();
+    const pinchState = () => { const [a, b] = [...pts.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
+    const lift = (e) => { pts.delete(e.pointerId); if (pts.size < 2 && pinch) { pinch = null; TM.pinchT = performance.now(); } };
+    el.addEventListener('pointerdown', (e) => {
+      TM.tween = null;
+      if (e.pointerType === 'touch') {
+        pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pts.size >= 2) { pinch = pinchState(); down = null; return; }
+      }
+      down = { x: e.clientX, y: e.clientY, cx: TM.cam.x, cy: TM.cam.y, drag: false };
+    });
     window.addEventListener('pointermove', (e) => {
+      if (pinch && pts.has(e.pointerId)) {
+        pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        const now = pinchState(), r = el.getBoundingClientRect();
+        TM.pan((pinch.x - now.x) / TM.cam.z, (pinch.y - now.y) / TM.cam.z);
+        TM.zoomAt(now.x - r.left, now.y - r.top, now.d / pinch.d);
+        pinch = now;
+        return;
+      }
       if (!down) return;
       const dx = e.clientX - down.x, dy = e.clientY - down.y;
       if (!down.drag && Math.hypot(dx, dy) > 5) { down.drag = true; el.classList.add('dragging'); }
       if (down.drag) { TM.cam.x = down.cx - dx / TM.cam.z; TM.cam.y = down.cy - dy / TM.cam.z; TM.clamp(); TM.applyView(); }
     });
-    window.addEventListener('pointerup', () => { if (down) { TM.dragged = down.drag; el.classList.remove('dragging'); } down = null; });
-    el.addEventListener('click', (e) => { if (TM.dragged) { TM.dragged = false; e.stopPropagation(); e.preventDefault(); } }, true);
+    window.addEventListener('pointerup', (e) => { lift(e); if (down) { TM.dragged = down.drag; el.classList.remove('dragging'); } down = null; });
+    window.addEventListener('pointercancel', (e) => { lift(e); down = null; el.classList.remove('dragging'); });
+    el.addEventListener('click', (e) => { if (TM.dragged || performance.now() - (TM.pinchT || 0) < 350) { TM.dragged = false; e.stopPropagation(); e.preventDefault(); } }, true);
     el.addEventListener('wheel', (e) => { e.preventDefault(); const r = el.getBoundingClientRect(); TM.zoomAt(e.clientX - r.left, e.clientY - r.top, e.deltaY < 0 ? 1.12 : 1 / 1.12); }, { passive: false });
     window.addEventListener('resize', () => { TM.clamp(); TM.applyView(); });
     // Guests walking the streets, on the pavements either side of each street's centre line.
