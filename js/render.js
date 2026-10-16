@@ -756,8 +756,8 @@
     }
     return { goods: [...goods], types: [...types] };
   };
-  // With a filter picked, the buildings it singles out: the ends of every link shown, plus each building that makes or
-  // uses a picked good and is of a picked type. Everything else is darkened, these get a slow white blink.
+  // With a filter picked, the buildings it singles out: the ends of every link shown (a picked good's whole chain
+  // included), plus each building that makes or uses a picked good and is of a picked type. Everything else is darkened, these get a slow white blink.
   function filterFocus(links, orphans) {
     const S = Game.S, G = R.flowGoods, T = R.flowTypes, on = new Set();
     for (const L of links) { on.add(L.p); on.add(L.b); }
@@ -787,6 +787,24 @@
       if (r) for (const o in r.outputs) (makers[o] = makers[o] || []).push(b);
     }
     const centre = (b) => { const [w, h] = FS.buildings[b.type].size; return [(b.x + w / 2) * TS, (b.y + h / 2) * TS]; };
+    // A picked good brings its whole chain: every building that makes it (of a picked type, if any), and upstream from
+    // there every building that feeds them, down to the raw crops. chain = those buildings, chainL = the links between them.
+    const chain = new Set(), chainL = new Set();
+    if (R.flows && R.flowGoods.size) {
+      const todo = S.buildings.filter((b) => { const r = FS.recipeById[b.recipe]; return r && Object.keys(r.outputs).some((o) => R.flowGoods.has(o)) && (!R.flowTypes.size || R.flowTypes.has(b.type)); });
+      todo.forEach((b) => chain.add(b));
+      while (todo.length) {
+        const b = todo.pop();
+        for (const i in FS.recipeById[b.recipe].inputs) {
+          if (i === 'water' && !R.flowGoods.has('water')) continue;
+          for (const p of makers[i] || []) {
+            if (p === b) continue;
+            chainL.add(p.id + '>' + b.id + '>' + i);
+            if (!chain.has(p)) { chain.add(p); todo.push(p); }
+          }
+        }
+      }
+    }
     const links = [];
     for (const b of S.buildings) {
       const r = FS.recipeById[b.recipe];
@@ -795,18 +813,23 @@
         const sel = R.selected === b.id || R.selected === p.id;
         // Water goes almost everywhere, so only draw it for the selected building or when filtered for.
         if (p === b) continue;
-        if (!sel && (!R.flows || !passes(i, [p.type, b.type]) || (i === 'water' && !R.flowGoods.has('water')))) continue;
-        links.push({ p, b, i, bad: b.status === 'missing' && !b.running && (b.missing || []).includes(i), color: linkColor(b, i, now) });
+        const inChain = chainL.has(p.id + '>' + b.id + '>' + i);
+        if (!sel && !inChain && (!R.flows || !passes(i, [p.type, b.type]) || (i === 'water' && !R.flowGoods.has('water')))) continue;
+        links.push({ p, b, i, inChain, bad: b.status === 'missing' && !b.running && (b.missing || []).includes(i), color: linkColor(b, i, now) });
       }
     }
     // Missing ingredients that no building on the farm makes: a red dashed stub that leads nowhere.
     const orphans = [];
     for (const b of S.buildings) {
       if (b.status !== 'missing' || b.running || (!R.flows && R.selected !== b.id)) continue;
-      for (const i of b.missing || []) if (!(makers[i] || []).length && (R.selected === b.id || passes(i, [b.type]))) orphans.push({ b, i });
+      for (const i of b.missing || []) if (!(makers[i] || []).length && (R.selected === b.id || chain.has(b) || passes(i, [b.type]))) orphans.push({ b, i });
     }
     const focus = R.flows && (R.flowGoods.size || R.flowTypes.size);
-    if (focus) drawFocus(g, filterFocus(links.filter((L) => passes(L.i, [L.p.type, L.b.type]) && (L.i !== 'water' || R.flowGoods.has('water'))), orphans.filter((O) => passes(O.i, [O.b.type]))), now);
+    if (focus) {
+      const on = filterFocus(links.filter((L) => L.inChain || (passes(L.i, [L.p.type, L.b.type]) && (L.i !== 'water' || R.flowGoods.has('water')))), orphans.filter((O) => chain.has(O.b) || passes(O.i, [O.b.type])));
+      chain.forEach((b) => on.add(b));
+      drawFocus(g, on, now);
+    }
     if (!links.length && !orphans.length) return;
     g.save();
     g.lineCap = 'round';
