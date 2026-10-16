@@ -1605,3 +1605,59 @@ body.touch-placing #toasts { bottom: 128px; }
   box-shadow: 0 1px 0 rgba(110, 75, 35, 0.18); }
 .modal-card.cb .card.unknown .about { color: #5a4e38; }
 .modal-card.cb .card .chip { background: #f6efdf; border-color: #e0d2b2; }
+/* The farm journal as a newspaper: one cream newsprint page per day on a dark desk, a blackletter-style masthead between
+   rules, a big serif headline, the news set in justified columns with rules between them, and page-turn buttons below.
+   Turning copies the old page on top (.np-ghost) and folds it away over one edge. */
+.modal-card.jr-np > header { background: #3a3128; border-bottom: 0; border-radius: 14px 14px 0 0; }
+.modal-card.jr-np > header h2, .modal-card.jr-np > header .x { color: #f1e9d6; }
+.modal-card.jr-np #modal-body { display: flex; flex-direction: column; padding: 14px 18px 10px; overflow: hidden; border-radius: 0 0 14px 14px; perspective: 1800px;
+  background: radial-gradient(ellipse at 50% 30%, #5a4a3b, #3a3128 75%); }
+.np { display: flex; flex-direction: column; min-height: 0; flex: 1; gap: 8px; }
+.np-sheet { flex: 1; min-height: 0; overflow-y: auto; background-color: #f3eddc; color: #24201a; padding: 16px 26px 12px; font-family: Georgia, 'Times New Roman', serif;
+  background-image: radial-gradient(ellipse at 50% 50%, transparent 60%, rgba(150, 120, 70, 0.14) 100%), radial-gradient(rgba(90, 70, 40, 0.06) 1px, transparent 1.4px);
+  background-size: 100% 100%, 5px 5px; background-attachment: local;
+  box-shadow: 0 1px 0 #d8ceb5, 0 2px 0 #ebe3cf, 0 3px 0 #d0c5aa, 0 4px 0 #e6ddc6, 0 8px 18px rgba(0, 0, 0, 0.45); border-radius: 2px; }
+.modal-card .np-mast { display: block; text-align: center; background: none; border-radius: 0; padding: 0; border-bottom: 3px double #2c251c; padding-bottom: 4px !important; margin-bottom: 10px; }
+.np-ears { display: flex; justify-content: space-between; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #5d5243; }
+.np-mast h1 { margin: 2px 0 4px; font-family: Georgia, 'Times New Roman', serif; font-size: clamp(28px, 5vw, 46px); font-weight: 700; font-variant: small-caps;
+  letter-spacing: 0.01em; line-height: 1.05; color: #1d1913; }
+.np-dateline { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid #2c251c; padding-top: 3px; font-size: 12px; font-style: italic; color: #3d3428; }
+.np-headline { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 4px 0 12px; font-size: clamp(20px, 2.8vw, 30px); line-height: 1.15; text-align: center;
+  font-weight: 700; padding-bottom: 10px; border-bottom: 1px solid #2c251c; }
+.np-hl-ico .ico { width: 54px; height: 54px; filter: sepia(0.25) drop-shadow(0 1px 1px rgba(60, 40, 10, 0.3)); }
+.np-cols { columns: 3 230px; column-gap: 26px; column-rule: 1px solid #b9ad93; font-size: 14px; line-height: 1.4; text-align: justify; hyphens: auto; }
+.np-art { break-inside: avoid; margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid #d3c8ae; }
+.np-art.unread { background: linear-gradient(90deg, rgba(232, 196, 92, 0.22), transparent); box-shadow: -6px 0 0 rgba(232, 196, 92, 0.22); }
+.np-art.bad { color: #8a2c1c; }
+.np-time { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #7a6d58; margin-bottom: 1px; font-family: system-ui, sans-serif; }
+.np-art .jr-dish { align-items: flex-start; text-align: left; }
+.np-art .jr-dish b { font-size: 16px; }
+.np-art .muted { color: #6d6150; }
+.np-report h3 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; text-align: center; border-bottom: 1px solid #2c251c; padding-bottom: 3px; }
+.np-report .gazette { background: none; border: 0; box-shadow: none; padding: 0; max-width: none; text-align: left; }
+.np-report .gz-head { display: none; }
+.np-report .gz-stats { grid-template-columns: 1fr; gap: 3px; }
+.np-report .gz-stats div { grid-template-columns: auto 1fr; gap: 8px; align-items: baseline; }
+.np-report .gz-ledger { min-width: 0; width: 100%; font-size: 12px; }
+.np-report .gz-split { background: #c9b98f; }
+.np-pending p { font-style: italic; color: #6d6150; text-align: center; margin: 6px 0 0; }
+.np-empty { font-style: italic; color: #6d6150; }
+.np-foot { text-align: center; font-size: 11px; color: #7a6d58; border-top: 3px double #2c251c; padding-top: 4px; margin-top: 4px; letter-spacing: 0.08em; text-transform: uppercase; }
+.np-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex: none; }
+.np-turn { display: inline-flex; align-items: center; gap: 6px; background: #f3eddc; border-color: #c9bc9d; color: #2c251c; font-family: Georgia, serif; font-size: 15px; padding: 4px 12px; min-width: 110px; justify-content: center; }
+.np-turn:disabled { visibility: hidden; }
+.np-pg { display: inline-flex; align-items: center; gap: 8px; color: #f1e9d6; font-family: Georgia, serif; font-size: 14px; }
+.np-pg button { background: transparent; color: #f1e9d6; border-color: rgba(241, 233, 214, 0.4); padding: 1px 8px; }
+.np-ghost { position: fixed; z-index: 40; margin: 0; pointer-events: none; overflow: hidden; backface-visibility: hidden; }
+.np-ghost.fwd { transform-origin: left center; animation: np-fwd 0.6s ease-in forwards; }
+.np-ghost.back { transform-origin: right center; animation: np-back 0.6s ease-in forwards; }
+@keyframes np-fwd { from { transform: perspective(1800px) rotateY(0); filter: brightness(1); } to { transform: perspective(1800px) rotateY(95deg); filter: brightness(0.75); opacity: 0.6; } }
+@keyframes np-back { from { transform: perspective(1800px) rotateY(0); filter: brightness(1); } to { transform: perspective(1800px) rotateY(-95deg); filter: brightness(0.75); opacity: 0.6; } }
+@media (max-width: 640px) {
+  .modal-card.jr-np #modal-body { padding: 10px 8px 8px; }
+  .np-sheet { padding: 12px 14px 10px; }
+  .np-ears { font-size: 10px; }
+  .np-dateline span:last-child { display: none; }
+  .np-turn { min-width: 0; padding: 4px 10px; }
+  .np-hl-ico .ico { width: 40px; height: 40px; }
+}
