@@ -1931,9 +1931,11 @@
     const S = Game.S;
     const next = Game.goals.find((g) => !S.goalsDone[g.id] && Game.goalVisible(g));
     const hidden = Game.goals.filter((g) => !Game.goalVisible(g)).length;
+    // Open goals first (in their usual order), finished ones below them.
+    const vis = Game.goals.filter(Game.goalVisible), shown = [...vis.filter((g) => !S.goalsDone[g.id]), ...vis.filter((g) => S.goalsDone[g.id])];
     return {
       title: '🎯 Goals', cls: 'chalk',
-      html: `<button class="tc-open" data-action="modal" data-arg="trophies">🏆 Trophy cabinet <span class="muted">${trophyList().flatMap((sh) => sh.items).filter((t) => t.won).length} won</span></button><div class="goals">${Game.goals.filter(Game.goalVisible).map((g) => `<div class="goal ${S.goalsDone[g.id] ? 'done' : g === next ? 'next' : ''}">
+      html: `<button class="tc-open" data-action="modal" data-arg="trophies">🏆 Trophy cabinet <span class="muted">${trophyList().flatMap((sh) => sh.items).filter((t) => t.won).length} won</span></button><div class="goals">${shown.map((g) => `<div class="goal ${S.goalsDone[g.id] ? 'done' : g === next ? 'next' : ''}">
         <span>${g === next && !S.goalsDone[g.id] ? '👉' : `<i class="gbox" aria-label="${S.goalsDone[g.id] ? 'Done' : 'Not done yet'}">${S.goalsDone[g.id] ? '✓' : ''}</i>`}</span><span>${esc(g.text)}${goalProg(g)}${stepOf(g.id) ? ` <span class="unlocktag" data-tip="${S.goalsDone[g.id] ? 'Unlocked' : 'Unlocks'} ${esc(stepOf(g.id).name)}">${S.goalsDone[g.id] ? '✅' : '🔓'} ${esc(stepOf(g.id).name)}</span>` : ''}</span><span class="reward">+${money(g.reward)}${g.toques ? ` · 🎩${g.toques}` : ''}</span></div>`).join('')}</div>
         ${hidden ? '<p class="small muted">More goals appear as your farm grows.</p>' : ''}
         <h4>Your farm in numbers</h4><div class="small farm-nums">Earned 💰${money(S.stats.earned)} · spent 💰${money(S.stats.spent)} · ${S.buildings.length} building${S.buildings.length === 1 ? '' : 's'} · ${Object.keys(S.seen).length} different goods produced · ${S.stats.experiments} experiment${S.stats.experiments === 1 ? '' : 's'}</div>`,
