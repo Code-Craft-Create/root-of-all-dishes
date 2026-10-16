@@ -705,7 +705,8 @@
     if (r) {
       const v = Game.rating(r);
       name = r.name; sub = r.menu.length ? starStr(v) : 'no menu'; bg = '#2f7d4f';
-      if (r.menu.some((id) => (Game.S.inv[id] || 0) < 1)) alert = '!';
+      const out = r.menu.filter((id) => (Game.S.inv[id] || 0) < 1).length; // dishes sold out, counted on a red badge
+      if (out) alert = String(out);
     } else if (rv) { name = rv.name; sub = starStr(st ? st.rating : rv.base); bg = rv.colors[0]; }
     else return ''; // a free lot has its TO LET sign on the map; no label
     if (Game.awardBoost && Game.awardBoost(lotId) > 1) award = 16; // room for the trophy icon before the name
@@ -713,7 +714,7 @@
     return `<g class="tm-label ${sel ? 'sel' : ''}" data-action="town-sel" data-arg="${lotId}" transform="translate(${x.toFixed(1)},${y.toFixed(1)})">
       <rect x="${-wpx / 2}" y="-12" width="${wpx}" height="22" rx="11" fill="${bg}" stroke="${sel ? '#f2c14e' : '#fbfaf6'}" stroke-width="${sel ? 3 : 1.5}"/>
       ${award ? svgIcon('ui_trophy', -wpx / 2 + 9, -6, 14) : ''}<text x="${-wpx / 2 + 11 + award}" y="3.5" class="tm-ln">${esc(text)}</text><text x="${wpx / 2 - 10}" y="3.5" class="tm-ls">${esc(sub)}</text>
-      ${alert ? `<circle cx="${wpx / 2 + 2}" cy="-10" r="8" fill="#c0463a" stroke="#fbfaf6" stroke-width="1.5"/><text x="${wpx / 2 + 2}" y="-6" class="tm-alert">!</text>` : ''}
+      ${alert ? `<circle cx="${wpx / 2 + 2}" cy="-10" r="8" fill="#c0463a" stroke="#fbfaf6" stroke-width="1.5"/><text x="${wpx / 2 + 2}" y="-6" class="tm-alert">${alert}</text>` : ''}
       <path d="M-5 10 L0 17 L5 10 Z" fill="${bg}"/></g>`;
   }
   const DIST_LABEL = { old_town: [6.5, 4.6], harbour: [5.6, 19.9], market: [20.5, 15.5] };

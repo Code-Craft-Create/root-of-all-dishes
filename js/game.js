@@ -2727,7 +2727,7 @@
     if (S.legacyWon || !S.town) return;
     if (Game.corpOffer() && !offered && !S.corpOffered) {
       offered = true; S.corpOffered = S.time;
-      Game.toast(`📨 The Crestwell Group has had enough: they offer to sell you all three of their restaurants. See the 📰 Town Guide.`, 'good', true);
+      Game.toast(`📨 The Crestwell Group has had enough: they offer to sell you all three of their restaurants. See the 🏙️ Town tab in the Town.`, 'good', true);
       Game.emit('offer');
     }
     if (Game.legacy().every((x) => x.done)) {
