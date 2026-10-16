@@ -3,4 +3,4 @@
 //   MAJOR: old saves can no longer be loaded (raise the save format S.v in game.js too);
 //   MINOR: new features, saves still load;
 //   PATCH: fixes and small tweaks only.
-window.GAME_VERSION = '1.23.1';
+window.GAME_VERSION = '1.24.1';
