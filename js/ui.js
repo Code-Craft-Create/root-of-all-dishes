@@ -1249,7 +1249,7 @@
     const nSteps = steps.filter((r) => Object.keys(r.inputs).length).length, nKinds = new Set(steps.map((r) => r.building)).size, cx = FS.complexity(id);
     const routeNote = nSteps !== cx.steps || nKinds !== cx.buildings ? ' ' + qm(`Your farm can't use every step of the usual route yet, so this plan takes another one. The 🔍 Codex counts the usual route: ${cx.steps} processing steps, ${cx.buildings} kinds of buildings.`) : '';
     return {
-      title: `🗺️ Production plan: ${FSI.img(i.id)} ${esc(i.name)} ${qm(`Everything it takes to make ${i.name} from scratch. Build a missing step and it is set to the right recipe straight away. Turn on Flows (F) to see goods move between your buildings.`)}`, cls: 'wide',
+      title: `🗺️ Production plan: ${FSI.img(i.id)} ${esc(i.name)} ${qm(`Everything it takes to make ${i.name} from scratch. Build a missing step and it is set to the right recipe straight away. Turn on Flows (F) to see goods move between your buildings.`)}`, cls: 'wide hazard',
       html: `        <div class="stats"><div><b>${nSteps}</b><span>processing steps${routeNote}</span></div><div><b>${nKinds}</b><span>kinds of buildings${routeNote}</span></div>
         <div><b>${toBuild + locked}</b><span>steps still missing${locked ? ' ' + qm(`${toBuild} can be built now, ${locked} ${locked > 1 ? 'are' : 'is'} not unlocked yet.`) : ''}</span></div><div><b>💰${money(cost)}</b><span>to build ${locked ? 'the open ones' : 'them'}</span></div></div>
         ${blueprintOffer(id)}
