@@ -717,29 +717,42 @@
     </div>`;
     return { title: '📰 Farm journal', cls: 'wide jr-np', html, after: jrAfter };
   };
-  // Turning a page: the old page is copied on top and folds away over its edge (to the left for a newer day, to the
-  // right for an older one) while the new page is already underneath.
+  // Turning a page like a real one: a leaf hinged on the left edge lifts towards you and swings over to the left, showing
+  // its paper back half way. Newer day: the old page is the leaf and swings away, uncovering the new page. Older day:
+  // the new page swings in from the left and settles over the old one. Copies of the pages do the animation on top of
+  // the real, already updated window.
   function jrTurn(dir) {
     const issues = jrIssues(), k = issues.findIndex((x) => x.day === ui.jrDay);
     const to = issues[Math.max(0, Math.min(issues.length - 1, (k < 0 ? issues.length - 1 : k) + dir))];
     if (!to || to.day === ui.jrDay) return;
+    document.querySelectorAll('.np-flip').forEach((f) => f.remove());
     const old = document.querySelector('#modal-body .np-sheet');
-    let ghost = null;
-    if (old && !reduceMotion()) {
-      const r = old.getBoundingClientRect();
-      ghost = old.cloneNode(true);
-      ghost.classList.add('np-ghost', dir > 0 ? 'fwd' : 'back');
-      Object.assign(ghost.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
-      ghost.scrollTop = old.scrollTop;
-    }
+    const anim = old && !reduceMotion();
+    const r = anim && old.getBoundingClientRect(), oldTop = anim ? old.scrollTop : 0;
+    const oldCopy = anim && old.cloneNode(true);
     ui.jrDay = to.day;
     renderModal(true);
     SFX.play('page');
-    if (ghost) {
-      document.body.appendChild(ghost);
-      ghost.scrollTop = old.scrollTop;
-      setTimeout(() => ghost.remove(), 700);
-    }
+    if (!anim) return;
+    const neu = document.querySelector('#modal-body .np-sheet');
+    const face = (src, top) => { const c = src.cloneNode(true); c.classList.add('np-face'); c.removeAttribute('data-scroll'); requestAnimationFrame(() => { c.scrollTop = top; }); return c; };
+    const wrap = document.createElement('div');
+    wrap.className = 'np-flip ' + (dir > 0 ? 'fwd' : 'back');
+    Object.assign(wrap.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+    // Older day: the old page stays put underneath until the new one has landed on it.
+    if (dir < 0) { const under = face(oldCopy, oldTop); under.classList.add('np-under'); wrap.appendChild(under); }
+    const leaf = document.createElement('div');
+    leaf.className = 'np-leaf';
+    leaf.appendChild(face(dir > 0 ? oldCopy : neu, dir > 0 ? oldTop : 0));
+    const back = document.createElement('div');
+    back.className = 'np-back';
+    leaf.appendChild(back);
+    const shade = document.createElement('div');
+    shade.className = 'np-shade';
+    wrap.append(shade, leaf);
+    document.body.appendChild(wrap);
+    leaf.addEventListener('animationend', (e) => { if (e.target === leaf) wrap.remove(); });
+    setTimeout(() => wrap.remove(), 3000); // in case the animation never runs (hidden tab)
   }
   ui.jrTurn = jrTurn;
   // Swipe left or right on a phone to turn the page.
