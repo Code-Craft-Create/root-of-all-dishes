@@ -1138,7 +1138,7 @@
 
   const revealTip = () => `Reveals one ingredient for toques (2 for a dish with a long supply chain). You have ${Game.S.toques || 0}; special requests, clue orders, events and cuisine targets earn more.`;
   // The dish picked with "Try it" stays the target until it is discovered, cleared, or another one is picked.
-  // Its origin text stays hidden here until it is discovered (David 2026-10-16: no spoilers in the lab).
+  // Its origin text stays hidden here until it is discovered (the owner, 2026-10-16: no spoilers in the lab).
   function targetBox() {
     const S = Game.S, id = ui.tkTarget;
     if (!id || S.discovered[id] || !FS.dishRecipe[id]) { ui.tkTarget = null; return ''; }
@@ -1650,6 +1650,7 @@
     const S = Game.S;
     drawTown();
     if (TownMap.svg) TownMap.svg.classList.toggle('night', dark > 0.3);
+    if (dark > 0.2 && dark < 0.4) TownMap.warm(dark <= 0.3); // dusk or dawn: the back layer's picture for after the switch
     const n = $('#town-night');
     if (n.dataset.sky !== c.join() + '|' + w.join()) {
       n.dataset.sky = c.join() + '|' + w.join();

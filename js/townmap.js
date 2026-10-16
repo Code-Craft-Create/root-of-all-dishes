@@ -225,7 +225,7 @@
       `<rect x="${x - 6}" y="${y - 21}" width="7" height="8" fill="none" stroke="#3b3b3b" stroke-width="1.2"/><circle cx="${x - 4}" cy="${y - 5}" r="5" fill="#3b3b3b"/><circle cx="${x - 4}" cy="${y - 5}" r="2" fill="#e3a92b"/>` +
       `<circle cx="${x + 6}" cy="${y - 3}" r="3" fill="#3b3b3b"/><rect x="${x + 4}" y="${y - 17}" width="1.6" height="5" fill="#3b3b3b"/></g>`;
   }
-  // A windmill with turning sails (the sails spin with CSS around their own centre).
+  // A windmill with turning sails (they spin around their own centre, see LOOPS).
   function windmill(i, j) {
     const [x, y] = P(i, j), hy = y - 58, hx = x + 1;
     const blades = [0, 90, 180, 270].map((a) => {
@@ -764,13 +764,18 @@
       const bands = Array.from({ length: (BAND_MAX - BAND_MIN) * BANDS }, () => []);
       for (const o of objs) bands[bandOf(o.key)].push(o.s);
       // Two layers: the ground and the countryside behind (static), the town with everything that moves in front, so a
-      // walker taking a step only redraws the front layer.
-      TM.el.innerHTML = `<svg class="tm-svg tm-back" xmlns="http://www.w3.org/2000/svg">${DEFS}${scenery.g}${scenery.back}</svg>` +
-        `<svg class="tm-svg" xmlns="http://www.w3.org/2000/svg">${bands.map((b) => `<g class="tm-band">${b.join('')}</g>`).join('')}<g id="tm-boats"></g>${districtLabels()}<g id="tm-labels"></g><g id="tm-float"></g></svg>`;
-      TM.back = TM.el.firstChild;
+      // walker taking a step only redraws the front layer. The back layer is shown as a picture on a canvas (see
+      // "The back layer as a picture" below); the live SVG of it only shows until that picture is ready. The patterns
+      // (DEFS) sit in the front layer, so they still work while the live back layer is hidden.
+      TM.el.innerHTML = `<canvas class="tm-backcv"></canvas><svg class="tm-svg tm-back" xmlns="http://www.w3.org/2000/svg">${scenery.g}${scenery.back}</svg>` +
+        `<svg class="tm-svg" xmlns="http://www.w3.org/2000/svg">${DEFS}${bands.map((b) => `<g class="tm-band">${b.join('')}</g>`).join('')}<g id="tm-boats"></g>${districtLabels()}<g id="tm-labels"></g><g id="tm-float"></g></svg>`;
+      TM.backCv = TM.el.firstChild;
+      TM.back = TM.backCv.nextSibling;
       TM.svg = TM.el.lastChild;
-      // Season, night and detail classes are set on the front layer; the back layer follows.
-      new MutationObserver(() => TM.back.setAttribute('class', TM.svg.getAttribute('class') + ' tm-back')).observe(TM.svg, { attributes: true, attributeFilter: ['class'] });
+      TM.backPic = null;
+      TM.backTf = null;
+      // Season, night and detail classes are set on the front layer; the back layer (and its picture) follows.
+      new MutationObserver(syncBack).observe(TM.svg, { attributes: true, attributeFilter: ['class'] });
       TM.bandEls = TM.svg.querySelectorAll('.tm-band');
       TM.lotEls = {};
       for (const g of TM.svg.querySelectorAll('.tm-lot')) TM.lotEls[g.dataset.arg] = g;
@@ -785,6 +790,7 @@
         TM.lotGlowSig = null;
       }
       TM.applyView();
+      queueMicrotask(syncBack);
     }
     GL = [];
     for (const id of Object.keys(LOT_AT)) TM.lotEls[id].innerHTML = lotSvg(id, id === sel);
@@ -794,19 +800,148 @@
     GL = null;
     if (TM.glowSvg && lg !== TM.lotGlowSig) { TM.lotGlowSig = lg; TM.glowSvg.lastChild.innerHTML = glowSvg(lg ? lg.split(';').map((p) => p.split(',').map(Number)) : []); }
     TM.svg.querySelector('#tm-labels').innerHTML = Object.keys(LOT_AT).map((id) => lotLabel(id, id === sel)).join('');
+    // The lots were redrawn: find the animated parts again (the scenery's, the lots' and the boats').
+    TM.loops = [];
+    addLoops(TM.svg);
   };
+  // The part of the scenery the view may show, in tiles (TM.clamp keeps every corner of the screen inside it).
+  const VIEW = { i0: -OUT - 1, i1: N + OUT - 1, j0: -OUT - 1, j1: SHORE + 12 };
   TM.applyView = function () {
     if (!TM.svg) return;
-    const W = TM.el.clientWidth || 800, H = TM.el.clientHeight || 600, c = TM.cam;
+    const W = TM.el.clientWidth || 800, H = TM.el.clientHeight || 600, c = TM.cam, dpr = window.devicePixelRatio || 1, s = c.z * dpr;
     // Zoomed out, the small details (glazing bars, sills, roof courses, tree shadows) are hidden: too small to see, and costly to draw.
     TM.svg.classList.toggle('lod', c.z < 1.15);
-    const vb = `${(c.x - W / 2 / c.z).toFixed(1)} ${(c.y - H / 2 / c.z).toFixed(1)} ${(W / c.z).toFixed(1)} ${(H / c.z).toFixed(1)}`;
+    // The top left corner of the view lands on a whole screen pixel, so the back layer's picture can be moved by whole
+    // pixels and stays as sharp as the SVG above it.
+    const vx = Math.round((c.x - W / 2 / c.z) * s), vy = Math.round((c.y - H / 2 / c.z) * s);
+    const vb = `${(vx / s).toFixed(3)} ${(vy / s).toFixed(3)} ${(W / c.z).toFixed(3)} ${(H / c.z).toFixed(3)}`;
     TM.svg.setAttribute('viewBox', vb);
-    TM.back.setAttribute('viewBox', vb);
     if (TM.glowSvg) TM.glowSvg.setAttribute('viewBox', vb);
+    if (TM.back.style.display !== 'none') TM.back.setAttribute('viewBox', vb);
+    TM.view = { x: vx, y: vy, s, w: Math.round(W * dpr), h: Math.round(H * dpr), dpr };
+    if (!TM.backQueued) { TM.backQueued = true; queueMicrotask(drawBack); } // once, after every change this event makes
   };
-  // Keep the whole view inside the scenery: every corner of the screen must land on drawn land or sea.
-  const VIEW = { i0: -OUT - 1, i1: N + OUT - 1, j0: -OUT - 1, j1: SHORE + 12 };
+
+  // ----- The back layer as a picture -----
+  // The back layer (ground, sea, countryside, outer land: some 18,000 shapes) never moves, but as a live SVG the browser
+  // would lay it out and repaint it each time a walker or boat in front takes a step. So it is turned into an image once
+  // (with its season, night and detail classes and their CSS rules baked in) and drawn onto a canvas under the front
+  // layer (drawBack, below).
+  const BACK_BOX = (() => {
+    const i0 = VIEW.i0, i1 = VIEW.i1, j0 = VIEW.j0, j1 = VIEW.j1, m = 64;
+    return { x: 32 * (i0 - j1) - m, y: 16 * (i0 + j0) - m, w: 32 * (i1 - j0 - i0 + j1) + 2 * m, h: 16 * (i1 + j1 - i0 - j0) + 2 * m };
+  })();
+  const backPics = new Map(); // classes -> { img, ready, used }
+  let backCss = null;
+  const backKey = (cls) => cls.split(/\s+/).filter((c) => c && c !== 'tm-svg' && c !== 'tm-back').sort().join(' ');
+  function backPic(key) {
+    let p = backPics.get(key);
+    if (p) { p.used = performance.now(); return p; }
+    if (backCss === null) {
+      backCss = [];
+      for (const sh of document.styleSheets) {
+        let rules = null;
+        try { rules = sh.cssRules; } catch (e) { continue; }
+        for (const r of rules) if (r.selectorText && r.selectorText.includes('.tm-svg')) backCss.push(r.cssText);
+      }
+      backCss = backCss.join('\n');
+    }
+    // Without the town's CSS rules (a page opened straight from disk may not read its own style sheet), the picture
+    // would come out wrong: then the live back layer simply stays.
+    if (!backCss) return { ready: false };
+    const b = BACK_BOX, src = `<svg xmlns="http://www.w3.org/2000/svg" class="tm-svg tm-back ${key}" viewBox="${b.x} ${b.y} ${b.w} ${b.h}" width="${b.w}" height="${b.h}">` +
+      `<style>${backCss}</style>${DEFS}${scenery.g}${scenery.back}</svg>`;
+    const img = new Image(), url = URL.createObjectURL(new Blob([src], { type: 'image/svg+xml' }));
+    p = { img, ready: false, used: performance.now() };
+    backPics.set(key, p);
+    img.src = url;
+    img.decode().then(() => { p.ready = true; URL.revokeObjectURL(url); syncBack(); }, () => { backPics.delete(key); URL.revokeObjectURL(url); });
+    // Keep a few pictures (day and night, near and far), and forget the one unused the longest.
+    if (backPics.size > 4) { let old = null; for (const [k, q] of backPics) if (!old || q.used < backPics.get(old).used) old = k; if (old !== key) backPics.delete(old); }
+    return p;
+  }
+  // The classes of the front layer changed (season, night, detail): show the matching picture once it is ready.
+  function syncBack() {
+    if (!TM.svg) return;
+    const cls = TM.svg.getAttribute('class') || '', key = backKey(cls);
+    if (TM.back.style.display !== 'none') TM.back.setAttribute('class', cls + ' tm-back');
+    const p = backPic(key);
+    if (!p.ready || TM.backPic === p) return;
+    TM.backPic = p;
+    TM.backDrawn = null;
+    drawBack();
+    // The live back layer is no longer needed: hidden, it costs no layout or painting.
+    if (TM.back.style.display !== 'none') TM.back.style.display = 'none';
+    // Get the picture of the other detail level ready while the town is quiet, so zooming across it does not wait.
+    const other = /\blod\b/.test(cls) ? backKey(cls.replace(/\blod\b/, '')) : backKey(cls + ' lod');
+    if (!backPics.has(other)) (window.requestIdleCallback || setTimeout)(() => { if (TM.svg) backPic(other); }, { timeout: 4000 });
+  }
+  // Before dusk or dawn: make the picture for the coming night (or day) early, so the switch does not stall a frame.
+  TM.warm = function (night) {
+    if (!TM.backPic || !TM.svg) return;
+    const cls = TM.svg.getAttribute('class') || '', key = night ? backKey(cls + ' night') : backKey(cls.replace(/\bnight\b/, ''));
+    if (!backPics.has(key)) backPic(key);
+  };
+  // The canvas reaches BACK_MARGIN CSS pixels past every edge of the view and is moved with a CSS transform, so a pan
+  // or a quick run of zoom steps only moves (or stretches) the picture already drawn. It is drawn again when the view
+  // runs past its edge (moving what is drawn and filling in the new strips) and, sharp, once the zoom holds still.
+  const BACK_MARGIN = 200;
+  function drawBack() {
+    TM.backQueued = false;
+    const p = TM.backPic, v = TM.view, cv = TM.backCv;
+    if (!p || !p.ready || !v || !cv) return;
+    const m = Math.round(BACK_MARGIN * v.dpr), cw = v.w + 2 * m, ch = v.h + 2 * m;
+    const fresh = cv.width !== cw || cv.height !== ch || !TM.backG;
+    if (fresh) {
+      cv.width = cw; cv.height = ch;
+      cv.style.width = cw / v.dpr + 'px'; cv.style.height = ch / v.dpr + 'px';
+      // Drawn off screen and handed over as a finished bitmap where the browser can: a 2D canvas on the page is copied
+      // to the screen again on every frame by some browsers, even when nothing on it changed.
+      TM.backOff = window.OffscreenCanvas && cv.getContext('bitmaprenderer') ? new OffscreenCanvas(cw, ch) : null;
+      TM.backG = (TM.backOff || cv).getContext('2d');
+      TM.backDrawn = null;
+    }
+    const g = TM.backG, b = BACK_BOX, now = performance.now(), d0 = TM.backDrawn;
+    let d = TM.backDrawn; // { x, y, s }: canvas pixel (0, 0) is the world point (x / s, y / s)
+    // Draw the part of the picture under a rectangle of the canvas (in canvas pixels).
+    const part = (x, y, w, h) => {
+      if (w <= 0 || h <= 0) return;
+      g.drawImage(p.img, (d.x + x) / d.s - b.x, (d.y + y) / d.s - b.y, w / d.s, h / d.s, x, y, w, h);
+    };
+    const full = () => {
+      d = TM.backDrawn = { x: v.x - m, y: v.y - m, s: v.s };
+      g.clearRect(0, 0, cw, ch);
+      part(0, 0, cw, ch);
+    };
+    // Where the canvas lands on the screen (in screen pixels), stretched by r while zooming.
+    const r = d ? v.s / d.s : 1, left = d ? d.x * r - v.x : 0, top = d ? d.y * r - v.y : 0;
+    const covers = d && left <= 0 && top <= 0 && left + cw * r >= v.w && top + ch * r >= v.h;
+    clearTimeout(TM.backSettle);
+    if (!d) full();
+    else if (r !== 1) {
+      // Zooming. One step is drawn sharp at once; in a quick run of steps (a pinch, a fast wheel) the picture is
+      // stretched, and drawn sharp again once the zoom holds still for a moment.
+      if (covers && now - (TM.backZoomT || 0) < 120) TM.backSettle = setTimeout(() => { TM.backDrawn = null; drawBack(); }, 150);
+      else full();
+      TM.backZoomT = now;
+    } else if (!covers) {
+      // Panned past the edge: move what is drawn so the view is in the middle again, and fill in the strips.
+      const nx = v.x - m, ny = v.y - m, dx = d.x - nx, dy = d.y - ny;
+      if (Math.abs(dx) >= cw || Math.abs(dy) >= ch) full();
+      else {
+        g.globalCompositeOperation = 'copy';
+        g.drawImage(cv, dx, dy);
+        g.globalCompositeOperation = 'source-over';
+        d = TM.backDrawn = { x: nx, y: ny, s: v.s };
+        if (dx > 0) part(0, 0, dx, ch); else if (dx < 0) part(cw + dx, 0, -dx, ch);
+        if (dy > 0) part(Math.max(0, dx), 0, cw - Math.abs(dx), dy); else if (dy < 0) part(Math.max(0, dx), ch + dy, cw - Math.abs(dx), -dy);
+      }
+    }
+    if (TM.backOff && d !== d0) cv.getContext('bitmaprenderer').transferFromImageBitmap(TM.backOff.transferToImageBitmap()); // drawn: show it
+    const k = v.s / d.s, tf = `translate(${((d.x * k - v.x) / v.dpr).toFixed(3)}px, ${((d.y * k - v.y) / v.dpr).toFixed(3)}px)${k !== 1 ? ` scale(${k.toFixed(5)})` : ''}`;
+    if (TM.backTf !== tf) { cv.style.transform = tf; TM.backTf = tf; }
+  }
+  // Keep the whole view inside the scenery (VIEW, above): every corner of the screen must land on drawn land or sea.
   TM.clamp = function () {
     const c = TM.cam, W = (TM.el && TM.el.clientWidth) || 800, H = (TM.el && TM.el.clientHeight) || 600;
     const span = Math.min(VIEW.i1 - VIEW.i0, VIEW.j1 - VIEW.j0);
@@ -920,6 +1055,7 @@
         bt.el = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         bt.el.innerHTML = `<path class="wake" d="M-22 4 q-10 -2 -22 1 M-22 6 q-8 3 -18 3" /><g class="boat">${BOAT_KINDS[bt.kind](bt.col)}</g>`;
         layer.appendChild(bt.el);
+        addLoops(bt.el);
       }
       let moving = false;
       if (bt.wait > 0) bt.wait -= dt;
@@ -1025,9 +1161,63 @@
       if (e.parentNode !== band) band.appendChild(e);
     });
   }
+  // ----- Small looping animations: windmill sails, the fountain, bobbing boats and TO LET signs, smoke, money notes -----
+  // These were CSS animations. But the browser gives an element with an animated transform a layer of its own, and with
+  // thousands of shapes around it in the town's SVG, sorting out those layers took more time each frame than everything
+  // else. So they are set from here every frame instead, with the same timings and easing, and are simply repainted.
+  const bezier = (x1, y1, x2, y2) => (x) => {
+    if (x <= 0 || x >= 1) return Math.max(0, Math.min(1, x));
+    const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx, cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+    let lo = 0, hi = 1, u = x;
+    for (let k = 0; k < 20; k++) { const f = ((ax * u + bx) * u + cx) * u; if (Math.abs(f - x) < 1e-5) break; if (f < x) lo = u; else hi = u; u = (lo + hi) / 2; }
+    return ((ay * u + by) * u + cy) * u;
+  };
+  const EASE_IO = bezier(0.42, 0, 0.58, 1), EASE_OUT = bezier(0, 0, 0.58, 1);
+  const bob = (t) => (t < 0.5 ? EASE_IO(2 * t) : EASE_IO(2 - 2 * t)); // there and back, eased both ways (a 50% keyframe)
+  const f2 = (v) => v.toFixed(2);
+  const LOOPS = {
+    sails: { dur: 9, tf: (t) => `rotate(${(360 * t).toFixed(1)}deg)` },
+    jet: { dur: 1.2, tf: (t) => `scaleY(${(1 - 0.3 * bob(t)).toFixed(3)})` },
+    boat: { dur: 3, tf: (t) => `translateY(${f2(2.5 * bob(t))}px)` },
+    'tm-tolet': { dur: 1.6, tf: (t) => `translateY(${f2(2.5 * bob(t))}px)`, calm: true },
+    smoke: { dur: 2.4, late: 's2', tf: (t) => { const p = EASE_OUT(t); return `translate(${f2(-8 * p)}px, ${f2(-14 * p)}px) scale(${f2(0.6 + 0.8 * p)})`; }, op: (t) => 0.8 * (1 - EASE_OUT(t)) },
+    // Chimney smoke only in autumn and winter (the CSS keeps it hidden otherwise).
+    csmoke: { dur: 3, late: 'c2', cold: true, tf: (t) => { const p = EASE_OUT(t); return `translateY(${f2(4 - 14 * p)}px) scale(${f2(0.6 + 0.8 * p)})`; },
+      op: (t) => (t < 0.3 ? 0.75 * EASE_OUT(t / 0.3) : 0.75 * (1 - EASE_OUT((t - 0.3) / 0.7))) },
+  };
+  const LOOP_SEL = Object.keys(LOOPS).map((k) => '.' + k).join(',');
+  const calmQ = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+  TM.loops = [];
+  function addLoops(root) {
+    for (const el of root.querySelectorAll(LOOP_SEL)) {
+      const k = Object.keys(LOOPS).find((n) => el.classList.contains(n)), L = LOOPS[k];
+      TM.loops.push({ el, L, off: L.late && el.classList.contains(L.late) ? L.dur / 2 : 0, tf: null, op: null });
+    }
+  }
+  const setLoop = (o, tf, op) => {
+    if (o.tf !== tf) { o.el.style.transform = tf; o.tf = tf; }
+    if (o.op !== op) { o.el.style.opacity = op; o.op = op; }
+  };
+  function tickLoops(now) {
+    const cold = TM.svg.classList.contains('s-winter') || TM.svg.classList.contains('s-autumn'), calm = calmQ && calmQ.matches;
+    for (const o of TM.loops) {
+      const L = o.L;
+      if ((L.cold && !cold) || (L.calm && calm)) { setLoop(o, '', ''); continue; }
+      const t = ((now + o.off) % L.dur) / L.dur;
+      setLoop(o, L.tf(t), L.op ? L.op(t).toFixed(3) : '');
+    }
+    // Money notes rise and fade once (1.6 s).
+    for (let k = TM.floats.length - 1; k >= 0; k--) {
+      const o = TM.floats[k], t = Math.min(1, (now - o.t0) / 1.6), p = EASE_OUT(t);
+      setLoop(o, `translateY(${f2(-34 * p)}px)`, (1 - p).toFixed(3));
+      if (t >= 1) TM.floats.splice(k, 1);
+    }
+  }
+  TM.floats = [];
   // Move the walkers: along their street, turning now and then at a crossing.
   TM.tick = function (dt, night) {
     if (!TM.svg) return;
+    tickLoops(performance.now() / 1000);
     tickBoats(dt);
     tickTrain(dt);
     for (const w of TM.walkers) {
@@ -1063,6 +1253,8 @@
     const tw = label ? textW(label, '800 13px system-ui, sans-serif') + 3 : 0, x0 = cx - (sz + tw) / 2;
     t.innerHTML = svgIcon(id, x0, cy - sz + 3, sz) + (label ? `<text x="${(x0 + sz + 3).toFixed(1)}" y="${cy.toFixed(1)}" style="text-anchor:start">${esc(label)}</text>` : '');
     layer.appendChild(t);
+    TM.floats.push({ el: t, t0: performance.now() / 1000, tf: null, op: null });
+    setLoop(TM.floats[TM.floats.length - 1], 'translateY(0px)', '1.000');
     setTimeout(() => t.remove(), 1700);
   };
 })();

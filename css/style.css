@@ -987,6 +987,7 @@ body.town-mode #buildbar, body.town-mode #viewport, body.town-mode #inspector { 
 #town-map { position: absolute; inset: 0; cursor: grab; touch-action: none; user-select: none; }
 #town-map.dragging { cursor: grabbing; }
 #town-map .tm-svg { display: block; position: absolute; inset: 0; width: 100%; height: 100%; }
+#town-map .tm-backcv { display: block; position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; } /* the back layer as a picture (townmap.js drawBack) */
 #town-night { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: multiply; }
 #town-night > div { position: absolute; inset: 0; mix-blend-mode: normal; }
 #town-weather { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
@@ -1046,8 +1047,7 @@ button.ghost { border: none; background: none; padding: 0 4px; }
 .tm-svg .tm-selring.top { stroke-width: 3; stroke-dasharray: 10 6; animation: tmsel 1.2s linear infinite; pointer-events: none; }
 @keyframes tmsel { to { stroke-dashoffset: -32; } }
 .tm-svg .tm-sign.big { font-size: 13px; }
-.tm-svg .tm-tolet { animation: tmbob 1.6s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) { .tm-svg .tm-tolet, .tm-svg .tm-selring.top { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .tm-svg .tm-selring.top { animation: none; } }
 .tm-svg .tm-sign { font: 800 9px system-ui, sans-serif; fill: #a3302a; text-anchor: middle; letter-spacing: 1px; }
 .tm-svg .tm-label { cursor: pointer; }
 .tm-svg .tm-label:hover rect { filter: brightness(1.12); }
@@ -1056,13 +1056,11 @@ button.ghost { border: none; background: none; padding: 0 4px; }
 .tm-svg .tm-alert { font: 800 12px system-ui, sans-serif; fill: #fff; text-anchor: middle; }
 .tm-svg .tm-dist { pointer-events: none; }
 .tm-svg .tm-dn { font: 800 15px system-ui, sans-serif; fill: #fff; text-anchor: middle; letter-spacing: .5px; }
-.tm-svg .boat { animation: tmbob 3s ease-in-out infinite; }
-@keyframes tmbob { 50% { transform: translateY(2.5px); } }
-.tm-svg .jet { animation: tmjet 1.2s ease-in-out infinite; transform-box: fill-box; transform-origin: bottom; }
-@keyframes tmjet { 50% { transform: scaleY(0.7); } }
-.tm-svg .tm-floater { font: 800 13px system-ui, sans-serif; text-anchor: middle; paint-order: stroke; stroke: rgba(0,0,0,.55); stroke-width: 3px; animation: tmfloat 1.6s ease-out forwards; pointer-events: none; }
+/* The town's looping animations (sails, fountain, boats, smoke, TO LET signs, money notes) are set by townmap.js LOOPS:
+   CSS animations there would give each its own layer, which is costly next to thousands of SVG shapes. */
+.tm-svg .jet { transform-box: fill-box; transform-origin: bottom; }
+.tm-svg .tm-floater { font: 800 13px system-ui, sans-serif; text-anchor: middle; paint-order: stroke; stroke: rgba(0,0,0,.55); stroke-width: 3px; pointer-events: none; }
 .tm-svg .tm-floater.pay { fill: #ffe39a; } .tm-svg .tm-floater.miss { fill: #ffb3a8; } .tm-svg .tm-floater.rival { font-size: 11px; opacity: .8; }
-@keyframes tmfloat { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-34px); opacity: 0; } }
 .roty .ry-head { font-size: 20px; margin-bottom: 6px; }
 .ry-row { display: grid; grid-template-columns: 34px 1fr auto; gap: 8px; align-items: center; padding: 6px 4px; border-bottom: 1px solid var(--panel2); }
 .ry-row.mine { background: #f2f8ef; }
@@ -1119,9 +1117,7 @@ button.ghost { border: none; background: none; padding: 0 4px; }
 .tm-svg .tm-dsub { font: 600 11px system-ui, sans-serif; fill: #fff; text-anchor: middle; opacity: .95; }
 .tm-svg .wake { fill: none; stroke: #e8f4fb; stroke-width: 1.6; stroke-linecap: round; opacity: 0; transition: opacity .6s; }
 .tm-svg .moving .wake { opacity: .85; }
-.tm-svg .smoke { fill: #d9d9d9; opacity: .7; animation: tmsmoke 2.4s ease-out infinite; transform-box: fill-box; transform-origin: center; }
-.tm-svg .smoke.s2 { animation-delay: -1.2s; }
-@keyframes tmsmoke { from { transform: translate(0, 0) scale(.6); opacity: .8; } to { transform: translate(-8px, -14px) scale(1.4); opacity: 0; } }
+.tm-svg .smoke { fill: #d9d9d9; opacity: .7; transform-box: fill-box; transform-origin: center; }
 .tw-fit { border-left: 4px solid var(--dc); background: #fff; border-radius: 6px; padding: 7px 10px; margin-top: 10px; display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
 .tw-pick button.loved { border-color: #e7a3a3; background: #fff5f5; }
 .tw-how { background: #fff; border-radius: 6px; padding: 7px 10px; margin: 0 0 8px; }
@@ -1142,9 +1138,7 @@ button.ghost { border: none; background: none; padding: 0 4px; }
 .tm-svg .sill { stroke: #fbfaf6; stroke-width: 1.6; fill: none; }
 .tm-svg .bloom { fill: #e0566b; } .tm-svg.s-spring .bloom { fill: #f2a3c0; } .tm-svg.s-autumn .bloom { fill: #e08a3b; } .tm-svg.s-winter .bloom { display: none; }
 .tm-svg .rline { stroke: #000; stroke-opacity: .16; stroke-width: .8; fill: none; }
-.tm-svg .csmoke { fill: #e9ecef; opacity: 0; } .tm-svg.s-winter .csmoke, .tm-svg.s-autumn .csmoke { animation: tmcsmoke 3s ease-out infinite; transform-box: fill-box; transform-origin: center; }
-.tm-svg .csmoke.c2 { animation-delay: -1.5s; }
-@keyframes tmcsmoke { 0% { opacity: 0; transform: translateY(4px) scale(.6); } 30% { opacity: .75; } 100% { opacity: 0; transform: translateY(-10px) scale(1.4); } }
+.tm-svg .csmoke { fill: #e9ecef; opacity: 0; } .tm-svg.s-winter .csmoke, .tm-svg.s-autumn .csmoke { transform-box: fill-box; transform-origin: center; }
 .tm-svg .lf2-hi { fill: #fff; opacity: .1; } .tm-svg .lf2-ln { stroke: #000; stroke-opacity: .15; stroke-width: 1; fill: none; }
 .tm-svg .fruit { fill: #d9483b; } .tm-svg.s-autumn .fruit { fill: #ee8a33; } .tm-svg.s-spring .fruit, .tm-svg.s-winter .fruit { display: none; }
 .tm-svg .gr3 { fill: #7fae5c; } .tm-svg.s-autumn .gr3 { fill: #a3a35c; } .tm-svg.s-winter .gr3 { fill: #e2e9ec; }
@@ -1160,8 +1154,7 @@ button.ghost { border: none; background: none; padding: 0 4px; }
 .tm-svg .fence { stroke: #8a6a4a; stroke-width: 1.2; fill: none; } .tm-svg .fence.post { stroke-width: 1.8; }
 .tm-svg .hay { fill: #e3c766; } .tm-svg .hay-end { fill: #f0d98a; }
 .tm-svg .sail-cloth { fill: #f4efe4; opacity: .92; }
-.tm-svg .sails { animation: tmspin 9s linear infinite; transform-box: fill-box; transform-origin: center; }
-@keyframes tmspin { to { transform: rotate(360deg); } }
+.tm-svg .sails { transform-box: fill-box; transform-origin: center; }
 .tm-svg .reed { stroke: #5f8a3a; stroke-width: 1.2; fill: none; } .tm-svg.s-winter .reed { stroke: #a99a7a; }
 .tm-svg .croad { stroke: #9a958a; stroke-width: 24; fill: none; } .tm-svg .lane { stroke: #cdb88e; stroke-width: 12; fill: none; opacity: .9; }
 .tm-svg.s-winter .lane { stroke: #dfe3e2; }
@@ -1181,7 +1174,7 @@ button.ghost { border: none; background: none; padding: 0 4px; }
 .tm-svg .foothill { fill: #6f9a4e; } .tm-svg.s-autumn .foothill { fill: #8f9450; } .tm-svg.s-winter .foothill { fill: #dfe7ea; } .tm-svg.s-winter .mtn-l { fill: #c9ccd0; } .tm-svg.s-winter .mtn-r { fill: #a3a8ae; }
 .tm-svg .river { stroke: #5b9bd5; stroke-width: 34; stroke-linejoin: round; stroke-linecap: round; fill: none; } .tm-svg .river-hi { stroke: #7fb3e0; stroke-width: 6; stroke-dasharray: 30 40; fill: none; opacity: .7; }
 .tm-svg.s-winter .river { stroke: #a9c9e3; }
-.tm-svg.tm-back .csmoke { animation: none !important; } .tm-svg.tm-back.s-winter .csmoke, .tm-svg.tm-back.s-autumn .csmoke { opacity: .5; }
+.tm-svg.tm-back.s-winter .csmoke, .tm-svg.tm-back.s-autumn .csmoke { opacity: .5; }
 .tm-svg .mtn.far { opacity: .75; } .tm-svg .mtn.far .foothill { fill: #7f9c86; } .tm-svg.s-winter .mtn.far .foothill { fill: #cfd9de; }
 .qm { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: #e6dcc8; color: #5f574b; font: 700 11px system-ui, sans-serif; cursor: help; vertical-align: 1px; margin-left: 3px; }
 .qm:hover { background: #d8c6a5; }
