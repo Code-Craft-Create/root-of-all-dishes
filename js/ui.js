@@ -1063,17 +1063,17 @@
     };
   };
 
-  // ----- Mystery Cupboard: the detective skills, one drawer each. An open drawer says what its skill does; a closed one
+  // ----- Mystery Cupboard: the detective skills, one drawer each, in an old cupboard with its doors swung open. An open drawer says what its skill does; a closed one
   // only its name and how many dishes it takes. -----
   modals.skills = () => {
     const n = Game.dishesCooked(), open = Game.SKILLS.filter((k) => Game.skill(k.id)).length;
     const drawer = (k) => Game.skill(k.id)
       ? `<div class="mc-drawer open"><span class="mc-icon">${FSI.img('sk_' + k.id)}</span><div class="mc-text"><b>${esc(k.name)}</b><span>${esc(k.about)}</span></div></div>`
-      : `<div class="mc-drawer"><span class="mc-icon">${FSI.img('ui_lock')}</span><div class="mc-text"><b>${esc(k.name)}</b>
+      : `<div class="mc-drawer"><span class="mc-icon mc-keyhole" title="Locked"></span><div class="mc-text"><b>${esc(k.name)}</b>
           <span>Opens at ${k.at} dish${k.at === 1 ? '' : 'es'} cooked</span><span class="mc-bar"><i style="width:${Math.round((n / k.at) * 100)}%"></i></span></div>
           <span class="mc-count">${n} / ${k.at}</span></div>`;
     return { title: `${FSI.img('ui_detective')} Mystery Cupboard <span class="muted">${open} / ${Game.SKILLS.length}</span>`, cls: 'mc-card',
-      html: `<div class="mc">${Game.SKILLS.map(drawer).join('')}</div>
+      html: `<div class="mcup"><span class="mcup-door l"></span><div class="mcup-body">${Game.SKILLS.map(drawer).join('')}</div><span class="mcup-door r"></span></div>
         <div class="row gap mc-foot"><button class="primary" data-action="modal" data-arg="testkitchen">🧪 Back to the Test Kitchen</button></div>` };
   };
 
@@ -1925,7 +1925,7 @@
         : `<span class="tc-slot ${t.shape}" data-tip="Not won yet">${inner}</span>`;
     };
     return { title: `🏆 Trophy cabinet <span class="muted">${won} / ${all.length}</span>`, cls: 'cabinet-card',
-      html: `${defs}<div class="cabinet">${shelves.map((sh) => `<div class="tc-shelf${sh.small ? ' small' : ''}"><div class="tc-row">${sh.items.map(slot).join('')}</div><div class="tc-ledge">${esc(sh.name)}</div></div>`).join('')}</div>` };
+      html: `${defs}<div class="cabinet">${shelves.map((sh) => `<div class="tc-shelf${sh.small ? ' small' : ''}"><div class="tc-row">${sh.items.map(slot).join('')}</div><div class="tc-ledge"><span>${esc(sh.name)}</span></div></div>`).join('')}</div>` };
   };
   modals.goals = () => {
     const S = Game.S;
@@ -2011,7 +2011,7 @@
       <span id="${valId}" class="vol-val">${volText(pct(v))}</span>${extra || '<span class="vol-extra"></span>'}</div>`;
   }
   modals.menu = () => ({
-    title: '⚙️ Settings',
+    title: '⚙️ Settings', cls: 'workshop',
     html: `<div class="gm">
       <div class="gm-actions">
         <button data-action="save"><span class="gm-ico">💾</span><b>Save game</b><span class="small muted">Saves to this browser</span></button>
