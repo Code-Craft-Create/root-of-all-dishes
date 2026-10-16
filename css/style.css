@@ -1757,6 +1757,21 @@ body.touch-placing #toasts { bottom: 128px; }
   .modal-card.laptop .cx-list { margin: -10px -10px 0; padding: 8px 10px; border-right: 0; border-bottom: 1px solid #e0e4ea; }
 }
 
+/* Plan production is a building site: the card is framed in yellow and black hazard tape. The tape is the card's border
+   (a striped border-box background under a plain padding-box one), edged in black on both sides, so the contents and
+   the shared close button stay as they are. */
+.modal-card.hazard { border: 14px solid transparent; border-radius: 16px;
+  background: linear-gradient(var(--panel), var(--panel)) padding-box,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 30%, transparent 70%, rgba(0, 0, 0, 0.12)) border-box,
+    repeating-linear-gradient(-45deg, #f5c518 0 18px, #1d1d1b 18px 36px) border-box;
+  box-shadow: inset 0 0 0 2px #1d1d1b, 0 0 0 2px #1d1d1b, 0 20px 60px rgba(0, 0, 0, 0.45); }
+.modal-card.hazard > header { border-radius: 2px 2px 0 0; }
+@media (max-width: 600px) {
+  .modal-card.hazard { border-width: 9px; border-radius: 12px;
+    background: linear-gradient(var(--panel), var(--panel)) padding-box,
+      linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 30%, transparent 70%, rgba(0, 0, 0, 0.12)) border-box,
+      repeating-linear-gradient(-45deg, #f5c518 0 12px, #1d1d1b 12px 24px) border-box; }
+}
 /* The Goals are the farmhouse kitchen's to-do list, chalked on a blackboard: a wooden frame (the header is its top rail),
    dark green slate with faint smudges of old writing, chalk-white text, chalk boxes that get a tick, a yellow chalk ring
    round the next goal, and a ledge with a stick of chalk and a felt eraser at the bottom. */
