@@ -1132,7 +1132,16 @@
       g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 1.5;
       g.strokeRect(R.hover.x * TS + 0.5, R.hover.y * TS + 0.5, TS - 1, TS - 1);
     }
-    // floating production text
+    g.setTransform(R.dpr, 0, 0, R.dpr, 0, 0);
+    drawSigns(g);
+    drawWeather(g, dt);
+    drawDaylight(g);
+    // Flows and bars come after the daylight tint, so their colours match and read the same at night.
+    g.setTransform(R.dpr * z, 0, 0, R.dpr * z, -R.cam.x * z * R.dpr, -R.cam.y * z * R.dpr);
+    drawFlows(g, z);
+    drawBars(g, now);
+    // Floating production text goes last, above every building's bar and the Chains links.
+    g.setTransform(R.dpr * z, 0, 0, R.dpr * z, -R.cam.x * z * R.dpr, -R.cam.y * z * R.dpr);
     g.textAlign = 'center'; g.textBaseline = 'middle';
     for (const f of R.floats) {
       f.t += dt;
@@ -1148,12 +1157,5 @@
     g.globalAlpha = 1;
     R.floats = R.floats.filter((f) => f.t < 1.6);
     g.setTransform(R.dpr, 0, 0, R.dpr, 0, 0);
-    drawSigns(g);
-    drawWeather(g, dt);
-    drawDaylight(g);
-    // Flows and bars come after the daylight tint, so their colours match and read the same at night.
-    g.setTransform(R.dpr * z, 0, 0, R.dpr * z, -R.cam.x * z * R.dpr, -R.cam.y * z * R.dpr);
-    drawFlows(g, z);
-    drawBars(g, now);
   };
 })();
