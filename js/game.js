@@ -718,7 +718,7 @@
       addItem(o, q);
       S.stats.produced[o] = (S.stats.produced[o] || 0) + q;
       const i = FS.items[o];
-      if (i.dish) { (S.cookedAt = S.cookedAt || {})[o] = S.time; sigMade(o, 'made'); } // restaurant guests notice food that has sat around
+      if (i.dish) sigMade(o, 'made');
       day[i.dish ? 'dish' : i.raw ? 'raw' : 'proc'] += i.value * q;
     }
     b.running = false; b.progress = 0; delete b.took;
@@ -2090,15 +2090,15 @@
   // Unlocked by finishing stage C. The town has three districts, opening one after another, each with its own guests
   // and five cuisines they want. The player rents one restaurant per district, sets each restaurant's menu and price level, and competes for the district's guests with a rival.
   // Guests eat dishes straight out of the farm's warehouse, so every restaurant is only as good as the supply chain
-  // behind it. Each guest gives a 1 to 5 star score from hidden rules; the rating is the average of the last `window`
-  // guests. The rules are never shown as numbers: guest reviews hint at them ("no Italian at all? Shame").
+  // behind it. Each guest gives a 1 to 5 star score (in half stars) from hidden rules and writes a review; the rating is
+  // the average of the last `window` reviews, exactly the ones the review feed shows. The rules are never shown as
+  // numbers: reviews hint at some of them, never at which cuisines a district wants.
   //   missing: a dish on the menu that is out of stock gives 1 star, whatever else.
   //   cplx:    long supply chains (FS.complexity rawCount) taste of the work behind them; Grand Cuisine dishes a bit more.
   //   taste:   a dish of one of the district's cuisines is liked; any other dish is out of place.
   //   price:   each district has a price level it likes; one step off is fine, two steps off is not.
   //   cover:   a good menu has every one of the district's five cuisines on it; each one missing costs stars.
   //   (menu)   guests only come once a menu has `menuMin` dishes, and only a full menu can be rated 5 stars.
-  //   stale:   a dish last cooked more than `stale` ago tastes like it sat around.
   //   special: in the Old Town, without Grand Cuisine (stage E) dishes on the menu the rating can't pass 4 stars; each
   //            one lifts that ceiling by 0.2, so 5 of them allow 5 stars.
   // Guests of a district pick a restaurant by rating (cubed), so a better rating takes guests from the others.
@@ -2119,7 +2119,7 @@
     return true;
   };
   Game.TOWN = {
-    menuMax: 12, menuMin: 4, window: 30, minGuests: 8, gap: 12, upkeep: 8, stale: DAY, rent: [5000, 5000], // rent: first, then + per restaurant
+    menuMax: 12, menuMin: 4, window: 20, minGuests: 8, gap: 12, upkeep: 8, rent: [5000, 5000], // rent: first, then + per restaurant
     prices: [{ id: 'low', name: 'Low', mult: 1.3 }, { id: 'fair', name: 'Fair', mult: 1.6 }, { id: 'high', name: 'High', mult: 2 }],
     stars: [[4, 2], [4.75, 5]], // toques the first time a restaurant reaches each rating
     newRating: 3.5, // how a restaurant without a rating yet competes for guests
@@ -2212,25 +2212,23 @@
   Game.lot = (id) => Game.LOTS.find((l) => l.id === id);
   Game.spot = Game.lot; // older name
   // The rival: one big corporation with a restaurant in every district. base: the rating each branch hovers around.
-  // theme: how well it does on each critic theme (0 to 0.5).
+  // critic: what the food critics add to its rating, on top of a little luck.
   Game.CORP = { name: 'Crestwell & Co', owner: 'the Crestwell Group', offer: 500000 };
   Game.RIVALS = [
     { id: 'cw_market', name: 'Crestwell Diner', owner: 'the Crestwell Group', lot: 'rv3', base: 3.9, price: 0, colors: ['#2b3a67', '#e3b341'],
       blurb: 'Fast, cheap and everywhere. It never runs out, and it never surprises.',
-      theme: { open: 0.5, master: 0.2, local: 0.2, long: 0, grand: 0 } },
+      critic: 0.25 },
     { id: 'cw_harbour', name: 'Crestwell Fish House', owner: 'the Crestwell Group', lot: 'rv2', base: 4.2, price: 1, colors: ['#2b3a67', '#e3b341'],
       blurb: 'Crestwell bought the old harbour inn and kept the nets on the walls.',
-      theme: { local: 0.45, master: 0.4, open: 0.3, long: 0.1, grand: 0 } },
+      critic: 0.3 },
     { id: 'cw_old_town', name: 'Maison Crestwell', owner: 'the Crestwell Group', lot: 'rv1', base: 4.5, price: 2, colors: ['#2b3a67', '#e3b341'],
       blurb: 'The flagship: white tablecloths, a famous name, and the Crestwell board at the best table.',
-      theme: { long: 0.4, grand: 0.35, local: 0.3, master: 0.3, open: 0.15 } },
+      critic: 0.35 },
   ];
   Game.rival = (id) => Game.RIVALS.find((x) => x.id === id);
-  const GUESTS = ['Anna', 'Ben', 'Chiara', 'Dev', 'Elif', 'Femi', 'Greta', 'Hiro', 'Ines', 'Jonas', 'Kofi', 'Lena', 'Mateo', 'Nadia', 'Olu', 'Priya',
-    'Quentin', 'Rosa', 'Sven', 'Tariq', 'Ursula', 'Vik', 'Wen', 'Ximena', 'Yusuf', 'Zoe'];
   // S.town = { v: 2, rests: [restaurant], next, rivals: {id: rival state}, dist: {id: {wait, share}} }.
-  // restaurant = { id, spot (lot id), name, menu: [dish ids], price: 0..2, scores: [1..5], reviews: [{ t, who, stars, dish, f, text }],
-  //   served, missed, earned, best, outAt: {dish: time of last review}, bought (a rival's restaurant you bought) }
+  // restaurant = { id, spot (lot id), name, menu: [dish ids], price: 0..2, reviews: [{ t, who, stars (1..5 in halves), dish, f, k (line), text }],
+  //   served, missed, earned, best, bought (a rival's restaurant you bought) }
   // rival state = { rating, served, sold, promo (until), beaten }
   // Saves from before the districts had six lots of their own (old_town, station, ...): their restaurants move to a
   // lot in the matching district.
@@ -2268,6 +2266,16 @@
       t.open = t.open || {};
       for (const r of t.rests) t.open[Game.lot(r.spot).district] = true;
     }
+    if (t.v === 4) {
+      // Version 5: every guest writes a review and the rating is the average of the feed. Old scores become reviews.
+      t.v = 5;
+      for (const r of t.rests) {
+        const old = (r.scores || []).slice(-Game.TOWN.window);
+        r.reviews = [];
+        for (const sc of old) addReview(r, r.menu[0] || null, null, halfStar(Math.min(sc, Game.ratingCap(r))));
+        delete r.scores; delete r.outAt;
+      }
+    }
     for (const rv of Game.RIVALS) if (!t.rivals[rv.id]) t.rivals[rv.id] = { rating: rv.base, served: 0, sold: false, promo: 0, beaten: false };
     if (!t.dist) t.dist = {};
     for (const d of Game.DISTRICTS) if (!t.dist[d.id]) t.dist[d.id] = { wait: 5, share: 0.5 };
@@ -2280,7 +2288,7 @@
   Game.rentCost = () => Game.TOWN.rent[0] + Game.TOWN.rent[1] * Game.restaurants().filter((r) => !r.bought).length;
   Game.townUpkeep = () => Game.TOWN.upkeep * Game.restaurants().length;
   function newRestaurant(lotId, name, bought) {
-    const t = town(), r = { id: t.next++, spot: lotId, name, menu: [], price: 1, scores: [], reviews: [], served: 0, missed: 0, earned: 0, best: 0, outAt: {} };
+    const t = town(), r = { id: t.next++, spot: lotId, name, menu: [], price: 1, reviews: [], served: 0, missed: 0, earned: 0, best: 0 };
     if (bought) r.bought = true;
     t.rests.push(r);
     return r;
@@ -2322,7 +2330,9 @@
   };
   // Guests eat at night too, but far fewer of them.
   const busy = () => { const h = (Game.S.time % DAY) / HOUR; return h >= 23 || h < 7 ? 0.3 : 1; };
-  Game.rating = (r) => (r.scores.length < Game.TOWN.minGuests ? null : Math.min(Game.ratingCap(r), r.scores.reduce((a, b) => a + b, 0) / r.scores.length));
+  // The rating is the average of the stars in the review feed, so what guests write always adds up to it. The ceiling
+  // (ratingCap) limits each guest's stars, not the average: after a change that lowers it, the rating follows guest by guest.
+  Game.rating = (r) => (r.reviews.length < Game.TOWN.minGuests ? null : r.reviews.reduce((a, x) => a + x.stars, 0) / r.reviews.length);
   Game.grandCount = (r) => r.menu.filter((id) => stageOf(id) === 'E').length;
   // Only a full menu can reach 5 stars: each empty slot takes 0.15 off the limit (8 dishes: 4.4, 4 dishes: 3.8).
   Game.menuCap = (r) => 5 - 0.15 * Math.max(0, Game.TOWN.menuMax - r.menu.length);
@@ -2376,8 +2386,6 @@
     f.taste = d.like(id) ? 0.3 : -0.8;
     f.price = [0.3, 0, -0.5][Math.abs(r.price - d.price)];
     f.cover = [0.4, 0, -0.4, -0.8, -0.8, -0.8][Game.missingCuisines(r).length];
-    const at = (Game.S.cookedAt || {})[id];
-    f.stale = at === undefined || Game.S.time - at > Game.TOWN.stale ? -0.5 : 0;
     f.chef = Game.headBonus(r, id);
     f.master = Game.mastered(id) ? Game.MASTERY.guest : 0;
     const score = Math.max(1, Math.min(5, 3 + Object.values(f).reduce((a, b) => a + b, 0)));
@@ -2385,27 +2393,39 @@
   }
   Game.judge = judge;
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
-  // A review line for the rule that mattered most to this guest (good or bad, depending on their score).
-  function reviewText(r, id, rule, good) {
-    const d = Game.districtOf(r), dish = FS.items[id].name;
-    const fill = (s) => s.replace(/\{dish\}/g, dish);
-    switch (rule) {
-      case 'missing': return pick([`Came all this way for the ${dish}, and they had run out.`, `The ${dish} is on the menu but not in the kitchen. Left hungry.`, `Sorry, no ${dish} today, they said. Again!`]);
-      case 'stale': return pick([`The ${dish} tasted like it had been sitting around for days.`, `Was the ${dish} cooked this week? It didn't taste like it.`]);
-      case 'cplx': return good ? pick([`You can taste every step that went into the ${dish}. Superb.`, `The ${dish} had real depth to it.`]) : `The ${dish} was fine, but a bit plain for a restaurant.`;
-      case 'chef': return pick([`You can tell ${r.chef.name} knows ${FS.cuisineById[r.chef.cz].name} cooking. That ${dish}!`, `Chef ${r.chef.name} came out to ask how the ${dish} was. Perfect, of course.`]);
-      case 'master': return pick([`The ${dish} here is the best I've ever had.`, `Whoever perfected this ${dish} deserves a medal.`]);
-      case 'special': return pick(['The menu is good, but nothing here is truly special.', `Solid ${dish}. Still, I was hoping for something grand.`]);
-    }
-    return '';
+  // Stars come in halves. A score between two half stars is rounded up or down at random, in proportion, so on average
+  // the stars equal the score.
+  function halfStar(x) { const lo = Math.floor(x * 2) / 2; return Math.max(1, Math.min(5, lo + (Math.random() < (x - lo) * 2 ? 0.5 : 0))); }
+  // Where a review's line comes from: the rule that mattered most to the guest (sometimes), a touch of the district
+  // (sometimes), else plain lines for their stars. A line already in the restaurant's feed is never used again while it
+  // is there: the next pool is tried, down to the plain lines of every star level.
+  function reviewPools(r, rule, stars) {
+    const R = FS.REVIEWS, d = Game.districtOf(r), D = R.district[d.id], good = stars >= 3.5, bad = stars <= 2.5, band = Math.floor(stars);
+    const first = [];
+    if (rule && Math.random() < 0.6) {
+      if (rule === 'missing') first.push(R.missing);
+      else if (rule === 'cplx') first.push(good ? R.cplx.good : R.cplx.bad);
+      else if (rule === 'price') first.push(good ? [...R.price.good, ...D.price] : r.price > d.price ? R.price.high : R.price.low);
+      else if (R[rule]) first.push(R[rule]);
+    } else if (rule === 'missing') first.push(R.missing);
+    if ((good || bad) && Math.random() < 0.25) first.push(good ? D.good : D.bad);
+    const bands = [band, ...[1, 2, 3, 4].flatMap((k) => [band - k, band + k])].filter((b) => R.band[b]);
+    return [...first, ...bands.map((b) => R.band[b])];
   }
-  function addReview(r, id, rule, score) {
-    const good = score >= 3.5;
-    const text = reviewText(r, id, rule, good);
-    // Skip a line one of the last few guests already wrote.
-    if (!text || r.reviews.slice(-4).some((x) => x.text === text)) return;
-    r.reviews.push({ t: Game.S.time, who: pick(GUESTS), stars: Math.round(score), dish: id, f: rule, text });
-    if (r.reviews.length > 20) r.reviews.shift();
+  // A guest's review: their stars and a line. The feed keeps the last `window` reviews (the rating is their average).
+  function addReview(r, id, rule, stars) {
+    const used = new Set(r.reviews.map((x) => x.k)), names = new Set(r.reviews.map((x) => x.who));
+    let k = null;
+    for (const pool of reviewPools(r, rule, stars)) {
+      const free = pool.filter((x) => !used.has(x) && (id || !x.includes('{dish}')) && (r.chef || !x.includes('{chef}')));
+      if (free.length) { k = pick(free); break; }
+    }
+    k = k || pick(FS.REVIEWS.band[Math.floor(stars)]);
+    const text = k.replace(/\{dish\}/g, id ? FS.items[id].name : '').replace(/\{chef\}/g, r.chef ? r.chef.name : '')
+      .replace(/\{cuisine\}/g, r.chef ? FS.cuisineById[r.chef.cz].name : '');
+    const who = pick(FS.REVIEWS.guests.filter((n) => !names.has(n)));
+    r.reviews.push({ t: Game.S.time, who, stars, dish: id, f: rule, k, text });
+    while (r.reviews.length > Game.TOWN.window) r.reviews.shift();
     Game.emit('review', r);
   }
   // One guest eats at restaurant r.
@@ -2416,10 +2436,9 @@
     let x = Math.random() * tot, k = 0;
     while (k < w.length - 1 && (x -= w[k]) > 0) k++;
     const id = r.menu[k];
-    let score, rule;
+    let stars, rule;
     if ((S.inv[id] || 0) < 1) {
-      score = 1; rule = 'missing'; r.missed++;
-      if (S.time - (r.outAt[id] || -1e9) > 2 * HOUR) { r.outAt[id] = S.time; addReview(r, id, rule, score); }
+      stars = 1; rule = 'missing'; r.missed++;
       Game.emit('guest', { lot: r.spot, miss: true });
     } else {
       S.inv[id] -= 1;
@@ -2429,19 +2448,21 @@
       const rv = Game.rating(r), rated = (town().rated = town().rated || {});
       if (rv !== null && !(rated[id] >= rv)) rated[id] = rv;
       if (rv !== null) sigMade(id, rv);
-      const j = judge(r, id);
-      score = j.score;
+      const j = judge(r, id), cap = Game.ratingCap(r), score = j.score;
+      if (score >= cap) {
+        // At the ceiling: the half star just above it only while the feed's average stays at or under it.
+        const lo = Math.floor(cap * 2) / 2, hi = Math.ceil(cap * 2) / 2, keep = r.reviews.slice(r.reviews.length >= Game.TOWN.window ? 1 : 0);
+        stars = (keep.reduce((a, x) => a + x.stars, 0) + hi) / (keep.length + 1) <= cap ? hi : lo;
+      } else stars = halfStar(score);
       // Guests never say which cuisines they want (taste, cover): that only shows in the stars, and the critic tells.
-      const good = score >= 3.5, rules = Object.entries(j.f).filter(([k, v]) => k !== 'taste' && k !== 'cover' && (good ? v > 0 : v < 0)).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+      const good = stars >= 3.5, rules = Object.entries(j.f).filter(([k, v]) => k !== 'taste' && k !== 'cover' && (good ? v > 0 : v < 0)).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
       rule = rules.length ? (Math.random() < 0.7 ? rules[0][0] : pick(rules)[0]) : null;
       // Near the ceiling, guests say what is missing for the top stars.
-      if (good && score > Game.ratingCap(r) && Math.random() < 0.4) rule = 'special';
-      if (rule && Math.random() < 0.3) addReview(r, id, rule, Math.min(score, Game.ratingCap(r)));
+      if (good && score > cap && cap < 5 && Math.random() < 0.4) rule = 'special';
       Game.emit('inv');
       Game.emit('guest', { lot: r.spot, pay, dish: id });
     }
-    r.scores.push(score);
-    if (r.scores.length > Game.TOWN.window) r.scores.shift();
+    addReview(r, id, rule, stars);
     const v = Game.rating(r);
     for (const [at, n] of Game.TOWN.stars) if (v !== null && v >= at && r.best < at) {
       r.best = at;
@@ -2528,42 +2549,53 @@
     { district: 'market', name: 'Rosa Brandt', paper: 'Market Crier', she: 'she' },
   ];
   Game.criticOf = (did) => Game.CRITICS.find((x) => x.district === did);
-  Game.THEMES = [
-    { id: 'long', name: 'The long road', desc: 'dishes with long supply chains, the more raw ingredients the better' },
-    { id: 'local', name: 'Local favourite', desc: 'menus with only the cuisines the district loves' },
-    { id: 'master', name: 'Perfected', desc: 'mastered dishes on the menu' },
-    { id: 'open', name: 'Never runs out', desc: 'restaurants that never turn a guest away from now until the visit' },
-    { id: 'grand', name: 'A grand occasion', desc: 'Grand Cuisine dishes on the menu' },
-  ];
-  Game.theme = (id) => Game.THEMES.find((x) => x.id === id);
-  // How well a menu fits a theme, 0 to 0.5.
-  function themeBonus(r, theme) {
-    const m = r.menu, d = Game.districtOf(r);
-    if (!m.length) return 0;
-    switch (theme) {
-      case 'long': return Math.max(0, Math.min(0.5, (m.reduce((a, id) => a + FS.complexity(id).rawCount, 0) / m.length - 6) / 14));
-      case 'local': return 0.5 * m.filter((id) => d.like(id)).length / m.length;
-      case 'master': return Math.min(0.5, 0.1 * m.filter((id) => Game.mastered(id)).length);
-      case 'open': return Math.max(0, 0.5 - 0.05 * (r.missed - ((critic().miss0 || {})[r.id] || 0)));
-      case 'grand': return 0.1 * Math.min(5, Game.grandCount(r));
-    }
-    return 0;
+  // What a critic weighs, besides the guests' rating and one dish: every item below adds or takes points, and the review
+  // lists each one. k: id, the points range in the comment.
+  //   long   -0.15..+0.15  how many raw ingredients stand behind the menu's dishes, on average
+  //   local  -0.3..+0.15   cuisines that don't belong to the district (named), or all five of its cuisines
+  //   open   -0.4..+0.15   guests turned away (sold out) since the visits were announced
+  //   master  0..+0.15     perfected dishes on the menu
+  //   grand  -0.1..+0.2    Grand Cuisine dishes (only in a district whose guests want them)
+  //   chef    0..+0.15     a head chef, by level
+  //   menu   -0.15..+0.05  a full menu, or a thin one
+  //   price  -0.2..+0.05   the price level the district likes
+  const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+  function criticReview(r, did) {
+    const S = Game.S, c = critic(), d = Game.district(did), m = r.menu, id = pick(m), rv = Game.rating(r), base = rv === null ? 3 : rv;
+    const out = (S.inv[id] || 0) < 1, dish = out ? 1 : Math.min(Game.ratingCap(r), judge(r, id).score), lines = [];
+    const add = (k, pts, text) => lines.push({ k, pts: Math.round(pts * 100) / 100, text });
+    const avg = m.reduce((a, x) => a + FS.complexity(x).rawCount, 0) / m.length;
+    add('long', clamp((avg - 8) / 12, -0.15, 0.15), `${avg >= 9 ? 'Long' : avg < 7 ? 'Short' : 'Ordinary'} supply chains: about ${Math.round(avg)} raw ingredients behind each dish`);
+    const czs = Game.menuCuisines(r), wrong = czs.filter((cz) => !d.cuisines.includes(cz)), right = czs.filter((cz) => d.cuisines.includes(cz));
+    const names = (l) => (l.length > 1 ? l.slice(0, -1).join(', ') + ' and ' + l[l.length - 1] : l[0]);
+    if (wrong.length) add('local', -0.1 * Math.min(3, wrong.length), `${names(wrong.map((cz) => FS.cuisineById[cz].name))} cooking does not belong in the ${d.name}`);
+    else if (right.length === d.cuisines.length) add('local', 0.15, `Every cuisine the ${d.name} loves, and nothing else`);
+    else add('local', 0, `Everything fits the ${d.name}, but the menu feels incomplete`);
+    const miss = r.missed - ((c.miss0 || {})[r.id] || 0);
+    add('open', miss ? -Math.min(0.4, 0.03 * miss) : 0.15, miss ? `${miss} guest${miss === 1 ? '' : 's'} turned away because a dish was sold out` : 'Not a single guest turned away');
+    const ms = m.filter((x) => Game.mastered(x)).length;
+    if (ms || Game.masteryUnlocked()) add('master', Math.min(0.15, 0.03 * ms), ms ? `${ms} perfected dish${ms === 1 ? '' : 'es'}` : 'No perfected dishes');
+    if (d.grand) { const g = Game.grandCount(r); add('grand', g ? Math.min(0.2, 0.04 * g) : -0.1, g ? `${g} ${Game.stageName('E')} dish${g === 1 ? '' : 'es'}` : 'Nothing truly grand on the menu'); }
+    if (r.chef) add('chef', 0.05 * r.chef.lvl, `Head chef ${r.chef.name}, level ${r.chef.lvl}`);
+    add('menu', m.length >= Game.TOWN.menuMax ? 0.05 : m.length < 8 ? -0.15 : 0, m.length >= Game.TOWN.menuMax ? 'A full menu' : m.length < 8 ? `A thin menu: ${m.length} dishes` : `${m.length} dishes on the menu`);
+    const poff = Math.abs(r.price - d.price);
+    add('price', [0.05, 0, -0.2][poff], poff ? `${Game.TOWN.prices[r.price].name} prices${poff > 1 ? ', far from what the district likes' : ''}` : `${Game.TOWN.prices[r.price].name} prices, just as the district likes`);
+    const start = 0.6 * base + 0.4 * dish, score = clamp(start + lines.reduce((a, x) => a + x.pts, 0), 1, 5);
+    const note = out ? 'out' : dish >= 4.3 ? 'great' : dish >= 3.5 ? 'good' : 'meh';
+    return { lot: r.spot, rid: r.id, name: r.name, dish: id, dishScore: dish, rating: base, start, note, lines, wrong, right, district: did, score };
   }
-  Game.themeBonus = themeBonus;
-  // S.critic = { v: 2, year, rumour, miss0: {restaurant id: missed then}, visits: {district: {theme, at, done}},
-  //   boost: {district: {lot, until}}, gold: {district: year of its last gold for you}, allGold (year), history: [{ year, district, theme, list }] }
+  Game.criticReview = criticReview;
+  // S.critic = { v: 2, year, rumour, miss0: {restaurant id: missed then}, visits: {district: {at, done}},
+  //   boost: {district: {lot, until}}, gold: {district: year of its last gold for you}, allGold (year), history: [{ year, district, list }] }
   const winterStart = (year) => year * YEAR + 6 * DAY;
   function planCritic(year) {
     const S = Game.S;
     if (!S.critic || S.critic.v !== 2) S.critic = { v: 2, history: [], boost: {}, gold: {} };
-    const c = S.critic, last = c.visits || {};
+    const c = S.critic;
     c.year = year; c.rumour = false; c.miss0 = {}; c.visits = {};
-    for (const cr of Game.CRITICS) {
-      const themes = Game.THEMES.filter((x) => !last[cr.district] || x.id !== last[cr.district].theme);
-      c.visits[cr.district] = { theme: pick(themes).id, at: winterStart(year) + (0.15 + Math.random() * 0.7) * 2 * DAY, done: false };
-    }
+    for (const cr of Game.CRITICS) c.visits[cr.district] = { at: winterStart(year) + (0.15 + Math.random() * 0.7) * 2 * DAY, done: false };
     for (const r of Game.restaurants()) c.miss0[r.id] = r.missed;
-    criticNews(`📰 This winter each district's food critic picks its Restaurant of the Year. See what they look for in the 📰 Town Guide.`);
+    criticNews(`📰 This winter each district's food critic picks its Restaurant of the Year. They notice everything, from the first guest turned away to the last plate.`);
     Game.emit('critic');
   }
   Game.planCritic = planCritic;
@@ -2583,31 +2615,22 @@
     }
     for (const cr of Game.CRITICS) { const v = c.visits[cr.district]; if (!v.done && S.time >= v.at) runCritic(cr.district); }
   }
-  // A visit: one dish at every restaurant of the district, the rival too, scored on rating, that dish, and the theme.
+  // A visit: one dish at every restaurant of the district, the rival too. Yours are scored on the rating, that dish
+  // and everything in criticReview; the rival on its rating and Crestwell's polish.
   function runCritic(did) {
     const S = Game.S, c = S.critic, t = town(), v = c.visits[did], cr = Game.criticOf(did), list = [];
     for (const r of t.rests) {
       if (!r.menu.length || Game.lot(r.spot).district !== did) continue;
-      const id = pick(r.menu), rv = Game.rating(r), base = rv === null ? 3 : rv;
-      let dish, note;
-      if ((S.inv[id] || 0) < 1) { dish = 1; note = 'out'; }
-      else {
-        dish = Math.min(Game.ratingCap(r), judge(r, id).score);
-        const at = (S.cookedAt || {})[id];
-        note = at === undefined || S.time - at > Game.TOWN.stale ? 'stale' : dish >= 4.3 ? 'great' : dish >= 3.5 ? 'good' : 'meh';
-      }
-      const bonus = themeBonus(r, v.theme), d = Game.district(did), czs = Game.menuCuisines(r);
-      const wrong = czs.filter((cz) => !d.cuisines.includes(cz)), right = czs.filter((cz) => d.cuisines.includes(cz));
+      const x = criticReview(r, did);
       const notes = (t.notes = t.notes || {}), n = (notes[did] = notes[did] || { right: [], wrong: [] });
-      for (const cz of wrong) if (!n.wrong.includes(cz)) n.wrong.push(cz);
-      for (const cz of right) if (!n.right.includes(cz)) n.right.push(cz);
-      list.push({ lot: r.spot, rid: r.id, name: r.name, dish: id, note, bonus, theme: v.theme, wrong, district: did, score: 0.6 * base + 0.4 * dish + bonus });
+      for (const cz of x.wrong) if (!n.wrong.includes(cz)) n.wrong.push(cz);
+      for (const cz of x.right) if (!n.right.includes(cz)) n.right.push(cz);
+      list.push(x);
     }
     for (const rv of Game.RIVALS) {
       const st = t.rivals[rv.id];
       if (st.sold || Game.lot(rv.lot).district !== did) continue;
-      const bonus = (rv.theme[v.theme] || 0) * (0.6 + Math.random() * 0.6);
-      list.push({ lot: rv.lot, rival: rv.id, name: rv.name, bonus, score: st.rating + bonus + (Math.random() - 0.5) * 0.3 });
+      list.push({ lot: rv.lot, rival: rv.id, name: rv.name, score: clamp(st.rating + rv.critic + (Math.random() - 0.5) * 0.3, 1, 5) });
     }
     list.sort((a, b) => b.score - a.score);
     // Each place goes to the best restaurant not yet placed that reaches its minimum score, so a place can stay empty.
@@ -2626,7 +2649,7 @@
     c.boost[did] = gold ? { lot: gold.lot, until: S.time + YEAR } : null;
     v.done = true;
     if (Game.CRITICS.every((x) => c.gold[x.district] === c.year)) c.allGold = c.year;
-    c.history.push({ year: c.year, district: did, theme: v.theme, list });
+    c.history.push({ year: c.year, district: did, list });
     if (c.history.length > 12) c.history.shift();
     const mine = list.find((x) => !x.rival && x.place);
     Game.toast(`🏆 ${cr.paper}: ${gold ? `${gold.name} is the ${Game.district(did).name}'s Restaurant of the Year!` : `nobody in the ${Game.district(did).name} was good enough for first place.`}` +
@@ -2645,13 +2668,12 @@
   };
   function criticBase(x) {
     const dish = x.dish ? FS.items[x.dish].name : '';
-    const th = { long: 'the long road behind every plate', local: 'how well it knows its neighbours', master: 'dishes cooked to perfection', open: 'a kitchen that never lets a guest down', grand: 'a sense of occasion' }[(x.theme || '')] || '';
     switch (x.note) {
       case 'out': return `I asked for the ${dish}. They had none. A menu is a promise, and this one was broken.`;
-      case 'stale': return `The ${dish} had clearly been waiting for me for some time. Freshness is not optional.`;
-      case 'great': return `The ${dish} was the best thing I ate all year.${x.bonus >= 0.3 && th ? ` And ${th}, too.` : ''}`;
-      case 'good': return `A very good ${dish}.${x.bonus >= 0.3 && th ? ` I liked ${th}.` : x.bonus < 0.15 ? ' It did not quite speak to this year\'s theme.' : ''}`;
-      default: return `The ${dish} was honest, but it did not stay with me.${x.bonus < 0.15 ? ' Nor did it fit this year\'s theme.' : ''}`;
+      case 'stale': return `The ${dish} had clearly been waiting for me for some time.`; // reviews from before v1.30
+      case 'great': return `The ${dish} was the best thing I ate all year.`;
+      case 'good': return `A very good ${dish}.`;
+      default: return `The ${dish} was honest, but it did not stay with me.`;
     }
   }
 
@@ -2705,7 +2727,7 @@
     if (S.legacyWon || !S.town) return;
     if (Game.corpOffer() && !offered && !S.corpOffered) {
       offered = true; S.corpOffered = S.time;
-      Game.toast(`📨 The Crestwell Group has had enough: they offer to sell you all three of their restaurants. See the 📰 Town Guide.`, 'good', true);
+      Game.toast(`📨 The Crestwell Group has had enough: they offer to sell you all three of their restaurants. See the 🏙️ Town tab in the Town.`, 'good', true);
       Game.emit('offer');
     }
     if (Game.legacy().every((x) => x.done)) {

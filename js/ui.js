@@ -1395,46 +1395,73 @@
   const share = (x) => Math.round(x * 100) + '%';
   // A small ? that explains something on hover, instead of a paragraph that is always there.
   const qm = (tip) => `<span class="qm" data-tip="${esc(tip)}">?</span>`;
-  // What the food critic has told you about a district's cuisines: ✓ wanted, ✗ not wanted. The rest is detective work.
-  const notesRow = (d) => {
-    const n = Game.cuisineNotes(d.id);
-    if (!n.right.length && !n.wrong.length) return '';
-    return `<span class="tw-czs" data-tip="What the critic has told you: ✓ wanted here, ✗ not wanted">${n.right.map((cz) => `<span class="ok">${czIcon(cz)}</span>`).join('')}${n.wrong.map((cz) => `<span class="no">${czIcon(cz)}</span>`).join('')}</span>`;
-  };
+  // What the food critic has told you about a district's cuisines, as chips with the cuisine written out: ✓ wanted,
+  // ✗ not wanted, and a grey ? for each wanted cuisine nobody has named yet. compact: the unknown ones as one chip.
+  const czChip = (cz, cls, mark) => `<span class="tw-chip ${cls}">${mark} ${FSI.img('cz_' + cz)} ${esc(FS.cuisineById[cz].name)}</span>`;
+  function cuisineChips(d, compact) {
+    const n = Game.cuisineNotes(d.id), unknown = d.cuisines.length - n.right.length;
+    const unk = !unknown ? '' : compact ? `<span class="tw-chip unk">? ${unknown} unknown</span>` : Array.from({ length: unknown }, () => '<span class="tw-chip unk">? unknown</span>').join('');
+    return `<div class="tw-chips">${n.right.map((cz) => czChip(cz, 'ok', '✓')).join('')}${unk}${n.wrong.map((cz) => czChip(cz, 'no', '✗')).join('')}</div>`;
+  }
   const districtTip = (d) => `${d.who}. They like ${Game.TOWN.prices[d.price].name.toLowerCase()} prices.`;
   const knownWrong = (d, id) => Game.cuisineNotes(d.id).wrong.includes(FS.cuisineOf(id).id);
-  function districtCard(d) {
+  // Everyone competing in a district, best first, with their share of its guests.
+  function standings(d) {
     const c = Game.contenders(d.id).sort((a, b) => b.rating - a.rating), tot = c.reduce((a, x) => a + x.weight, 0);
+    return c.length ? `<div class="tw-standing">${c.map((x) => `<div class="${x.r ? 'mine' : ''}"><span>${esc(x.r ? x.r.name : x.rv.name)}</span>${starBar(x.rating)}<b>${x.rating.toFixed(1)}</b><span class="small muted" data-tip="Share of this district's guests">${share(tot ? x.weight / tot : 0)}</span></div>`).join('')}</div>` : '';
+  }
+  function districtCard(d) {
     const lock = Game.districtOpen(d.id) ? '' : ` <span data-tip="${esc('Opens with: ' + Game.districtNeed(d.id).map((x) => (x.done ? '✅ ' : '⬜ ') + x.text).join(' · '))}">🔒</span>`;
-    return `<div class="tw-dcard" style="--dc:${d.color}"><div class="tw-dname">${esc(d.name)}${lock} ${notesRow(d)} <span class="small" data-tip="${esc(districtTip(d))}">${esc(d.short)}</span></div>
-      ${c.length ? `<div class="tw-standing">${c.map((x) => `<div class="${x.r ? 'mine' : ''}"><span>${esc(x.r ? x.r.name : x.rv.name)}</span>${starBar(x.rating)}<b>${x.rating.toFixed(1)}</b><span class="small muted" data-tip="Share of this district's guests">${share(tot ? x.weight / tot : 0)}</span></div>`).join('')}</div>` : ''}</div>`;
+    const known = Game.cuisineNotes(d.id), chips = known.right.length || known.wrong.length ? cuisineChips(d, true) : '';
+    return `<div class="tw-dcard" style="--dc:${d.color}"><div class="tw-dname">${esc(d.name)}${lock} <span class="small" data-tip="${esc(districtTip(d))}">${esc(d.short)}</span></div>
+      ${chips}${standings(d)}</div>`;
   }
-  // How well a restaurant fits its district: its cuisines, the price level its guests like, and who it competes with.
-  function fitBox(r, d) {
-    const P = Game.TOWN.prices, poff = Math.abs(r.price - d.price), n = Game.cuisineNotes(d.id), known = n.right.length + n.wrong.length;
-    const c = Game.contenders(d.id), tot = c.reduce((a, x) => a + x.weight, 0), me = c.find((x) => x.r === r), rivals = c.filter((x) => x.rv);
-    const ok = (b) => (b ? '✅' : '⚠️');
-    return `<div class="tw-fit" style="--dc:${d.color}">
-      <div>🔎 ${known ? `${notesRow(d)} <span class="small muted">${n.right.length} of 5 found</span>` : '<span class="muted">Which cuisines?</span>'} ${qm(`${d.name} guests want five cuisines, and a menu earns its stars with dishes of all five and nothing else. Nobody tells you which: watch the stars, and read what the food critic writes after each visit.`)}</div>
-      <div>${ok(!poff)} 💰 ${P[r.price].name}${poff ? ` <span class="muted">(they like ${P[d.price].name})</span>` : ''}</div>
-      ${rivals.length ? `<div>⚔️ ${share(tot && me ? me.weight / tot : 0)} of guests vs ${rivals.map((x) => `${esc(x.rv.name)} ★${x.rating.toFixed(1)}`).join(', ')} ${qm('Guests in a district pick between its restaurants by stars: more stars, more guests.')}</div>` : ''}</div>`;
+  // Why a restaurant's rating can't go higher yet.
+  function capTip(r, d) {
+    const why = [];
+    if (r.menu.length < Game.TOWN.menuMax) why.push(`Only a full menu of ${Game.TOWN.menuMax} dishes can reach 5 stars.`);
+    if (d.grand && Game.grandCount(r) < 5) why.push(`${d.name} guests expect something grand: each ${Game.stageName('E')} dish on the menu lifts the limit.`);
+    return why.join('\n') || "This restaurant can't be rated higher yet.";
   }
+  // A restaurant: a header that always shows (rating, guests, share of the district), then three tabs: Menu,
+  // District (cuisines, prices, competition, head chef) and Reviews. Adding dishes opens a picker in place of the menu.
+  const TOWN_SUBS = ['menu', 'district', 'reviews'];
   function restaurantPanel(r) {
-    const S = Game.S, l = Game.lot(r.spot), d = Game.district(l.district), v = Game.rating(r), T = Game.TOWN, cap = Game.ratingCap(r);
-    const czs = Game.menuCuisines(r);
+    const l = Game.lot(r.spot), d = Game.district(l.district), v = Game.rating(r), T = Game.TOWN, cap = Game.ratingCap(r);
+    const c = Game.contenders(d.id), tot = c.reduce((a, x) => a + x.weight, 0), me = c.find((x) => x.r === r), rivals = c.filter((x) => x.rv);
+    const out = r.menu.filter((id) => have(id) < 1).length, sub = TOWN_SUBS.includes(ui.townSub) ? ui.townSub : 'menu';
+    const tabs = [['menu', `🍽️ Menu <span class="${out ? 'tw-out' : 'muted'}">${out ? `${out} out` : `${r.menu.length}/${T.menuMax}`}</span>`],
+      ['district', '🔎 District'], ['reviews', `⭐ Reviews <span class="muted">${r.reviews.length}</span>`]];
+    const body = sub === 'district' ? districtTab(r, d) : sub === 'reviews' ? reviewsTab(r, v) : ui.townPick ? pickerTab(r, d) : menuTab(r, d);
+    return `<div class="tw-head"><span class="pack-icon">${FSI.img('ui_restaurant')}</span><div><h3>${esc(r.name)}</h3>
+        <div class="small muted">${esc(l.name)}, ${esc(d.name)}${r.bought ? ' · bought from its old owner' : ''}${Game.awardBoost(r.spot) > 1 ? ` · 🏆 ${esc(d.name)}'s Restaurant of the Year` : ''}</div>
+        <div>${starBar(v)} <b>${v === null ? 'new' : v.toFixed(1)}</b>${cap < 5 ? ` <span class="small muted" data-tip="${esc(capTip(r, d))}">max ${cap.toFixed(1)}</span>` : ''}
+          ${qm(v === null ? `Rated after ${T.minGuests} guests.` : `The average of the ${r.reviews.length} guest reviews under ⭐ Reviews.`)}</div>
+        <div class="small muted"><span data-tip="Plates served">🍽️ ${r.served}</span> · <span data-tip="Guests turned away because their dish was sold out">😠 ${r.missed}</span> · <span data-tip="Earned so far (upkeep ${T.upkeep}/min)">💰${money(r.earned)}</span></div>
+        ${rivals.length ? `<div class="small">⚔️ <b>${share(tot && me ? me.weight / tot : 0)}</b> of the guests vs ${rivals.map((x) => `${esc(x.rv.name)} ★${x.rating.toFixed(1)}`).join(', ')} ${qm('Guests in a district pick between its restaurants by stars: more stars, more guests.')}</div>` : ''}</div></div>
+      <div class="tw-sub">${tabs.map(([k, label]) => `<button class="${sub === k ? 'on' : ''}" data-action="town-sub" data-arg="${k}">${label}</button>`).join('')}</div>
+      ${body}`;
+  }
+  function menuTab(r, d) {
+    const T = Game.TOWN, full = r.menu.length >= T.menuMax;
     const menu = r.menu.map((id) => {
       const n = have(id);
-      return `<div class="tw-dish ${n < 1 ? 'out' : ''}"><span class="ico-l">${FSI.img(id)}</span><div><b data-item="${id}" class="link">${esc(it(id).name)}</b>${knownWrong(d, id) ? ` <span class="warnc" title="The critic says this cuisine doesn't belong here">✗</span>` : ''}
-        <div class="small muted">${esc(it(id).cuisine)} · <span class="nowrap">💰${price(it(id).value * T.prices[r.price].mult * Game.dishMult(id))} a plate</span>${Game.mastered(id) ? ' · <span class="okc" title="Mastered">⭐</span>' : ''}${Game.headBonus(r, id) ? ` · <span class="okc" title="${esc(r.chef.name)}'s speciality">👨‍🍳</span>` : ''}</div></div>
-        <span class="small ${n < 1 ? 'short' : ''}" title="In your warehouse">${n < 1 ? 'out of stock' : `📦 ${n}`}</span>
-        <button class="small" data-action="plan" data-arg="${id}" title="Plan production for this dish">🗺️</button>
-        <button class="small" data-action="menu-del" data-arg="${r.id}|${id}" title="Take it off the menu">✕</button></div>`;
+      return `<div class="tw-dish ${n < 1 ? 'out' : ''}"><span class="ico-l">${FSI.img(id)}</span><div><b data-item="${id}" class="link">${esc(it(id).name)}</b>${knownWrong(d, id) ? ` <span class="warnc" data-tip="The critic says this cuisine doesn't belong here">✗</span>` : ''}
+        <div class="small muted">${esc(it(id).cuisine)} · <span class="nowrap">💰${price(it(id).value * T.prices[r.price].mult * Game.dishMult(id))} a plate</span>${Game.mastered(id) ? ' · <span class="okc" data-tip="Mastered">⭐</span>' : ''}${Game.headBonus(r, id) ? ` · <span class="okc" data-tip="${esc(r.chef.name)}'s speciality">👨‍🍳</span>` : ''}</div></div>
+        <span class="small ${n < 1 ? 'short' : ''}" data-tip="In your warehouse">${n < 1 ? 'out of stock' : `📦 ${n}`}</span>
+        <button class="small" data-action="plan" data-arg="${id}" data-tip="Plan production for this dish">🗺️</button>
+        <button class="small" data-action="menu-del" data-arg="${r.id}|${id}" data-tip="Take it off the menu">✕</button></div>`;
     }).join('');
-    // Dishes that could go on the menu: discovered ones, by cuisine.
+    return `${r.menu.length && r.menu.length < T.menuMin ? `<p class="warn small">Guests come once the menu has ${T.menuMin} dishes.</p>` : ''}
+      ${menu || '<p class="hint">Empty: add some dishes.</p>'}
+      <p><button class="primary" data-action="town-pick" data-arg="1" ${full ? 'disabled' : ''}>${full ? 'Menu full' : '＋ Add a dish'}</button></p>`;
+  }
+  // Discovered dishes to add, by cuisine; cuisines and dishes with stock first. Search matches the dish, its cuisine or an ingredient.
+  function pickerTab(r, d) {
+    const S = Game.S, T = Game.TOWN, full = r.menu.length >= T.menuMax;
     const known = FS.dishList.filter((x) => S.discovered[x.id] && !r.menu.includes(x.id));
     const czOpts = [...new Set(known.map((x) => FS.cuisineOf(x.id).id))].map((c) => FS.cuisineById[c]).sort((a, b) => FS.CUISINES.indexOf(a) - FS.CUISINES.indexOf(b));
     const czf = czOpts.some((c) => c.id === ui.townCz) ? ui.townCz : '';
-    // Search matches the dish, its cuisine or an ingredient. Grouped by cuisine; cuisines and dishes with stock come first.
     const q = (ui.search.town || '').toLowerCase().trim();
     const hit = (x) => !q || x.name.toLowerCase().includes(q) || (x.cuisine || '').toLowerCase().includes(q)
       || Object.keys(FS.dishRecipe[x.id].inputs).some((i) => it(i).name.toLowerCase().includes(q));
@@ -1443,29 +1470,29 @@
     const groups = new Map();
     for (const x of pickList) { const c = FS.cuisineOf(x.id).id; if (!groups.has(c)) groups.set(c, []); groups.get(c).push(x); }
     const groupList = [...groups.entries()].sort(([a, la], [b, lb]) => (have(lb[0].id) > 0) - (have(la[0].id) > 0) || FS.CUISINES.indexOf(FS.cuisineById[a]) - FS.CUISINES.indexOf(FS.cuisineById[b]));
-    const full = r.menu.length >= T.menuMax;
-    const reviews = r.reviews.slice().reverse().map((x) => `<div class="tw-review"><div>${starBar(x.stars)} <b>${esc(x.who)}</b> <span class="small muted">day ${Math.floor(x.t / Game.DAY) + 1}, ${clockOf(x.t)}</span></div>
-      <div>“${esc(x.text)}”</div></div>`).join('');
-    return `<div class="tw-head"><span class="pack-icon">${FSI.img('ui_restaurant')}</span><div><h3>${esc(r.name)} <button class="small ghost" data-action="town-rename" data-arg="${r.id}" title="Rename this restaurant">✏️</button></h3>
-        <div class="small muted">${esc(l.name)}, ${esc(d.name)}${r.bought ? ' · bought from its old owner' : ''}${Game.awardBoost(r.spot) > 1 ? ` · 🏆 ${esc(d.name)}'s Restaurant of the Year` : ''}</div>
-        <div>${starBar(v)} <b>${v === null ? 'new' : v.toFixed(1)}</b>${cap < 5 ? ` <span class="small muted" data-tip="This restaurant can't be rated higher yet.">max ${cap.toFixed(1)}</span>` : ''}
-          ${qm(v === null ? `Rated after ${T.minGuests} guests.` : `Average of the last ${r.scores.length} guests.`)}</div>
-        <div class="small muted"><span data-tip="Plates served">🍽️ ${r.served}</span> · <span data-tip="Guests turned away because their dish was sold out">😠 ${r.missed}</span> · <span data-tip="Earned so far (upkeep ${T.upkeep}/min)">💰${money(r.earned)}</span></div></div></div>
-      ${fitBox(r, d)}
-      ${Game.headChefsUnlocked() || r.chef ? `<h4>Head chef ${qm(`Promote a chef from the 🎓 Culinary Academy for 🎩${Game.HEAD.promote}. Guests rate dishes of their speciality higher, and the rating can go higher too. Train chefs at the Academy first: their level comes with them.`)}</h4>${headChefBox(r)}` : ''}
-      <h4>Prices ${qm("Price per plate, as a multiple of the dish's value.")}</h4>
-      <div class="row gap">${T.prices.map((p, k) => `<button class="${r.price === k ? 'primary' : ''}" data-action="town-price" data-arg="${r.id}|${k}" title="${PRICE_TIPS[k]}">${p.name} ×${p.mult}</button>`).join('')}</div>
-      <h4>Menu <span class="small muted">${r.menu.length} / ${T.menuMax}</span></h4>
-      ${r.menu.length && r.menu.length < T.menuMin ? `<p class="warn small">Guests come once the menu has ${T.menuMin} dishes.</p>` : ''}
-      ${menu || '<p class="hint">Empty: add dishes below.</p>'}
-      <h4>Add a dish ${full ? '<span class="small muted">menu full</span>' : ''}</h4>
+    const tip = (x) => `${knownWrong(d, x.id) ? "✗ The critic says this cuisine doesn't belong here\n" : ''}${x.cuisine} · ${have(x.id)} in stock${x.about ? '\n' + x.about : ''}`;
+    return `<div class="tw-pickhead"><b>Add a dish</b> <span class="small muted">${r.menu.length} / ${T.menuMax} on the menu</span><button class="small" data-action="town-pick" data-arg="0">Done</button></div>
       <div class="row gap wrap"><input type="search" class="search" data-search="town" placeholder="Search dishes, cuisines, ingredients" value="${esc(ui.search.town || '')}">
         ${ddPicker('town-cz', [{ v: '', label: 'All cuisines' }, ...czOpts.map((c) => ({ v: c.id, label: (Game.cuisineNotes(d.id).wrong.includes(c.id) ? '✗ ' : '') + c.name, icon: 'cz_' + c.id, n: known.filter((x) => FS.cuisineOf(x.id).id === c.id).length }))], czf, 'Filter by cuisine', 'dd-wide')}
         <label class="small tw-stock"><input type="checkbox" data-change="town-stock" ${ui.townStock ? 'checked' : ''}> In stock only</label></div>
-      <div class="tw-pick" data-scroll="twpick">${groupList.map(([cz, list]) => `<div class="tw-pick-cz">${FSI.img('cz_' + cz)} ${esc(FS.cuisineById[cz].name)} <span class="muted">${list.filter((x) => have(x.id) > 0).length} / ${list.length} in stock</span></div>${list.map((x) => `<button class="small ${knownWrong(d, x.id) ? 'unwanted' : ''}" data-action="menu-add" data-arg="${r.id}|${x.id}" ${full ? 'disabled' : ''} title="${knownWrong(d, x.id) ? `✗ The critic says this cuisine doesn't belong here · ` : ''}${esc(x.cuisine)} · ${have(x.id)} in stock${x.about ? '\n' + esc(x.about) : ''}">${FSI.img(x.id)} ${esc(x.name)} <span class="muted">${have(x.id)}</span></button>`).join('')}`).join('') || `<span class="hint">${ui.townStock ? 'No dishes in stock match.' : 'No discovered dishes match.'}</span>`}</div>
-      <h4>Guest reviews</h4>
+      <div class="tw-pick" data-scroll="twpick">${groupList.map(([cz, list]) => `<div class="tw-pick-cz">${FSI.img('cz_' + cz)} ${esc(FS.cuisineById[cz].name)} <span class="muted">${list.filter((x) => have(x.id) > 0).length} / ${list.length} in stock</span></div>${list.map((x) => `<button class="small ${knownWrong(d, x.id) ? 'unwanted' : ''}" data-action="menu-add" data-arg="${r.id}|${x.id}" ${full ? 'disabled' : ''} data-tip="${esc(tip(x))}">${FSI.img(x.id)} ${esc(x.name)} <span class="muted">${have(x.id)}</span></button>`).join('')}`).join('') || `<span class="hint">${ui.townStock ? 'No dishes in stock match.' : 'No discovered dishes match.'}</span>`}</div>`;
+  }
+  function districtTab(r, d) {
+    const P = Game.TOWN.prices, poff = Math.abs(r.price - d.price), n = Game.cuisineNotes(d.id);
+    return `<h4>Cuisines ${qm(`${d.name} guests want five cuisines, and a menu earns its stars with dishes of all five and nothing else. Nobody tells you which: watch the stars, and read what the food critic writes after each visit.`)} <span class="small muted">${n.right.length} of 5 found</span></h4>
+      ${cuisineChips(d)}
+      <h4>Prices ${qm("Price per plate, as a multiple of the dish's value.")}</h4>
+      <div class="row gap">${P.map((p, k) => `<button class="${r.price === k ? 'primary' : ''}" data-action="town-price" data-arg="${r.id}|${k}" data-tip="${PRICE_TIPS[k]}">${p.name} ×${p.mult}</button>`).join('')}</div>
+      <p class="small">${poff ? `⚠️ ${esc(d.name)} guests like ${P[d.price].name.toLowerCase()} prices.` : `✅ Just what ${esc(d.name)} guests like.`}</p>
+      <h4>Competition</h4>${standings(d) || '<p class="hint">Guests come once the menu has enough dishes.</p>'}
+      ${Game.headChefsUnlocked() || r.chef ? `<h4>Head chef ${qm(`Promote a chef from the 🎓 Culinary Academy for 🎩${Game.HEAD.promote}. Guests rate dishes of their speciality higher, and the rating can go higher too. Train chefs at the Academy first: their level comes with them.`)}</h4>${headChefBox(r)}` : ''}`;
+  }
+  function reviewsTab(r, v) {
+    const reviews = r.reviews.slice().reverse().map((x) => `<div class="tw-review"><div>${starBar(x.stars)} <b>${esc(x.who)}</b> <span class="small muted">day ${Math.floor(x.t / Game.DAY) + 1}, ${clockOf(x.t)}</span></div>
+      <div>“${esc(x.text)}”</div></div>`).join('');
+    return `${r.reviews.length ? `<p class="tw-revsum">${starBar(v === null ? r.reviews.reduce((a, x) => a + x.stars, 0) / r.reviews.length : v)} <span class="small muted">${v === null ? `Rated after ${Game.TOWN.minGuests} guests` : `${v.toFixed(1)}: the average of these ${r.reviews.length} reviews`}</span></p>` : ''}
       ${reviews || '<p class="hint">No reviews yet.</p>'}
-      ${r.bought ? '' : `<p><button class="small danger" data-action="town-close" data-arg="${r.id}">Close this restaurant</button></p>`}`;
+      <div class="row gap tw-manage"><button class="small" data-action="town-rename" data-arg="${r.id}">✏️ Rename</button>${r.bought ? '' : `<button class="small danger" data-action="town-close" data-arg="${r.id}">Close this restaurant</button>`}</div>`;
   }
   // A restaurant's head chef, or the Academy chefs who could take the job.
   function headChefBox(r) {
@@ -1505,19 +1532,32 @@
     const S = Game.S, c = S.critic, C = Game.CRITIC;
     if (!c || c.v !== 2 || !c.visits) return '<p class="hint">No visits announced yet.</p>';
     const inTown = S.time >= c.year * Game.YEAR + 6 * Game.DAY, done = Game.criticDone();
-    const tip = `Each district's food critic names its Restaurant of the Year every winter, on a day nobody knows.\nGold 🎩${C.toques[0]} + 💰${money(C.prize[0])} and 30% more guests for a year · silver 🎩${C.toques[1]} + 💰${money(C.prize[1])}\nScores are out of 5: gold needs ${C.min[0]}, silver ${C.min[1]}. A place nobody reaches stays empty.`;
+    const tip = `Each district's food critic names its Restaurant of the Year every winter, on a day nobody knows.\nThey weigh everything: your guests' rating, one dish they eat, the supply chains behind your menu, whether it fits the district, every guest turned away, and more. Their review lists each plus and minus.\nGold 🎩${C.toques[0]} + 💰${money(C.prize[0])} and 30% more guests for a year · silver 🎩${C.toques[1]} + 💰${money(C.prize[1])}\nScores are out of 5: gold needs ${C.min[0]}, silver ${C.min[1]}. A place nobody reaches stays empty.`;
     const rows = Game.DISTRICT_ORDER.map(Game.criticOf).map((cr) => {
-      const v = c.visits[cr.district], d = Game.district(cr.district), th = Game.theme(v.theme), won = (c.gold || {})[cr.district] === c.year;
-      const st = v.done ? (won ? '🥇' : '—') : `<b data-tip="${esc(th.desc)}">“${esc(th.name)}”</b>`;
+      const v = c.visits[cr.district], d = Game.district(cr.district), won = (c.gold || {})[cr.district] === c.year;
+      const st = v.done ? (won ? '🥇' : '—') : `<span class="muted">${esc(cr.name)}</span>`;
       return `<div style="--dc:${d.color}"><span class="tw-cname" data-tip="${esc(`${cr.name}, ${cr.paper}`)}">${esc(d.name)}</span><span>${st}</span></div>`;
     }).join('');
     const when = done ? `Next visits: winter, year ${c.year + 2}` : inTown ? '🕵️ <b>In town now!</b>' : `Winter, year ${c.year + 1}`;
     return `<div class="tw-critic"><div>${when} ${qm(tip)}</div>${c.history.length ? `<button class="small" data-action="modal" data-arg="gazette">📰 Results</button>` : ''}</div>
       <div class="tw-critics">${rows}</div>`;
   }
+  // Your restaurants at a glance: stars, share of their district's guests and dishes out of stock. A row opens the restaurant.
+  function myRestaurants() {
+    const rs = Game.restaurants();
+    if (!rs.length) return `<p class="hint">${ui.touch ? 'Tap' : 'Click'} a TO LET sign on the map to open your first restaurant.</p>`;
+    return `<div class="tw-mine">${rs.map((r) => {
+      const d = Game.districtOf(r), v = Game.rating(r), out = r.menu.filter((id) => have(id) < 1).length;
+      const c = Game.contenders(d.id), tot = c.reduce((a, x) => a + x.weight, 0), me = c.find((x) => x.r === r);
+      return `<button class="tw-mrow" style="--dc:${d.color}" data-action="town-sel" data-arg="${r.spot}"><span><b>${esc(r.name)}</b><span class="small muted">${esc(d.name)}</span></span>
+        ${starBar(v)}<b>${v === null ? 'new' : v.toFixed(1)}</b><span class="small muted" data-tip="Share of the district's guests">${share(tot && me ? me.weight / tot : 0)}</span>
+        <span class="small ${out ? 'tw-out' : 'muted'}">${!r.menu.length ? 'no menu' : out ? `${out} sold out` : '✓ stocked'}</span></button>`;
+    }).join('')}</div>`;
+  }
   function guidePanel() {
     const L = Game.legacy(), done = !!Game.S.legacyWon;
-    return `<h3>📰 Town Guide</h3>
+    return `<h3>🏙️ Town</h3>
+      <h4>Your restaurants</h4>${myRestaurants()}
       ${done || Game.stageOpen('E') ? `<h4>👑 The Legacy ${done ? '<span class="okc">complete!</span>' : qm('The last goal of the game.')}</h4>
       ${done ? '<button class="small" data-action="finale">👑 Watch the finale again</button>' : ''}
       <div class="tw-legacy">${L.map((x) => `<div class="${x.done ? 'done' : ''}"><span>${x.done ? '✅' : '⬜'}</span><span>${esc(x.text)}</span>${x.prog && !x.done ? `<span class="small muted">${x.prog[0]} / ${x.prog[1]}</span>` : ''}</div>`).join('')}</div>` : ''}
@@ -1534,7 +1574,7 @@
     const body = tab === 'guide' ? guidePanel() : r ? restaurantPanel(r) : l.rival ? rivalPanel(l) : freeLotPanel(l);
     return `<div class="tw-tabs"><span class="tw-grip"></span>${l ? `<button class="tw-lottab ${tab === 'lot' ? 'on' : ''}" data-action="town-tab" data-arg="lot" data-tip="${esc(lotName)}">🍴 ${esc(lotName)}</button>`
       : `<span class="tw-lottab hintab">${ui.touch ? 'Tap' : 'Click'} a TO LET sign</span>`}
-      <button class="${tab === 'guide' ? 'on' : ''}" data-action="town-tab" data-arg="guide" data-tip="Town Guide">📰 Guide</button>
+      <button class="${tab === 'guide' ? 'on' : ''}" data-action="town-tab" data-arg="guide" data-tip="Your restaurants, the critics and the districts">🏙️ Town</button>
       <button class="tw-sheetbtn" data-action="town-sheet" title="${ui.townSheet ? 'Close' : 'Open'}"><i></i></button></div><div class="tw-body" data-scroll="twbody">${body}</div>`;
   }
   // Redraw an element's HTML, keeping the focused search box, its caret, and scroll positions.
@@ -1567,7 +1607,7 @@
     const t = Game.town();
     if (!t) return '';
     return [ui.townSel, Game.seasonIndex(), JSON.stringify(t.open || {}), JSON.stringify((Game.S.critic && Game.S.critic.boost) || ''),
-      t.rests.map((r) => [r.spot, r.name, r.menu.length, Game.rating(r) === null ? '-' : Game.rating(r).toFixed(1), r.menu.some((id) => have(id) < 1) ? '!' : ''].join(':')).join(),
+      t.rests.map((r) => [r.spot, r.name, r.menu.length, Game.rating(r) === null ? '-' : Game.rating(r).toFixed(1), r.menu.filter((id) => have(id) < 1).length].join(':')).join(),
       Game.RIVALS.map((rv) => t.rivals[rv.id].sold ? 'x' : t.rivals[rv.id].rating.toFixed(1)).join()].join('|');
   }
   function drawTown(force) {
@@ -1607,18 +1647,28 @@
       <p class="hint">Rent a restaurant, pick its menu and keep it supplied from your farm.</p>` }
       : { title: '🔒 Not yet', html: `<p class="hint">Keep cooking through the 🍽️ cuisines.</p>` };
   };
+  // A critic's score sheet for one of your restaurants: where the score starts (guests' rating and the dish), then every
+  // plus and minus. Visits from before v1.30 have no sheet.
+  const signed = (v) => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v).toFixed(2);
+  function scoreSheet(x) {
+    if (!x.lines) return '';
+    const dish = FS.items[x.dish] ? FS.items[x.dish].name : 'dish';
+    return `<div class="ry-sheet small"><div><span>Start: guests' rating ★${x.rating.toFixed(1)} (60%) and the ${esc(dish)} I ate ★${x.dishScore.toFixed(1)} (40%)</span><b>${x.start.toFixed(2)}</b></div>
+      ${x.lines.map((l) => `<div class="${l.pts > 0 ? 'plus' : l.pts < 0 ? 'minus' : ''}"><span>${esc(l.text)}</span><b>${signed(l.pts)}</b></div>`).join('')}
+      <div class="tot"><span>Score</span><b>${x.score.toFixed(2)}</b></div></div>`;
+  }
   // The critics' verdicts of the last year they visited.
   modals.gazette = () => {
     const c = Game.S.critic, hs = c && c.v === 2 ? c.history : [];
     if (!hs.length) return { title: '📰 Food critics', html: '<p class="hint">The critics have not visited yet.</p>' };
     const year = hs[hs.length - 1].year, medal = ['🥇', '🥈', '🥉'];
     const blocks = hs.filter((h) => h.year === year).map((h) => {
-      const cr = Game.criticOf(h.district), d = Game.district(h.district), th = Game.theme(h.theme), gold = h.list.find((x) => x.place === 1);
+      const cr = Game.criticOf(h.district), d = Game.district(h.district), gold = h.list.find((x) => x.place === 1);
       const rows = h.list.map((x) => `<div class="ry-row ${x.rival ? '' : 'mine'}"><span class="ry-place">${medal[x.place - 1] || '·'}</span>
         <div><b>${esc(x.name)}</b>${x.rival ? ' <span class="small muted">rival</span>' : ' <span class="small okc">yours</span>'}
-        ${x.rival ? '' : `<div class="small ry-quote">“${esc(Game.criticLine(x))}”</div>`}</div><span class="small muted">${x.score.toFixed(2)}</span></div>`).join('');
+        ${x.rival ? '' : `<div class="small ry-quote">“${esc(Game.criticLine(x))}”</div>${scoreSheet(x)}`}</div><span class="small muted">${x.score.toFixed(2)}</span></div>`).join('');
       return `<div class="ry-block"><div class="ry-head" style="color:${d.color}">${gold && !gold.rival ? '🏆' : '🍽️'} ${esc(d.name)}: <b>${gold ? esc(gold.name) : 'nobody'}</b>${gold ? '' : ' was good enough for gold'}</div>
-        <p class="small muted">${esc(cr.name)}, ${esc(cr.paper)} · <b>“${esc(th.name)}”</b> <span data-tip="${esc(th.desc)}" class="qm">?</span></p>${rows}</div>`;
+        <p class="small muted">${esc(cr.name)}, ${esc(cr.paper)}</p>${rows}</div>`;
     }).join('');
     return { title: `📰 Restaurants of the Year ${year + 1}`, cls: 'roty',
       html: `${blocks}<p class="small muted">${qm(`Places need a score of at least ${Game.CRITIC.min.slice(0, 2).join(' (🥇) and ')} (🥈); a place nobody reaches stays empty.`)}</p>` };
@@ -2455,7 +2505,9 @@
       case 'ac-pick': ui.acPick = ui.acPick === +arg ? null : +arg; ui.refresh(); break;
       case 'ac-assign': { const [cid, what] = String(arg).split('|'); Game.assignChef(+cid, what); if (what) ui.acPick = null; ui.refresh(); break; }
       case 'ac-send': Game.sendChef(arg); ui.refresh(); break;
-      case 'town-sel': ui.townSel = arg; ui.townTab = 'lot'; ui.search.town = ''; drawTown(); ui.refresh(); if (phoneTown()) townSheet(true); break;
+      case 'town-sub': ui.townSub = arg; ui.townPick = false; ui.refresh(); break;
+      case 'town-pick': ui.townPick = arg === '1'; ui.search.town = ''; ui.refresh(); break;
+      case 'town-sel': ui.townSel = arg; ui.townTab = 'lot'; ui.townPick = false; ui.search.town = ''; drawTown(); ui.refresh(); if (phoneTown()) townSheet(true); break;
       case 'town': ui.setTown(!ui.townMode); break;
       case 'finale': ui.finale(); break;
       // See an earned card again from the trophy shelf (nothing is paid twice: cards only show).
@@ -2470,7 +2522,12 @@
       case 'town-open': spend(() => Game.openRestaurant(arg)); ui.refresh(); break;
       case 'town-close': if (confirm('Close this restaurant? The spot is free again, but the rent is not refunded and its reviews are lost.')) Game.closeRestaurant(+arg); ui.refresh(); break;
       case 'town-price': { const [rid, k] = String(arg).split('|'); Game.setPriceLevel(+rid, +k); ui.refresh(); break; }
-      case 'menu-add': case 'menu-del': { const [rid, id] = String(arg).split('|'); Game.setMenu(+rid, id, action === 'menu-add'); ui.refresh(); break; }
+      case 'menu-add': case 'menu-del': {
+        const [rid, id] = String(arg).split('|'), r = Game.restaurants().find((x) => x.id === +rid);
+        Game.setMenu(+rid, id, action === 'menu-add');
+        if (r && r.menu.length >= Game.TOWN.menuMax) ui.townPick = false; // full: back to the menu
+        ui.refresh(); break;
+      }
       case 'cz-dishes': ui.filter.cuisine = arg; openModal('cookbook'); break;
       case 'czbook': {
         // A secret book stays shut and only gives a little wobble.

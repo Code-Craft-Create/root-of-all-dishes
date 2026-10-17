@@ -166,7 +166,7 @@
   function criticCmd(arg) {
     if (!Game.restaurantsUnlocked()) return print('Restaurants are not open yet (discover more dishes).', 'err');
     const c0 = Game.S.critic;
-    if (arg === 'plan' || !c0 || c0.v !== 2) { Game.planCritic(Math.floor(Game.S.time / Game.YEAR)); if (arg === 'plan') return printList('Planned visits:', Object.entries(Game.S.critic.visits).map(([d, v]) => `${Game.district(d).name}: ${Game.theme(v.theme).name}`)); }
+    if (arg === 'plan' || !c0 || c0.v !== 2) { Game.planCritic(Math.floor(Game.S.time / Game.YEAR)); if (arg === 'plan') return printList('Planned visits:', Object.entries(Game.S.critic.visits).map(([d, v]) => `${Game.district(d).name}: day ${Math.floor(v.at / Game.DAY) + 1}`)); }
     for (const cr of Game.CRITICS) {
       Game.runCritic(cr.district);
       const h = Game.S.critic.history[Game.S.critic.history.length - 1];
@@ -182,8 +182,7 @@
   function stock() {
     const ids = new Set(Game.restaurants().flatMap((r) => r.menu));
     if (!ids.size) return print('No restaurant has a menu yet.', 'err');
-    Game.S.cookedAt = Game.S.cookedAt || {};
-    for (const id of ids) { Game.addItem(id, 20, true); Game.S.cookedAt[id] = Game.S.time; }
+    for (const id of ids) Game.addItem(id, 20, true);
     print(`Added 20 of each of ${ids.size} menu dishes.`);
   }
   function recipes(arg) {

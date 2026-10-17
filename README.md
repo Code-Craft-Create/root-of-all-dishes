@@ -216,15 +216,17 @@ guest every ~12 game seconds (fewer at night, more with more restaurants) to one
 cubed (a new restaurant counts as 3.5 stars, the Restaurant of the Year ×1.3, a rival cutting prices ×1.5). Your
 guests eat straight from the warehouse and score 1 to 5 from hidden rules: out of stock = 1 star; complexity (12+ raw
 +0.6, 8+ +0.3, under 5 −0.3, Grand Cuisine +0.3); the district's favourite food +0.6; price level (the district's
-favourite +0.3, two steps off −0.5); one cuisine +0.3, three or more −0.6; under 4 dishes −0.5; not cooked within a
-game day −0.5. Without Grand Cuisine dishes the rating stops at 4 stars, each one lifts that by 0.1. Rating = average
-of the last 30 guests (shown after 8); reviews hint at the rule that mattered most. First 4 stars pay 2 toques, 4.75
+favourite +0.3, two steps off −0.5); one cuisine +0.3, three or more −0.6; under 4 dishes −0.5. How long a dish has
+been in the warehouse doesn't matter. Without Grand Cuisine dishes the rating stops at 4 stars, each one lifts that by 0.1. Every guest gives
+half stars and writes a review (lines in js/data/reviews.js, never one already in the feed); the rating is the average
+of the last 20 reviews, exactly the feed shown (rated after 8). First 4 stars pay 2 toques, 4.75
 pays 5. Rival ratings drift around their base, drop while you take more than half of their district's guests, and a
 rival you overtake cuts prices for a day. Buy a rival for 10,000 × rating² (Game.buyRival): it becomes your
-restaurant. **Food critic** (`Game.CRITIC`, `Game.THEMES`, `runCritic`): a year is 8 game days; at its start the
-Town Gazette announces the year's theme (long chains, local favourite, one cuisine, never runs out, Grand Cuisine), and
-the critic comes at an unannounced moment in winter, eats one dish everywhere (rivals too: 0.6 × rating + 0.4 × the
-dish + theme bonus up to 0.5) and names gold, silver and bronze (10/5/2 toques, 25,000/10,000/5,000 coins; gold also
+restaurant. **Food critic** (`Game.CRITIC`, `criticReview`, `runCritic`): a year is 8 game days; the critic comes at
+an unannounced moment in winter and eats one dish everywhere. Your score (`criticReview`) starts at 0.6 × rating + 0.4 ×
+the dish, then every item adds or takes points: supply chain length, cuisines that don't belong (or all five), guests
+turned away since the visits were announced, perfected dishes, Grand Cuisine (Old Town), head chef, menu size and price
+level; the Gazette lists each one. Rivals score their rating + a fixed polish (0.25 to 0.35) ± a little luck. The critic names gold, silver and bronze (10/5/2 toques, 25,000/10,000/5,000 coins; gold also
 gets 30% more guests for a year). **Stage E** is finished when each of its cuisines has 10 dishes on the menus of
 restaurants rated 4 stars or better. **The Legacy** (last goal, `Game.legacy`): finish Grand Cuisine, be Restaurant of
 the Year three years in a row, own all nine restaurants. Winning it opens the finale (`ui.finale` in ui.js "THE FINALE"):
