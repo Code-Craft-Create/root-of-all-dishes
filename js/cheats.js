@@ -13,6 +13,8 @@
     money: { usage: 'money <amount>', about: 'Add money (a negative amount takes some away)', run: money },
     recipes: { usage: 'recipes <all|hide>', about: 'Reveal every dish in the Cookbook (hide = take back only what the console revealed; saved)', run: recipes },
     order: { usage: 'order <plain|bulk|special|regular|clue|contract|event|menu|supply|seasonal>', about: 'Bring in an order of that kind now (if one can be made)', run: order },
+    goal: { usage: 'goal [next|all|<id>]', about: 'Complete goals as if reached, with their reward and unlocks (no argument = list the open ones with their ids; all = every goal but the Legacy, see win; saved)', run: goalCmd },
+    unlock: { usage: 'unlock <' + Object.keys(Game.FEATURES).join('|') + '>', about: 'Unlock a late feature now by completing the goal or stage that opens it (saved)', run: unlock },
     stage: { usage: 'stage <A|B|C|D|E>', about: 'Finish every stage up to this one and open its cuisines (saved)', run: stage },
     toques: { usage: 'toques <amount>', about: 'Add toques (saved)', run: toques },
     chefs: { usage: 'chefs', about: 'Make every Academy chef reveal their next ingredient now', run: chefs },
@@ -108,6 +110,36 @@
     if (!Game.cheatStage(id)) return print(`Try ${COMMANDS.stage.usage}.`, 'err');
     print(`Stages up to ${id} are done and their cuisines open. Now on ${Game.currentStage().name}.`);
   }
+  // Goals count what you have cooked, so revealing recipes does not finish them; these complete them directly.
+  const goalLine = (g) => `${g.id}: ${g.text}${Game.goalVisible(g) ? '' : ' (hidden for now)'}`;
+  function goalCmd(arg) {
+    const open = () => Game.goals.filter((g) => !Game.S.goalsDone[g.id]);
+    if (!arg) return open().length ? printList(`Open goals (${COMMANDS.goal.usage}):`, open().map(goalLine)) : print('Every goal is done.');
+    let ids;
+    if (arg === 'next') { const g = Game.nextGoal() || open()[0]; ids = g ? [g.id] : []; }
+    else if (arg === 'all') ids = open().filter((g) => g.id !== 'legacy').map((g) => g.id);
+    else if (!Game.goals.some((g) => g.id === arg)) return print(`No goal "${arg}". Type goal to list the open ones.`, 'err');
+    else if (Game.S.goalsDone[arg]) return print(`The goal ${arg} is already done.`, 'err');
+    else ids = [arg];
+    if (!ids.length) return print('No open goal left.', 'err');
+    const done = ids.filter((id) => Game.cheatGoal(id));
+    printList(`Completed ${done.length} goal${done.length === 1 ? '' : 's'}:`, done.map((id) => goalLine(Game.goals.find((g) => g.id === id))));
+    const next = Game.nextGoal();
+    if (next) print(`Next goal: ${next.text}`);
+    toggle(false); // show the splashes
+  }
+  // Each feature opens with a stage or a goal (Game.FEATURES); the Dispatcher with the gold3 goal (and needs the Orders
+  // window, so the first order goal too), the town with the town goal.
+  const FEATURE_GOALS = { dispatcher: ['order', 'gold3'], restaurants: ['town'], finedining: ['stageD'] };
+  function unlock(arg) {
+    const f = Game.FEATURES[arg];
+    if (!f) return print(`Try ${COMMANDS.unlock.usage}.`, 'err');
+    if (Game.featureKnown(arg)) return print(`Already unlocked: ${f.name}.`, 'err');
+    const goals = (FEATURE_GOALS[arg] || ['stage' + f.stage]).filter((id) => Game.cheatGoal(id));
+    if (!Game.featureKnown(arg)) return print(`Could not unlock ${f.name}.`, 'err');
+    print(`Unlocked ${f.name}${goals.length ? ` (completed goal${goals.length > 1 ? 's' : ''} ${goals.join(', ')})` : ''}.`);
+    toggle(false);
+  }
   function target(arg) {
     const q = FS.slug(String(arg || '')), open = FS.CUISINES.filter((c) => Game.S.cuisines[c.id]);
     const c = q ? FS.CUISINES.find((x) => x.id === q) || FS.CUISINES.find((x) => x.id.includes(q)) : open[open.length - 1];
@@ -187,7 +219,7 @@
   }
   function recipes(arg) {
     const shown = (Game.S.cheatRevealed || []).length;
-    if (arg === 'all') { const n = Game.revealAllDishes(); return print(`All ${FS.dishList.length} dishes are visible; ${n} of them were revealed by the console.`); }
+    if (arg === 'all') { const n = Game.revealAllDishes(); print(`All ${FS.dishList.length} dishes are visible; ${n} of them were revealed by the console.`); return print('Goals count dishes you have cooked, so they stay open: use goal next, goal all or unlock <feature> to move on.'); }
     if (arg === 'hide') return print(`Hid the ${Game.hideRevealed()} dishes the console revealed. Real discoveries stay (${Object.keys(Game.S.discovered).length}).`);
     print(`${shown} dishes are revealed by the console. Try ${COMMANDS.recipes.usage}.`);
   }
