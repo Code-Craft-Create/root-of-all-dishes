@@ -1856,19 +1856,31 @@
     const S = Game.S;
     checkCuisines();
     checkSkills();
-    for (const g of Game.goals) {
-      if (S.goalsDone[g.id] || !g.check()) continue;
-      S.goalsDone[g.id] = true;
-      S.money += g.reward; dayStats().bonus += g.reward;
-      if (g.toques) Game.addToques(g.toques);
-      // Milestones get their own celebration card instead of a toast.
-      if (g.splash) Game.emit('unlock', 'goal:' + g.id);
-      else if (!g.card) Game.toast(`🎯 Goal complete: ${g.text} (+${g.reward}${g.toques ? ` and 🎩${g.toques}` : ''})`, 'good', 'quiet');
-      if (g.done) g.done();
-      Game.emit('goals');
-      if (FS.STEPS.some((st) => st.goal === g.id)) Game.refreshUnlocks();
-    }
+    for (const g of Game.goals) if (!S.goalsDone[g.id] && g.check()) finishGoal(g);
   }
+  function finishGoal(g) {
+    const S = Game.S;
+    S.goalsDone[g.id] = true;
+    S.money += g.reward; dayStats().bonus += g.reward;
+    if (g.toques) Game.addToques(g.toques);
+    // Milestones get their own celebration card instead of a toast.
+    if (g.splash) Game.emit('unlock', 'goal:' + g.id);
+    else if (!g.card) Game.toast(`🎯 Goal complete: ${g.text} (+${g.reward}${g.toques ? ` and 🎩${g.toques}` : ''})`, 'good', 'quiet');
+    if (g.done) g.done();
+    Game.emit('goals');
+    if (FS.STEPS.some((st) => st.goal === g.id)) Game.refreshUnlocks();
+  }
+  // Cheat helper: complete a goal as if it had been reached (reward, splash and whatever it unlocks). Goals whose effect
+  // lives elsewhere get that state too: a stage goal finishes its stage, the town goal opens the town, the Legacy is won.
+  Game.cheatGoal = function (id) {
+    const S = Game.S, g = Game.goals.find((x) => x.id === id);
+    if (!g || S.goalsDone[id]) return false;
+    if (id === 'legacy') return Game.cheatLegacy();
+    if (/^stage[A-E]$/.test(id)) Game.cheatStage(id.slice(5));
+    if (id === 'town' && !S.townOpen) { S.townOpen = S.time || 1; Game.emit('unlock', 'restaurants'); Game.emit('town'); }
+    finishGoal(g);
+    return true;
+  };
   // ---------- Cuisines and stages ----------
   // Dishes cooked so far in a cuisine (cooked, not just discovered, like the dish goals).
   Game.cuisineCooked = (c) => c.dishIds.filter(made).length;
